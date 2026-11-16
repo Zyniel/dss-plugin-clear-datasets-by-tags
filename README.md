@@ -41,22 +41,42 @@ Inside DSS, the recap always uses the AG Grid of DSS, never the two AG Grid sett
 ## Repository layout
 
 ```
-plugin.json                          Id, version and name of the plugin
-python-lib/dss_project_maintenance/  All the code, testable without DSS
-  core/                                Shared: run a macro, read the form, read a project, tags
-  recap/                               Shared: the HTML recap and the summary dataset
-  macros/                              The code of each macro, one folder per macro
-    clear_datasets_by_tags/
-    report_dataset_tags/
-python-runnables/                    One folder per macro: form (runnable.json) and entry point (runnable.py)
-  clear-datasets-by-tags/
-  report-dataset-tags/
-resource/                            Files DSS calls to fill the lists of the forms
-tests/                               pytest tests, in the same layout as python-lib
-docs/                                Documentation
-build_plugin_zip.py                  Builds the zip to install in DSS
-pyproject.toml, uv.lock              Development tools and their versions
+.
+├── plugin.json                    Id, version, name and settings of the plugin
+├── python-lib/
+│   └── dss_project_maintenance/   All the code, testable without DSS
+│       ├── core/                  Shared: run a macro, read the form, read a project, tags
+│       ├── recap/                 Shared: the HTML recap and the summary dataset
+│       └── macros/                The code of each macro, one folder per macro
+│           ├── clear_datasets_by_tags/
+│           └── report_dataset_tags/
+├── python-runnables/              The macros as DSS sees them, one folder per macro
+│   ├── clear-datasets-by-tags/
+│   │   ├── runnable.json          The form
+│   │   └── runnable.py            The entry point
+│   └── report-dataset-tags/       The same two files
+├── resource/
+│   └── tag_choices.py             Fills the "Cat. Tags" lists of the forms
+├── tests/                         pytest tests: core/, recap/ and macros/ mirror python-lib
+│   ├── core/
+│   ├── recap/
+│   ├── macros/
+│   ├── plugin/                    The plugin files of every macro: forms, runnables, imports, zip
+│   ├── integration/               The macros on a real DSS, skipped without a config file
+│   └── support/                   Fake DSS objects and test helpers
+├── docs/                          Documentation, see the table below
+│   └── macros/                    The user guide and automation page of each macro
+├── README.md                      This page
+├── CHANGELOG.md                   The changes of each version
+├── LICENSE                        MIT License
+├── build_plugin_zip.py            Builds the zip to install in DSS
+├── pyproject.toml                 Development tools and their settings
+├── uv.lock                        Exact versions of the tools
+├── .python-version                Python 3.9, the version DSS 13 runs
+└── .github/workflows/ci.yml       The CI: checks and tests on each push and pull request
 ```
+
+The plugin zip holds `plugin.json`, `README.md`, `LICENSE`, `python-lib/`, `python-runnables/` and `resource/`. The rest is for development.
 
 ## Documentation
 
