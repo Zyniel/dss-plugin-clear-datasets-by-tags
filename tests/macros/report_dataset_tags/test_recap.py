@@ -3,8 +3,8 @@
 import json
 from typing import Any, Optional
 
-from dss_project_maintenance.macros.report_dataset_tags import MACRO
-from dss_project_maintenance.macros.report_dataset_tags.recap import (
+from macros.report_dataset_tags import MACRO
+from macros.report_dataset_tags.recap import (
     COLUMNS_BY_TAG,
     COLUMNS_BY_TAG_AND_DATASET,
     NO_TAG,
@@ -15,8 +15,8 @@ from dss_project_maintenance.macros.report_dataset_tags.recap import (
     describe_counts,
     describe_failures,
 )
-from dss_project_maintenance.recap.html import build_recap_html
-from dss_project_maintenance.recap.page import COLUMN_TAGS
+from recap.html import build_recap_html
+from recap.page import COLUMN_TAGS
 from support.fakes import FakeProject, make_dataset
 from support.runs import run
 

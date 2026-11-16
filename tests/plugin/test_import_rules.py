@@ -15,9 +15,10 @@ import pytest
 from support.dataiku_stub import RESOURCES, ROOT, RUNNABLES
 
 LIB = ROOT / "python-lib"
-PACKAGE = LIB / "dss_project_maintenance"
-SHARED = ("dss_project_maintenance.core", "dss_project_maintenance.recap")
-MACROS = "dss_project_maintenance.macros"
+SHARED = ("core", "recap")
+MACROS = "macros"
+# The packages of python-lib, imported by their own names: core, macros, recap.
+PACKAGES = tuple(sorted(path.name for path in LIB.iterdir() if (path / "__init__.py").is_file()))
 
 
 def imported_modules(path: Path) -> list[str]:
@@ -38,7 +39,7 @@ def is_under(module: str, *packages: str) -> bool:
 
 
 def library_files() -> list[Path]:
-    return sorted(PACKAGE.rglob("*.py"))
+    return sorted(LIB.rglob("*.py"))
 
 
 @pytest.mark.parametrize("path", library_files(), ids=lambda path: str(path.relative_to(LIB)))
@@ -48,7 +49,7 @@ def test_python_lib_never_imports_dataiku(path: Path) -> None:
 
 @pytest.mark.parametrize(
     "path",
-    [path for path in library_files() if path.relative_to(PACKAGE).parts[0] in ("core", "recap")],
+    [path for path in library_files() if path.relative_to(LIB).parts[0] in ("core", "recap")],
     ids=lambda path: str(path.relative_to(LIB)),
 )
 def test_the_shared_code_never_imports_a_macro(path: Path) -> None:
@@ -57,11 +58,11 @@ def test_the_shared_code_never_imports_a_macro(path: Path) -> None:
 
 @pytest.mark.parametrize(
     "path",
-    [path for path in library_files() if len(path.relative_to(PACKAGE).parts) > 2 and "macros" in path.parts],
+    [path for path in library_files() if len(path.relative_to(LIB).parts) > 2 and "macros" in path.parts],
     ids=lambda path: str(path.relative_to(LIB)),
 )
 def test_a_macro_never_imports_another_macro(path: Path) -> None:
-    own = f"{MACROS}.{path.relative_to(PACKAGE).parts[1]}"
+    own = f"{MACROS}.{path.relative_to(LIB).parts[1]}"
     other_macros = [
         module for module in imported_modules(path) if is_under(module, MACROS) and not is_under(module, own)
     ]
@@ -71,11 +72,7 @@ def test_a_macro_never_imports_another_macro(path: Path) -> None:
 @pytest.mark.parametrize("folder", sorted(path.parent.name for path in RUNNABLES.glob("*/runnable.py")))
 def test_a_runnable_imports_only_its_macro_and_the_shared_code(folder: str) -> None:
     own = f"{MACROS}.{folder.replace('-', '_')}"
-    modules = [
-        module
-        for module in imported_modules(RUNNABLES / folder / "runnable.py")
-        if is_under(module, "dss_project_maintenance")
-    ]
+    modules = [module for module in imported_modules(RUNNABLES / folder / "runnable.py") if is_under(module, *PACKAGES)]
 
     assert own in modules
     assert all(is_under(module, own, *SHARED) for module in modules), modules
@@ -83,6 +80,6 @@ def test_a_runnable_imports_only_its_macro_and_the_shared_code(folder: str) -> N
 
 @pytest.mark.parametrize("path", sorted(RESOURCES.glob("*.py")), ids=lambda path: path.name)
 def test_a_resource_file_imports_only_the_shared_code(path: Path) -> None:
-    modules = [module for module in imported_modules(path) if is_under(module, "dss_project_maintenance")]
+    modules = [module for module in imported_modules(path) if is_under(module, *PACKAGES)]
 
     assert all(is_under(module, *SHARED) for module in modules), modules

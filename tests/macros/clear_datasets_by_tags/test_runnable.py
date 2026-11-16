@@ -5,9 +5,9 @@ from typing import Any
 
 import pytest
 
-from dss_project_maintenance.core.runner import RunFailed
-from dss_project_maintenance.macros.clear_datasets_by_tags import MACRO
-from dss_project_maintenance.macros.clear_datasets_by_tags.recap import RECAP_COLUMNS
+from core.runner import RunFailed
+from macros.clear_datasets_by_tags import MACRO
+from macros.clear_datasets_by_tags.recap import RECAP_COLUMNS
 from support.dataiku_stub import install_fake_dataiku, load_runnable_class
 from support.fakes import PROJECT_KEY, FakeClient, FakeProject, make_dataset
 

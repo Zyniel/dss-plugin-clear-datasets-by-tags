@@ -4,15 +4,15 @@ import json
 import re
 from typing import Any
 
-from dss_project_maintenance.macros.clear_datasets_by_tags import MACRO
-from dss_project_maintenance.macros.clear_datasets_by_tags.cleanup import (
+from macros.clear_datasets_by_tags import MACRO
+from macros.clear_datasets_by_tags.cleanup import (
     STATUS_CLEARED,
     STATUS_EXCLUDED,
     STATUS_FAILED,
     STATUS_SKIPPED,
     STATUS_WOULD_BE_CLEARED,
 )
-from dss_project_maintenance.macros.clear_datasets_by_tags.recap import (
+from macros.clear_datasets_by_tags.recap import (
     COLUMNS,
     RECAP_COLUMNS,
     STATUSES,
@@ -22,7 +22,7 @@ from dss_project_maintenance.macros.clear_datasets_by_tags.recap import (
     describe_counts,
     describe_failures,
 )
-from dss_project_maintenance.recap.html import build_recap_html
+from recap.html import build_recap_html
 from support.fakes import FakeProject, make_dataset
 from support.runs import run
 

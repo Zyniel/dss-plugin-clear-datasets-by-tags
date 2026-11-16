@@ -15,8 +15,8 @@ from typing import Any
 
 import pytest
 
-from dss_project_maintenance.core.macro import MaintenanceMacro
-from dss_project_maintenance.core.options import (
+from core.macro import MaintenanceMacro
+from core.options import (
     RECAP_ERROR_CHOICES,
     RECAP_OPTION_DEFAULTS,
     RECAP_OPTION_LABELS,
@@ -24,11 +24,11 @@ from dss_project_maintenance.core.options import (
     RUN_OPTION_DEFAULTS,
     RUN_OPTION_LABELS,
 )
-from dss_project_maintenance.recap.html import AG_GRID_DEFAULT_INTEGRITY, AG_GRID_DEFAULT_URL
+from recap.html import AG_GRID_DEFAULT_INTEGRITY, AG_GRID_DEFAULT_URL
 from support.dataiku_stub import RESOURCES, ROOT, RUNNABLES, install_fake_dataiku, load_module, load_runnable_class
 from support.fakes import PROJECT_KEY, FakeClient, FakeProject, make_dataset
 
-PLUGIN_ID = "project-maintenance"
+PLUGIN_ID = "clear-datasets-by-tags"
 # The heading of the macros of the plugin on the Macros page of a project.
 CATEGORY = "Project maintenance"
 # The options of the "Run" section, only in the forms of the macros that change data.
@@ -44,9 +44,7 @@ ERROR_CHOICE_PARAMS = {"on_error": RUN_ERROR_CHOICES, "on_recap_error": RECAP_ER
 
 MACRO_FOLDERS = sorted(path.name for path in RUNNABLES.iterdir() if path.is_dir() and path.name != "__pycache__")
 MACRO_PACKAGES = sorted(
-    path.name
-    for path in (ROOT / "python-lib" / "dss_project_maintenance" / "macros").iterdir()
-    if (path / "__init__.py").is_file()
+    path.name for path in (ROOT / "python-lib" / "macros").iterdir() if (path / "__init__.py").is_file()
 )
 
 
@@ -56,7 +54,7 @@ def read_json(path: Any) -> Any:
 
 def macro_of(folder: str) -> MaintenanceMacro:
     """Return the MACRO of the package named after a folder of python-runnables."""
-    module = importlib.import_module(f"dss_project_maintenance.macros.{folder.replace('-', '_')}")
+    module = importlib.import_module(f"macros.{folder.replace('-', '_')}")
     macro: MaintenanceMacro = module.MACRO
     return macro
 
@@ -257,8 +255,8 @@ def test_plugin_zip_holds_the_plugin_and_nothing_else() -> None:
     for folder in MACRO_FOLDERS:
         assert f"python-runnables/{folder}/runnable.json" in names
         assert f"python-runnables/{folder}/runnable.py" in names
-        assert f"python-lib/dss_project_maintenance/macros/{folder.replace('-', '_')}/__init__.py" in names
-    assert "python-lib/dss_project_maintenance/core/runner.py" in names
+        assert f"python-lib/macros/{folder.replace('-', '_')}/__init__.py" in names
+    assert "python-lib/core/runner.py" in names
     assert "resource/tag_choices.py" in names
     assert {name.split("/")[0] for name in names} == {
         "plugin.json",

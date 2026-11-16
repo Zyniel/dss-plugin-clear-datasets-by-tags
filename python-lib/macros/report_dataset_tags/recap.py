@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from dss_project_maintenance.macros.report_dataset_tags.report import (
+from macros.report_dataset_tags.report import (
     OPTION_LABELS,
     STATUS_LABELS,
     STATUS_UNKNOWN,
@@ -10,8 +10,8 @@ from dss_project_maintenance.macros.report_dataset_tags.report import (
     STATUS_UNUSED,
     STATUS_USED,
 )
-from dss_project_maintenance.recap.html import build_common_option_chips, count_of, format_duration, yes_no
-from dss_project_maintenance.recap.page import (
+from recap.html import build_common_option_chips, count_of, format_duration, yes_no
+from recap.page import (
     ALL_STATUSES,
     COLUMN_LONG_TEXT,
     COLUMN_NUMBER,

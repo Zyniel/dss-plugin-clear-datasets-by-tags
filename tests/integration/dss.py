@@ -8,7 +8,7 @@ import json
 import re
 from typing import Any
 
-PLUGIN_ID = "project-maintenance"
+PLUGIN_ID = "clear-datasets-by-tags"
 CLEAR = f"pyrunnable_{PLUGIN_ID}_clear-datasets-by-tags"
 REPORT = f"pyrunnable_{PLUGIN_ID}_report-dataset-tags"
 

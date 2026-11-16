@@ -3,7 +3,7 @@
 import json
 from typing import Any
 
-from dss_project_maintenance.core.tags import (
+from core.tags import (
     MATCH_ALL,
     MATCH_ANY,
     SCOPE_ALL_DATASETS,
@@ -11,8 +11,8 @@ from dss_project_maintenance.core.tags import (
     SCOPE_LABEL,
     SCOPE_TAGS,
 )
-from dss_project_maintenance.macros.clear_datasets_by_tags import MACRO
-from dss_project_maintenance.macros.clear_datasets_by_tags.cleanup import OPTION_DEFAULTS, OPTION_LABELS
+from macros.clear_datasets_by_tags import MACRO
+from macros.clear_datasets_by_tags.cleanup import OPTION_DEFAULTS, OPTION_LABELS
 from support.dataiku_stub import RUNNABLES
 
 # The parameters of the form, top to bottom.

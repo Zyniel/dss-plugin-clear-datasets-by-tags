@@ -53,7 +53,7 @@ import re
 import dataiku
 
 project = dataiku.api_client().get_default_project()
-macro = project.get_macro("pyrunnable_project-maintenance_report-dataset-tags")
+macro = project.get_macro("pyrunnable_clear-datasets-by-tags_report-dataset-tags")
 run_id = macro.run(params={"show_unused_tags": True})
 html = macro.get_result(run_id, as_type="string")
 if isinstance(html, bytes):  # The API client can return bytes.
@@ -65,7 +65,7 @@ print(recap["counts"])
 
 ### Macro id
 
-`pyrunnable_project-maintenance_report-dataset-tags`
+`pyrunnable_clear-datasets-by-tags_report-dataset-tags`
 
 ### Parameters
 

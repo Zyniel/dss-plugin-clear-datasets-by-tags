@@ -1,5 +1,5 @@
 [project]
-name = "dss-plugin-project-maintenance"
+name = "dss-plugin-clear-datasets-by-tags"
 # Keep in line with plugin.json: a test checks that both versions match.
 version = "1.0.0"
 license = "MIT"

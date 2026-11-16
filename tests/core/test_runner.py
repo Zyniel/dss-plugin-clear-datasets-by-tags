@@ -6,8 +6,8 @@ from typing import Any, Optional
 
 import pytest
 
-from dss_project_maintenance.core.macro import RunStopped
-from dss_project_maintenance.core.runner import RunFailed, run_macro
+from core.macro import RunStopped
+from core.runner import RunFailed, run_macro
 from support.fakes import PROJECT_KEY, FakeClient, FakeProject, FakeRecapDataset, make_dataset
 from support.runs import run
 from support.sample_macro import MACRO

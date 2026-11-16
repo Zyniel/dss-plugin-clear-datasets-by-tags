@@ -7,10 +7,10 @@ failed when its name is in config["fail"].
 from collections.abc import Callable
 from typing import Any
 
-from dss_project_maintenance.core.macro import MaintenanceMacro, RunStopped
-from dss_project_maintenance.core.options import read_recap_options, read_run_options
-from dss_project_maintenance.core.project import list_project_datasets
-from dss_project_maintenance.recap.page import (
+from core.macro import MaintenanceMacro, RunStopped
+from core.options import read_recap_options, read_run_options
+from core.project import list_project_datasets
+from recap.page import (
     ALL_STATUSES,
     COLUMN_STATUS,
     ICON_CHECK,

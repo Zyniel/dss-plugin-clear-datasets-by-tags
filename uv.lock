@@ -218,7 +218,7 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/34/0e/4d80b69695c6afc54ac7ee5e4ba5813623a1d72a721452b4a0ac96bb8498/dataiku-api-client-13.5.6.tar.gz", hash = "sha256:cfb874f494093a5f7e9f85c9145bb48b9502094e8d0b80f72d5d2c5b5249f33c", size = 320925, upload-time = "2025-07-16T09:27:20.285Z" }
 
 [[package]]
-name = "dss-plugin-project-maintenance"
+name = "dss-plugin-clear-datasets-by-tags"
 version = "1.0.0"
 source = { virtual = "." }
 

@@ -2,7 +2,7 @@
 
 The steps, in order. The example adds a macro `drop-old-partitions` ("Drop Old Partitions").
 
-Before you start, read the [architecture](architecture.md). To see what a macro must provide at the minimum, read `tests/support/sample_macro.py`. For complete examples, read `python-lib/dss_project_maintenance/macros/clear_datasets_by_tags` (a macro that changes data) and `python-lib/dss_project_maintenance/macros/report_dataset_tags` (a macro that only reads).
+Before you start, read the [architecture](architecture.md). To see what a macro must provide at the minimum, read `tests/support/sample_macro.py`. For complete examples, read `python-lib/macros/clear_datasets_by_tags` (a macro that changes data) and `python-lib/macros/report_dataset_tags` (a macro that only reads).
 
 ## 1. Choose the id
 
@@ -11,11 +11,11 @@ Before you start, read the [architecture](architecture.md). To see what a macro 
 
 ## 2. The code of the macro
 
-Create `python-lib/dss_project_maintenance/macros/drop_old_partitions/` with:
+Create `python-lib/macros/drop_old_partitions/` with:
 
 | File | Content |
 |---|---|
-| `__init__.py` | A docstring that presents the macro, then `from dss_project_maintenance.macros.drop_old_partitions.macro import MACRO`. |
+| `__init__.py` | A docstring that presents the macro, then `from macros.drop_old_partitions.macro import MACRO`. |
 | `macro.py` | The subclass of `MaintenanceMacro`, with `id`, `label`, `recap_columns`, and an instance `MACRO`. Each method calls a function of the two next files. |
 | A file for the work, for example `partitions.py` | Read the form, decide, then act. |
 | `recap.py` | The JSON of the recap, the rows of the summary dataset, the `RecapPage`, and `describe_failures()`: what failed in the work, as counts. |
@@ -29,7 +29,7 @@ Rules:
 - **Decide before you act.** Find all the reasons to stop before you change anything, then raise `RunStopped` if needed.
 - **Report, do not crash.** A failure on one item goes into the recap, and the run continues with the next items. When the run goes on, show the failure in a banner: DSS shows a success.
 - **Count, do not list.** A banner gives counts for what the summary dataset holds, and details only for what it cannot give, such as an error of DSS (use `dss_said()`) or a tag of the form. A message must not grow with the project.
-- **Absolute imports:** `from dss_project_maintenance.core.tags import matches`.
+- **Absolute imports:** `from core.tags import matches`.
 
 ## 3. The form
 
@@ -52,7 +52,7 @@ Create `python-runnables/drop-old-partitions/runnable.json`. The easiest way: co
 Copy `python-runnables/clear-datasets-by-tags/runnable.py` into `python-runnables/drop-old-partitions/`. Change only:
 
 - the docstring;
-- the import: `from dss_project_maintenance.macros.drop_old_partitions import MACRO`;
+- the import: `from macros.drop_old_partitions import MACRO`;
 - the name of the class, for example `DropOldPartitions`.
 
 ## 5. The tests

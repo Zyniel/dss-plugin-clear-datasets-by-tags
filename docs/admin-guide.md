@@ -9,8 +9,8 @@ What a DSS administrator must know to install the plugin and trust it.
 
 ## Install and update
 
-1. Download the zip of a version from the [Releases](https://github.com/Zyniel/dss-project-maintenance/releases) of the repository.
-2. Install: **Plugins > Add plugin > Upload**. Update: **Plugins > Installed > DSS Project Maintenance**, then upload the new zip.
+1. Download the zip of a version from the [Releases](https://github.com/Zyniel/dss-plugin-clear-datasets-by-tags/releases) of the repository.
+2. Install: **Plugins > Add plugin > Upload**. Update: **Plugins > Installed > Clear Datasets by Tags**, then upload the new zip.
 3. Set the [plugin settings](../README.md#plugin-settings) if needed.
 
 After an update, DSS still shows each user the values of their last run in the form. "Reset to default" shows the new defaults.

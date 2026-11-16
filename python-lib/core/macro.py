@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import Any
 
-from dss_project_maintenance.recap.page import RecapPage
+from recap.page import RecapPage
 
 
 class RunStopped(Exception):

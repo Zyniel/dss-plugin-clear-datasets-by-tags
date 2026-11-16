@@ -9,21 +9,21 @@ import time
 from collections.abc import Callable
 from typing import Any, NamedTuple, Optional
 
-from dss_project_maintenance.core.macro import RunStopped
-from dss_project_maintenance.core.options import (
+from core.macro import RunStopped
+from core.options import (
     ON_ERROR_STOP,
     option_unchecked,
     read_checkbox,
     read_recap_options,
     read_run_options,
 )
-from dss_project_maintenance.core.project import (
+from core.project import (
     list_project_datasets,
     name_projects,
     read_datasets_without_recipe,
     read_shared_datasets,
 )
-from dss_project_maintenance.core.tags import (
+from core.tags import (
     SCOPE_ALL_DATASETS,
     SCOPE_CHOICES,
     SCOPE_LABEL,
@@ -36,8 +36,8 @@ from dss_project_maintenance.core.tags import (
     select_datasets,
     tags_in_both,
 )
-from dss_project_maintenance.recap.html import count_of, dss_said
-from dss_project_maintenance.recap.page import TONE_CAUTION, TONE_MUTED, Banner
+from recap.html import count_of, dss_said
+from recap.page import TONE_CAUTION, TONE_MUTED, Banner
 
 logger = logging.getLogger(__name__)
 

@@ -6,13 +6,13 @@ import re
 from html import escape
 from typing import Any, Optional
 
-from dss_project_maintenance.core.options import (
+from core.options import (
     RECAP_ERROR_CHOICES,
     RECAP_OPTION_LABELS,
     RUN_ERROR_CHOICES,
     RUN_OPTION_LABELS,
 )
-from dss_project_maintenance.recap.page import (
+from recap.page import (
     COLUMN_LONG_TEXT,
     COLUMN_NUMBER,
     COLUMN_STATUS,

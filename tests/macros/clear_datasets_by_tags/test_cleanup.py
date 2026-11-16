@@ -5,9 +5,9 @@ from typing import Any
 
 import pytest
 
-from dss_project_maintenance.core.macro import RunStopped
-from dss_project_maintenance.macros.clear_datasets_by_tags import MACRO
-from dss_project_maintenance.macros.clear_datasets_by_tags.cleanup import (
+from core.macro import RunStopped
+from macros.clear_datasets_by_tags import MACRO
+from macros.clear_datasets_by_tags.cleanup import (
     SKIP_EXTERNAL,
     SKIP_PARTITIONED,
     SKIP_RECAP_DATASET,
@@ -20,7 +20,7 @@ from dss_project_maintenance.macros.clear_datasets_by_tags.cleanup import (
     STATUS_SKIPPED,
     STATUS_WOULD_BE_CLEARED,
 )
-from dss_project_maintenance.recap.page import TONE_MUTED
+from recap.page import TONE_MUTED
 from support.fakes import FakeProject, make_dataset
 from support.runs import row_of, run, status_of
 

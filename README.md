@@ -1,10 +1,10 @@
-# DSS Project Maintenance
+# Dataiku Plugin - Clear Datasets by Tags
 
 A Dataiku DSS plugin with macros to maintain projects. A macro that changes data simulates by default: it shows what it would do before it changes anything.
 
 | | |
 |---|---|
-| Plugin id | `project-maintenance` |
+| Plugin id | `clear-datasets-by-tags` |
 | Version | 1.0.0 (see the [CHANGELOG](CHANGELOG.md)) |
 | Works with | DSS 13 and later, in the built-in Python 3.9 environment, with no code environment |
 | License | [MIT](LICENSE): free to use for any purpose, keeping the copyright notice and the license text in copies |
@@ -20,7 +20,7 @@ In a project, open **Macros**: the macros of the plugin are in the **Project mai
 
 ## Install
 
-1. Build the zip: `uv run python build_plugin_zip.py`. The zip is in `dist/dss-plugin-project-maintenance-<version>.zip`.
+1. Build the zip: `uv run python build_plugin_zip.py`. The zip is in `dist/dss-plugin-clear-datasets-by-tags-<version>.zip`.
 2. In DSS: **Plugins > Add plugin > Upload**, then select the zip.
 3. In a project: open **Macros**, select a macro and run it. For a macro that changes data, keep "Simulate" checked first, and read the recap before a real run.
 
@@ -28,7 +28,7 @@ In a project, open **Macros**: the macros of the plugin are in the **Project mai
 
 ## Plugin settings
 
-A DSS administrator sets them once, in **Plugins > Installed > DSS Project Maintenance > Settings**. They apply to all macros.
+A DSS administrator sets them once, in **Plugins > Installed > Clear Datasets by Tags > Settings**. They apply to all macros.
 
 | Setting | Default | Use |
 |---|---|---|
@@ -42,38 +42,37 @@ Inside DSS, the recap always uses the AG Grid of DSS, never the two AG Grid sett
 
 ```
 .
-├── plugin.json                    Id, version, name and settings of the plugin
-├── python-lib/
-│   └── dss_project_maintenance/   All the code, testable without DSS
-│       ├── core/                  Shared: run a macro, read the form, read a project, tags
-│       ├── recap/                 Shared: the HTML recap and the summary dataset
-│       └── macros/                The code of each macro, one folder per macro
-│           ├── clear_datasets_by_tags/
-│           └── report_dataset_tags/
-├── python-runnables/              The macros as DSS sees them, one folder per macro
+├── plugin.json                Id, version, name and settings of the plugin
+├── python-lib/                All the code, testable without DSS
+│   ├── core/                  Shared: run a macro, read the form, read a project, tags
+│   ├── recap/                 Shared: the HTML recap and the summary dataset
+│   └── macros/                The code of each macro, one folder per macro
+│       ├── clear_datasets_by_tags/
+│       └── report_dataset_tags/
+├── python-runnables/          The macros as DSS sees them, one folder per macro
 │   ├── clear-datasets-by-tags/
-│   │   ├── runnable.json          The form
-│   │   └── runnable.py            The entry point
-│   └── report-dataset-tags/       The same two files
+│   │   ├── runnable.json      The form
+│   │   └── runnable.py        The entry point
+│   └── report-dataset-tags/   The same two files
 ├── resource/
-│   └── tag_choices.py             Fills the "Cat. Tags" lists of the forms
-├── tests/                         pytest tests: core/, recap/ and macros/ mirror python-lib
+│   └── tag_choices.py         Fills the "Cat. Tags" lists of the forms
+├── tests/                     pytest tests: core/, recap/ and macros/ mirror python-lib
 │   ├── core/
 │   ├── recap/
 │   ├── macros/
-│   ├── plugin/                    The plugin files of every macro: forms, runnables, imports, zip
-│   ├── integration/               The macros on a real DSS, skipped without a config file
-│   └── support/                   Fake DSS objects and test helpers
-├── docs/                          Documentation, see the table below
-│   └── macros/                    The user guide and automation page of each macro
-├── README.md                      This page
-├── CHANGELOG.md                   The changes of each version
-├── LICENSE                        MIT License
-├── build_plugin_zip.py            Builds the zip to install in DSS
-├── pyproject.toml                 Development tools and their settings
-├── uv.lock                        Exact versions of the tools
-├── .python-version                Python 3.9, the version DSS 13 runs
-└── .github/workflows/ci.yml       The CI: checks and tests on each push and pull request
+│   ├── plugin/                The plugin files of every macro: forms, runnables, imports, zip
+│   ├── integration/           The macros on a real DSS, skipped without a config file
+│   └── support/               Fake DSS objects and test helpers
+├── docs/                      Documentation, see the table below
+│   └── macros/                The user guide and automation page of each macro
+├── README.md                  This page
+├── CHANGELOG.md               The changes of each version
+├── LICENSE                    MIT License
+├── build_plugin_zip.py        Builds the zip to install in DSS
+├── pyproject.toml             Development tools and their settings
+├── uv.lock                    Exact versions of the tools
+├── .python-version            Python 3.9, the version DSS 13 runs
+└── .github/workflows/ci.yml   The CI: checks and tests on each push and pull request
 ```
 
 The plugin zip holds `plugin.json`, `README.md`, `LICENSE`, `python-lib/`, `python-runnables/` and `resource/`. The rest is for development.

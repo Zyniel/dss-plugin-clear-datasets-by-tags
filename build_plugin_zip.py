@@ -7,8 +7,9 @@ from pathlib import Path
 # The paths are relative to this file, so that the script works from any folder.
 ROOT = Path(__file__).resolve().parent
 
-version = json.loads((ROOT / "plugin.json").read_text(encoding="utf-8"))["version"]
-zip_path = ROOT / "dist" / f"dss-plugin-project-maintenance-{version}.zip"
+plugin = json.loads((ROOT / "plugin.json").read_text(encoding="utf-8"))
+# The name Dataiku gives plugin zips: dss-plugin-<plugin id>-<version>.zip.
+zip_path = ROOT / "dist" / f"dss-plugin-{plugin['id']}-{plugin['version']}.zip"
 zip_path.parent.mkdir(exist_ok=True)
 
 with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as plugin_zip:

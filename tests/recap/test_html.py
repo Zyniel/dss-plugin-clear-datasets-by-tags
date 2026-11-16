@@ -9,8 +9,8 @@ from typing import Any
 
 import pytest
 
-from dss_project_maintenance.recap import page
-from dss_project_maintenance.recap.html import (
+from recap import page
+from recap.html import (
     AG_GRID_DEFAULT_INTEGRITY,
     AG_GRID_DEFAULT_URL,
     ICON_SHAPES,
@@ -23,7 +23,7 @@ from dss_project_maintenance.recap.html import (
     read_grid_cdn,
     to_html_script_json,
 )
-from dss_project_maintenance.recap.page import (
+from recap.page import (
     ALL_STATUSES,
     COLUMN_LONG_TEXT,
     COLUMN_NUMBER,

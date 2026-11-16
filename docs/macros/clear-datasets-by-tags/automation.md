@@ -73,7 +73,7 @@ import re
 import dataiku
 
 project = dataiku.api_client().get_default_project()
-macro = project.get_macro("pyrunnable_project-maintenance_clear-datasets-by-tags")
+macro = project.get_macro("pyrunnable_clear-datasets-by-tags_clear-datasets-by-tags")
 run_id = macro.run(
     params={
         "included_tags": ["temporary"],
@@ -94,7 +94,7 @@ A failed run, for example with a form that is not valid, raises an error in `get
 
 ### Macro id
 
-`pyrunnable_project-maintenance_clear-datasets-by-tags`
+`pyrunnable_clear-datasets-by-tags_clear-datasets-by-tags`
 
 ### Parameters
 

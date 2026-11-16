@@ -4,11 +4,11 @@ The changes of each version of the plugin, the most recent first.
 
 ## 1.0.0 - 2026-11-16
 
-First version of **DSS Project Maintenance**.
+First version of the Dataiku plugin **Clear Datasets by Tags**.
 
 ### Plugin
 
-- Id `project-maintenance`, name "DSS Project Maintenance". Works with DSS 13 and later, in the built-in Python 3.9 environment.
+- Id `clear-datasets-by-tags`, name "Clear Datasets by Tags". Works with DSS 13 and later, in the built-in Python 3.9 environment.
 - Released under the [MIT License](LICENSE). The zip contains the `LICENSE` file.
 - The macros are in the **Project maintenance** section of the Macros page of a project.
 - Plugin settings:
@@ -46,7 +46,7 @@ First version of **DSS Project Maintenance**.
 
 ### For developers
 
-- The code is in the package `dss_project_maintenance` of `python-lib`. The shared code (`core`, `recap`) is separate from the code of each macro (`macros/<macro>`). A test checks the import rules.
+- The code is in `python-lib`. The shared code (`core`, `recap`) is separate from the code of each macro (`macros/<macro>`). A test checks the import rules.
 - Each macro describes its recap (`RecapPage`), and shows its own failures in a banner (`Banner`): the shared code lays it out. See [adding a macro](docs/adding-a-macro.md).
 - A visibility condition of a form is `model.<checkbox>` or `model.<select list> != '<choice>'`. A test checks that the parameter and the choice exist.
 - The tests are in folders: `tests/core`, `tests/recap`, `tests/macros/<macro>`, `tests/plugin`. The tests of `tests/plugin` run on each macro.

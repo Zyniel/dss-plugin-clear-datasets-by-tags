@@ -19,11 +19,11 @@ from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from dss_project_maintenance.core.macro import MaintenanceMacro
-from dss_project_maintenance.core.options import FAILING_ON_ERROR, ON_ERROR_FAIL
-from dss_project_maintenance.recap.dataset import write_recap_dataset
-from dss_project_maintenance.recap.html import build_recap_html, dss_said, read_grid_cdn, with_outcome
-from dss_project_maintenance.recap.page import OUTCOME_FAILED, OUTCOME_SUCCESS, OUTCOME_WARNING
+from core.macro import MaintenanceMacro
+from core.options import FAILING_ON_ERROR, ON_ERROR_FAIL
+from recap.dataset import write_recap_dataset
+from recap.html import build_recap_html, dss_said, read_grid_cdn, with_outcome
+from recap.page import OUTCOME_FAILED, OUTCOME_SUCCESS, OUTCOME_WARNING
 
 logger = logging.getLogger(__name__)
 

@@ -4,8 +4,8 @@ from typing import Any
 
 import pytest
 
-from dss_project_maintenance.macros.report_dataset_tags import MACRO
-from dss_project_maintenance.macros.report_dataset_tags.report import (
+from macros.report_dataset_tags import MACRO
+from macros.report_dataset_tags.report import (
     OPTION_DEFAULTS,
     STATUS_UNKNOWN,
     STATUS_UNUSED,

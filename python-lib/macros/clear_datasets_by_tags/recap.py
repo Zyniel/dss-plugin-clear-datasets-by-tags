@@ -2,8 +2,8 @@
 
 from typing import Any
 
-from dss_project_maintenance.core.tags import SCOPE_ALL_DATASETS, SCOPE_LABEL
-from dss_project_maintenance.macros.clear_datasets_by_tags.cleanup import (
+from core.tags import SCOPE_ALL_DATASETS, SCOPE_LABEL
+from macros.clear_datasets_by_tags.cleanup import (
     OPTION_LABELS,
     SKIP_STOPPED,
     STATUS_CLEARED,
@@ -15,9 +15,9 @@ from dss_project_maintenance.macros.clear_datasets_by_tags.cleanup import (
     WARNING_SHARING_NOT_CHECKED,
     count_by_status,
 )
-from dss_project_maintenance.recap.dataset import format_flag
-from dss_project_maintenance.recap.html import build_common_option_chips, count_of, format_duration, yes_no
-from dss_project_maintenance.recap.page import (
+from recap.dataset import format_flag
+from recap.html import build_common_option_chips, count_of, format_duration, yes_no
+from recap.page import (
     ALL_STATUSES,
     COLUMN_LONG_TEXT,
     COLUMN_NUMBER,

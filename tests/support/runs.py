@@ -2,8 +2,8 @@
 
 from typing import Any
 
-from dss_project_maintenance.core.macro import MaintenanceMacro
-from dss_project_maintenance.core.runner import run_recap
+from core.macro import MaintenanceMacro
+from core.runner import run_recap
 from support.fakes import PROJECT_KEY, FakeProject
 
 

@@ -4,10 +4,10 @@ How the code is split, which rules keep it clean, and the steps of a run.
 
 ## The three parts of the code
 
-All the code is in `python-lib/dss_project_maintenance`. It does not depend on DSS: you can test it on your computer.
+All the code is in `python-lib`, in three packages: `core`, `recap` and `macros`. It does not depend on DSS: you can test it on your computer.
 
 ```
-python-lib/dss_project_maintenance/
+python-lib/
   core/                  Shared by all macros
     macro.py               MaintenanceMacro: what each macro must provide
     runner.py              run_macro(): runs a macro, from start to end
@@ -42,7 +42,7 @@ These rules keep the macros independent. `tests/plugin/test_import_rules.py` che
 - A macro never imports another macro. If two macros need the same code, it goes into `core` or `recap`.
 - `runnable.py` imports only its own macro and the shared code. A file of `resource/` imports only the shared code.
 - Nothing in `python-lib` imports `dataiku`.
-- Imports are absolute: `from dss_project_maintenance.core.tags import matches`, never `from .tags import matches`.
+- Imports are absolute: `from core.tags import matches`, never `from .tags import matches`.
 
 **When to share code?** When a second macro needs it, not before. For example, `clear_dataset()` stays in `clear_datasets_by_tags` while no other macro clears datasets.
 

@@ -1,34 +1,34 @@
-"""The MaintenanceMacro of "Clear Datasets by Tags": what the shared runner calls."""
+"""The MaintenanceMacro of "Report Dataset Tags": what the shared runner calls."""
 
 from collections.abc import Callable
 from typing import Any
 
-from dss_project_maintenance.core.macro import MaintenanceMacro
-from dss_project_maintenance.macros.clear_datasets_by_tags.cleanup import run_cleanup
-from dss_project_maintenance.macros.clear_datasets_by_tags.recap import (
+from core.macro import MaintenanceMacro
+from macros.report_dataset_tags.recap import (
     RECAP_COLUMNS,
     build_recap_page,
     build_recap_rows,
     describe_counts,
     describe_failures,
 )
-from dss_project_maintenance.recap.page import RecapPage
+from macros.report_dataset_tags.report import run_report
+from recap.page import RecapPage
 
 
-class ClearDatasetsByTagsMacro(MaintenanceMacro):
-    """Clears the data of the datasets with the included tags, or of all datasets, except the excluded ones.
+class ReportDatasetTagsMacro(MaintenanceMacro):
+    """Reports how the datasets of a project use tags. It changes nothing.
 
-    Each method calls the function of the same name in cleanup.py or recap.py.
+    Each method calls the function of the same name in report.py or recap.py.
     """
 
-    id = "clear-datasets-by-tags"
-    label = "Clear Datasets by Tags"
+    id = "report-dataset-tags"
+    label = "Report Dataset Tags"
     recap_columns = RECAP_COLUMNS
 
     def run(
         self, project: Any, project_key: str, config: dict[str, Any], progress_callback: Callable[[int], None]
     ) -> dict[str, Any]:
-        return run_cleanup(project, project_key, config, progress_callback)
+        return run_report(project, project_key, config, progress_callback)
 
     def describe_counts(self, recap: dict[str, Any]) -> str:
         return describe_counts(recap)
@@ -43,4 +43,4 @@ class ClearDatasetsByTagsMacro(MaintenanceMacro):
         return describe_failures(recap)
 
 
-MACRO = ClearDatasetsByTagsMacro()
+MACRO = ReportDatasetTagsMacro()

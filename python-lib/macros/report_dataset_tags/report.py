@@ -15,11 +15,11 @@ import logging
 from collections.abc import Callable
 from typing import Any, Optional
 
-from dss_project_maintenance.core.options import read_checkbox, read_recap_options
-from dss_project_maintenance.core.project import list_project_datasets
-from dss_project_maintenance.core.tags import split_category_tag
-from dss_project_maintenance.recap.html import dss_said
-from dss_project_maintenance.recap.page import TONE_CAUTION, Banner
+from core.options import read_checkbox, read_recap_options
+from core.project import list_project_datasets
+from core.tags import split_category_tag
+from recap.html import dss_said
+from recap.page import TONE_CAUTION, Banner
 
 logger = logging.getLogger(__name__)
 

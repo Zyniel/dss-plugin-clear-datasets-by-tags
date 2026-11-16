@@ -97,8 +97,8 @@ The options of the "Summary" section are the same for all macros, and the "Run" 
 
 ## Do not rename
 
-- **The plugin id** (`project-maintenance` in `plugin.json`): it is part of the id of each macro and of the name of the zip. If it changes, scenarios and API calls break, and DSS sees another plugin.
-- **The id of a macro** (the name of its folder): scenarios and the API use it, for example `pyrunnable_project-maintenance_clear-datasets-by-tags`.
+- **The plugin id** (`clear-datasets-by-tags` in `plugin.json`): it is part of the id of each macro and of the name of the zip. If it changes, scenarios and API calls break, and DSS sees another plugin.
+- **The id of a macro** (the name of its folder): scenarios and the API use it, for example `pyrunnable_clear-datasets-by-tags_clear-datasets-by-tags`.
 
 ## Release a version
 
