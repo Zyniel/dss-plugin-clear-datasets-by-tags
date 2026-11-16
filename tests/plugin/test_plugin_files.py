@@ -243,6 +243,16 @@ def test_plugin_zip_builds_from_any_folder(tmp_path: Path) -> None:
         assert "plugin.json" in plugin_zip.namelist()
 
 
+def test_uv_build_stops_and_gives_the_command_that_builds_the_zip() -> None:
+    # pyproject.toml makes build_plugin_zip.py the build backend, so that uv build makes no wheel.
+    assert 'build-backend = "build_plugin_zip"' in (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    backend = load_module(ROOT / "build_plugin_zip.py")
+
+    for hook in (backend.build_sdist, backend.build_wheel):
+        with pytest.raises(SystemExit, match=r"Build the plugin zip with: uv run python build_plugin_zip\.py$"):
+            hook(str(ROOT / "dist"))
+
+
 def test_plugin_zip_holds_the_plugin_and_nothing_else() -> None:
     subprocess.run([sys.executable, str(ROOT / "build_plugin_zip.py")], cwd=ROOT, check=True, capture_output=True)
     version = read_json(ROOT / "plugin.json")["version"]

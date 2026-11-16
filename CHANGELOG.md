@@ -51,5 +51,6 @@ First version of the Dataiku plugin **Clear Datasets by Tags**.
 - A visibility condition of a form is `model.<checkbox>` or `model.<select list> != '<choice>'`. A test checks that the parameter and the choice exist.
 - The tests are in folders: `tests/core`, `tests/recap`, `tests/macros/<macro>`, `tests/plugin`. The tests of `tests/plugin` run on each macro.
 - Integration tests run the macros on a real DSS, in `tests/integration`. They are skipped without a config file: see [integration tests](docs/integration-tests.md).
+- `uv build` stops with a message that gives the command that builds the plugin zip, instead of making a Python wheel that DSS cannot install.
 - Checked on DSS 13.4.4: see [verification](docs/verification.md).
 - Commits use the GitHub noreply address of each developer: see [development](docs/development.md). `.claude/settings.json` stops Claude Code from adding attribution lines to commits and pull requests.

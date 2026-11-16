@@ -13,6 +13,13 @@ dev = ["mypy>=1.19,<2", "pytest", "ruff"]
 # The DSS API client, only for the integration tests on a real DSS 13: see docs/integration-tests.md.
 integration = ["dataiku-api-client>=13.4,<14"]
 
+# uv build would make a Python wheel, of no use in DSS: build_plugin_zip.py stops it with a message.
+# Build the plugin zip with: uv run python build_plugin_zip.py
+[build-system]
+requires = []
+build-backend = "build_plugin_zip"
+backend-path = ["."]
+
 [tool.uv]
 package = false
 

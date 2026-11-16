@@ -46,6 +46,7 @@ Get-ChildItem python-runnables\*\runnable.py | ForEach-Object { uv run mypy $_.F
 
 Good to know:
 
+- **`uv build`** stops with a message: it makes Python wheels, and DSS installs a plugin zip. Build the zip with `uv run python build_plugin_zip.py`.
 - **`uv run ruff format .`** fixes the format. `uv run ruff check --fix .` fixes what it can.
 - **mypy, one runnable at a time.** All runnables are named `runnable.py`, and mypy refuses two files with the same name in one run. This is why there is a loop.
 - **mypy 1.x.** mypy 2 cannot check code for Python 3.9 any more.

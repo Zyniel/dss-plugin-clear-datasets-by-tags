@@ -20,7 +20,7 @@ In a project, open **Macros**: the macros of the plugin are in the **Project mai
 
 ## Install
 
-1. Build the zip: `uv run python build_plugin_zip.py`. The zip is in `dist/dss-plugin-clear-datasets-by-tags-<version>.zip`.
+1. Build the zip: `uv run python build_plugin_zip.py`. The zip is in `dist/dss-plugin-clear-datasets-by-tags-<version>.zip`. `uv build` does not build the plugin: it only makes Python wheels, so it stops with a message.
 2. In DSS: **Plugins > Add plugin > Upload**, then select the zip.
 3. In a project: open **Macros**, select a macro and run it. For a macro that changes data, keep "Simulate" checked first, and read the recap before a real run.
 
