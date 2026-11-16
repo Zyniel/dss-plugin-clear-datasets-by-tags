@@ -1,0 +1,129 @@
+# Clear Datasets by Tags: user guide
+
+The macro clears the data of the datasets of a project, selected by their tags, or of all of them. The definitions, schemas and settings of the datasets stay: only the data is cleared.
+
+You cannot undo a clear, and anything that uses a cleared dataset can break until it is rebuilt. The macro only simulates while "Simulate" is checked.
+
+## Who can run it
+
+The macro is in **Macros > Project maintenance** of each project, for users who can write in the project ("Write project content"). It acts with the rights of the user: it never clears a dataset that the user could not clear by hand.
+
+Only project administrators can read which datasets are shared with other projects. See [Checks before clearing](#checks-before-clearing).
+
+## Select the datasets
+
+1. **Include:** "Datasets with the included tags" (default) selects the datasets with the included tags. "All datasets" selects every dataset of the project.
+2. **Excluded tags:** among the selected datasets, the ones with these tags are excluded, and never cleared.
+
+| Include | Included tags | Excluded tags | Result |
+|---|---|---|---|
+| Datasets with the included tags | None | Any | Refused: "Give at least one included tag, or choose 'All datasets' in 'Include'." |
+| Datasets with the included tags | One or more | None | Clears the datasets with the included tags. |
+| Datasets with the included tags | One or more | One or more | Clears the datasets with the included tags, except the excluded ones. |
+| All datasets | Ignored | None | Clears every dataset of the project. |
+| All datasets | Ignored | One or more | Clears every dataset of the project, except the excluded ones. |
+
+In every case, the [options](#the-options) and the [datasets that are never cleared](#datasets-that-are-never-cleared) still apply, and "Simulate" only shows what would be cleared.
+
+With "All datasets", the form hides the included tags but keeps their values: the run ignores them, and a grey notice names them. To remove the notice, choose "Datasets with the included tags", empty the two fields, then choose "All datasets" again.
+
+Each list of tags has three fields:
+
+| Field | Content |
+|---|---|
+| Included Tags / Excluded Tags | Tags typed by hand, for example `temporary`. Press Enter after each one. |
+| Included Cat. Tags / Excluded Cat. Tags | Category tags picked from a list: the tags of the datasets of the project, read when the form opens. DSS writes them `<category>:<value>`, for example `Stage:Raw`. A DSS administrator can limit the list to some categories, in the plugin setting "Tag categories". |
+| Included tags match / Excluded tags match | "Any": a dataset matches if it has at least one tag of the list. "All": only if it has every tag of the list. |
+
+The typed tags and the category tags of a list make one single list.
+
+Rules:
+
+- **Exact match**, upper and lower case included: `Temporary` does not match `temporary`.
+- **A tag in both lists** is excluded, and a notice names it. Check the two lists.
+- **A tag on no dataset** selects nothing, or excludes nothing. It does not stop the run, and a notice names it: with a typo in an excluded tag, the datasets it should protect are cleared.
+
+## The options
+
+| Option | Default | Effect |
+|---|---|---|
+| Simulate | Checked | Only shows what would be cleared. Nothing is cleared. |
+| Clear shared datasets | Checked | Checked: the projects that use them can break. Unchecked: they are skipped, which needs project admin rights. |
+| Clear partitioned datasets | Unchecked | Checked: all their partitions are cleared. Unchecked: they are skipped. |
+| Clear datasets with no recipe | Unchecked | Checked: no recipe can rebuild their data, so it is lost. Unchecked: they are skipped. |
+| If an error occurs | Continue, run ends in error | When a dataset cannot be cleared. Every dataset is tried, then the run ends in error, and DSS shows only its message. "Continue, run ends as success" shows the recap: see [automation](automation.md#scenarios). |
+| Write to a dataset | Unchecked | Keeps the recap in a dataset: see [automation](automation.md#summary-dataset). |
+| Summary dataset | None | Visible when the option above is checked. |
+| Append mode | Checked | Visible when "Write to a dataset" is checked. Unchecked: each run replaces the content of the dataset. |
+| If the summary is not written | Continue | Visible when "Write to a dataset" is checked. "Fail the run" is for scenarios. |
+
+A dataset loaded by hand, by code or by the API, like an input dataset, often has no recipe: check "Clear datasets with no recipe" to clear it.
+
+DSS remembers the values of your last run of the macro in this project, in this browser. After a plugin update, click **Reset to default** to see the new defaults.
+
+## Datasets that are never cleared
+
+- **Datasets shared by other projects** into this one: they are never selected, and not shown.
+- **External datasets:** DSS does not manage their data, for example a SQL table created outside DSS. They are skipped, with the reason in the recap.
+- **The summary dataset** of the run.
+
+## How the macro decides
+
+For each selected dataset, the first rule that applies wins:
+
+1. it has the excluded tags: **Excluded**;
+2. it is the summary dataset: **Skipped**;
+3. DSS does not manage it (external): **Skipped**;
+4. it is shared and "Clear shared datasets" is unchecked: **Skipped**;
+5. it is partitioned and "Clear partitioned datasets" is unchecked: **Skipped**;
+6. no recipe builds it and "Clear datasets with no recipe" is unchecked: **Skipped**;
+7. otherwise, the dataset is to clear. A simulation marks it **Cleared (Simulate)**. A real run marks it **Cleared** or **Failed**, or **Skipped** if the run stopped before it ("If an error occurs" is "Raise exception").
+
+## Checks before clearing
+
+The macro first decides for each dataset, and only then clears. It finds every reason to stop a real run before it clears anything. A simulation shows these reasons in red banners, and does not stop.
+
+| Check | When it works | When it fails |
+|---|---|---|
+| Datasets shared with other projects | The recap names the projects of each shared dataset. | DSS gives this list only to project administrators. With "Clear shared datasets" checked (the default), the run continues with a notice. Unchecked, a real run stops: it cannot skip what it cannot find. |
+| Datasets with no recipe | The recap shows them. | Reading the Flow failed. Option unchecked: a real run stops. Checked: the run continues with a notice. |
+
+So, with "Clear shared datasets" unchecked, a real run by an editor who is not a project administrator stops. Ask a project administrator to run it, or check "Clear shared datasets".
+
+## Read the recap
+
+At the top: the macro, the project, who ran it and when (UTC). Then the banners, always in this order:
+
+- **Blue:** how to read the run: a simulation cleared nothing.
+- **Red:** data failed, or a real run would stop. Click "Failed" to list the datasets that failed. This banner shows only when an option says to continue: otherwise the run ends in error, and DSS shows only its message.
+- **Yellow:** what to check: the datasets to clear that carry a risk (shared, partitioned, with no recipe), a check that was not possible, tags on no dataset or in both lists, no dataset selected, a summary dataset that was not written.
+- **Grey:** for information: included tags ignored, the summary dataset written.
+
+Banners give counts for what the table and the summary dataset hold. They give details only for what these cannot show, such as a tag of the form or an error of DSS. The log has the whole error.
+
+Then:
+
+- **The figures:** "Cleared" and "Failed" (or "Cleared (Simulate)" in a simulation), "Skipped", "Excluded" if there are excluded tags, "Selected", "Scanned" and "Duration". Click a figure to show only these datasets in the table. "Selected" shows them all again.
+- **The options** of the run.
+- **The tags**, included and excluded, with "Any" or "All", and the number of datasets that have each tag. An included tag on no dataset is yellow: maybe it has a typo. With "All datasets", "Include: All datasets of the project" replaces the included tags.
+- **The table:** one row per selected dataset, failures first. In DSS, it is interactive: sort with the header of a column, filter with its menu, search all columns with the box above, and save the rows with "Export CSV". The CSV contains the status as text, without the icon.
+
+"Download" saves the recap as an HTML file. Opened alone, it loads AG Grid from the internet to show the same interactive table. Offline, or if an administrator turned it off, it shows a simple table.
+
+| Status | Meaning |
+|---|---|
+| Cleared | The data was cleared. The messages of DSS are in the Detail column. |
+| Cleared (Simulate) | Simulation: nothing was cleared, a real run would clear it. |
+| Failed | DSS could not clear it. The error is in the Detail column. The run continued with the next datasets, unless "If an error occurs" is "Raise exception". |
+| Skipped | A rule or an option protected it, or the run stopped before it ("Not tried: the run stopped"). The reason is in the Detail column. |
+| Excluded | It has the excluded tags. |
+
+The Detail column says why: "Has included tags", "Has excluded tags", or "Has all included tags" and "Has all excluded tags" with "All". With "All datasets", a dataset to clear has no reason to show. A skipped dataset says why, for example "Is external" or "Has no recipe; 'Clear datasets with no recipe' is unchecked". It also gives the warnings of cleared datasets: shared, partitioned, or with no recipe. When the user cannot read the sharing, a banner says it once: the summary dataset and the JSON recap have "Sharing not checked" on each dataset.
+
+## Good practice
+
+- **Simulate first.** Read the recap, mainly the warnings and the skipped datasets, before you uncheck "Simulate".
+- **With "All datasets",** give an excluded tag to each dataset to keep, and check its row is "Excluded" in the simulation.
+- **Protect the summary dataset.** Give it an excluded tag, so that runs with other tags leave it alone.
+- **Check the advanced options with care.** Each one lets the macro clear data that is harder to get back. "Clear shared datasets" is checked by default: uncheck it when other projects must keep their data.
+- **In a scenario,** keep "Continue, run ends in error" (the default) or choose "Raise exception" in "If an error occurs", and choose "Fail the run" in "If the summary is not written" if you keep a history, so that the step turns red when something fails.
