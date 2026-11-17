@@ -69,9 +69,13 @@ def named_params(form: dict[str, Any]) -> dict[str, dict[str, Any]]:
 def test_plugin_id_and_versions() -> None:
     plugin = read_json(ROOT / "plugin.json")
     project_text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
 
     assert plugin["id"] == PLUGIN_ID
     assert f'\nversion = "{plugin["version"]}"\n' in project_text
+    # The README is written by hand, and also goes into the zip: it must give the id and version of the plugin.
+    assert f"\n| Plugin id | `{plugin['id']}` |\n" in readme
+    assert f"\n| Version | {plugin['version']} (" in readme
 
 
 def test_the_plugin_settings_default_to_the_ag_grid_of_the_code() -> None:

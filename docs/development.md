@@ -22,6 +22,50 @@ git config user.email "<id>+<login>@users.noreply.github.com"
 
 Git uses it for your commits in this repository, and for the commits Claude Code makes for you. In **Settings > Emails**, also check "Keep my email addresses private" and "Block command line pushes that expose my email".
 
+## Repository layout
+
+```
+.
+├── plugin.json                Id, version, name and settings of the plugin
+├── python-lib/                All the code, testable without DSS
+│   ├── core/                  Shared: run a macro, read the form, read a project, tags
+│   ├── recap/                 Shared: the HTML recap and the summary dataset
+│   └── macros/                The code of each macro, one folder per macro
+│       ├── clear_datasets_by_tags/
+│       └── report_dataset_tags/
+├── python-runnables/          The macros as DSS sees them, one folder per macro
+│   ├── clear-datasets-by-tags/
+│   │   ├── runnable.json      The form
+│   │   └── runnable.py        The entry point
+│   └── report-dataset-tags/   The same two files
+├── resource/
+│   └── tag_choices.py         Fills the "Cat. Tags" lists of the forms
+├── tests/                     pytest tests: core/, recap/ and macros/ mirror python-lib
+│   ├── core/
+│   ├── recap/
+│   ├── macros/
+│   ├── plugin/                The plugin files of every macro: forms, runnables, imports, zip
+│   ├── integration/           The macros on a real DSS, skipped without a config file
+│   └── support/               Fake DSS objects and test helpers
+├── docs/                      Documentation
+│   ├── images/                The screenshot of the README
+│   └── macros/                The user guide and automation page of each macro
+├── README.md                  For users: what the plugin does, install, settings
+├── CHANGELOG.md               The changes of each version
+├── LICENSE                    MIT License
+├── build_plugin_zip.py        Builds the zip to install in DSS
+├── pyproject.toml             Development tools and their settings
+├── uv.lock                    Exact versions of the tools
+├── .python-version            Python 3.9, the version DSS 13 runs
+└── .github/
+    ├── workflows/
+    │   ├── ci.yml             Checks and tests on each push and pull request
+    │   └── release.yml        Publishes the release of a version tag, with its zip
+    ├── ISSUE_TEMPLATE/        The bug report form
+    ├── CONTRIBUTING.md        How to contribute
+    └── SECURITY.md            How to report a vulnerability
+```
+
 ## Run the checks
 
 Bash:
@@ -46,12 +90,23 @@ Get-ChildItem python-runnables\*\runnable.py | ForEach-Object { uv run mypy $_.F
 
 Good to know:
 
-- **`uv build`** stops with a message: it makes Python wheels, and DSS installs a plugin zip. Build the zip with `uv run python build_plugin_zip.py`.
 - **`uv run ruff format .`** fixes the format. `uv run ruff check --fix .` fixes what it can.
 - **mypy, one runnable at a time.** All runnables are named `runnable.py`, and mypy refuses two files with the same name in one run. This is why there is a loop.
 - **mypy 1.x.** mypy 2 cannot check code for Python 3.9 any more.
 - **Another Python version.** To run the tests on Python 3.13, like the CI: `uv run --isolated --python 3.13 --group dev pytest`.
 - **Node.js.** If it is installed, a test also checks the syntax of the script of the interactive table.
+
+## Build the zip
+
+```bash
+uv run python build_plugin_zip.py
+```
+
+The zip is in `dist/dss-plugin-clear-datasets-by-tags-<version>.zip`. It holds `plugin.json`, `README.md`, `LICENSE`, `python-lib/`, `python-runnables/` and `resource/`: the rest of the repository is for development. The command is the same in bash and PowerShell, and uv installs Python 3.9 and the tools the first time.
+
+`uv build` does not build the plugin: it only makes Python wheels, so it stops with a message.
+
+To try the zip, install it in DSS: **Plugins > Add plugin > Upload**.
 
 ## The tests
 
@@ -85,6 +140,8 @@ The fake objects copy the shape of the DSS answers. If a real DSS answers in ano
 | Lint, types and plugin zip | `uv sync --locked`, ruff, ruff format, mypy, mypy for each runnable, then the build of the zip, kept as the `plugin-zip` artifact. |
 | Tests on Python 3.9 and 3.13 | `uv run --locked --python <version> pytest`. |
 
+`.github/workflows/release.yml` runs when a version tag is pushed: see [Release a version](#release-a-version).
+
 ## Change an option
 
 Example with an option of Clear Datasets by Tags:
@@ -105,6 +162,14 @@ The options of the "Summary" section are the same for all macros, and the "Run" 
 
 1. **Version:** set the same version in `plugin.json` and `pyproject.toml`, then run `uv lock`. A test checks that the two versions are equal.
 2. **CHANGELOG:** describe the changes in [CHANGELOG.md](../CHANGELOG.md).
-3. **Checks:** run them all, then build the zip: `uv run python build_plugin_zip.py`.
+3. **Checks:** run them all, then [build the zip](#build-the-zip).
 4. **Install:** in DSS, update the plugin with the new zip, in **Plugins > Installed**.
 5. **Verify:** simulate the macro on a test project, then do the checks of [verification](verification.md) that the change touches.
+6. **Publish:** push the commits to `main`, then tag the version and push the tag:
+
+```bash
+git tag 1.0.0
+git push origin 1.0.0
+```
+
+The Release workflow checks that the tag is the version of `plugin.json`, runs the checks, builds the zip and publishes the GitHub release, with the section of the version in the CHANGELOG as its notes. A tag with a hyphen, such as `1.1.0-beta`, is published as a pre-release.

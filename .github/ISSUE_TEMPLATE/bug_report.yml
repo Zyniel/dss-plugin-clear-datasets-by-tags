@@ -1,0 +1,59 @@
+name: Bug report
+description: A macro does something wrong, or fails.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Issues are public: remove the names and data you do not want to share.
+        To report a vulnerability, follow the security policy instead.
+  - type: dropdown
+    id: macro
+    attributes:
+      label: Macro
+      options:
+        - Clear Datasets by Tags
+        - Report Dataset Tags
+        - The plugin itself (install, settings)
+    validations:
+      required: true
+  - type: input
+    id: plugin-version
+    attributes:
+      label: Plugin version
+      description: In DSS, Plugins > Installed.
+      placeholder: "1.0.0"
+    validations:
+      required: true
+  - type: input
+    id: dss-version
+    attributes:
+      label: DSS version
+      placeholder: "13.4.4"
+    validations:
+      required: true
+  - type: dropdown
+    id: started-from
+    attributes:
+      label: Started from
+      options:
+        - The Macros page of a project
+        - A scenario
+        - The API
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to reproduce it
+      description: The values of the form, and the tags of the datasets involved.
+  - type: textarea
+    id: recap
+    attributes:
+      label: The JSON recap or the error
+      description: The RECAP_JSON line of the run log, or the error message DSS shows.
+      render: json
