@@ -1,0 +1,54 @@
+name: Release
+
+# Pushing a version tag, such as 1.0.0, publishes the GitHub release of that version, with the plugin zip.
+# A tag with a hyphen, such as 1.1.0-beta, is published as a pre-release.
+on:
+  push:
+    tags: ["[0-9]+.[0-9]+.[0-9]+*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Publish the release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      # The tag must be the version of plugin.json: the zip is named after it.
+      - name: Check the tag
+        run: |
+          version=$(python3 -c "import json; print(json.load(open('plugin.json'))['version'])")
+          if [ "$GITHUB_REF_NAME" != "$version" ]; then
+            echo "::error::The tag is $GITHUB_REF_NAME, but plugin.json says $version."
+            exit 1
+          fi
+      # The same checks as the CI: a release is never built from code that fails them.
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy
+      - run: for f in python-runnables/*/runnable.py; do uv run mypy "$f" || exit 1; done
+      - run: uv run pytest
+      - run: uv run python build_plugin_zip.py
+      # The notes: the section of this version in the CHANGELOG, with its links made absolute.
+      - name: Write the release notes
+        run: |
+          awk -v heading="## $GITHUB_REF_NAME" \
+            'index($0, heading " ") == 1 || $0 == heading { found = 1; next } /^## / { found = 0 } found' \
+            CHANGELOG.md \
+            | sed -E "s#\]\(([^):#][^):]*)\)#](https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_REF_NAME/\1)#g" \
+            > release-notes.md
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "::error::CHANGELOG.md has no section for $GITHUB_REF_NAME."
+            exit 1
+          fi
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prerelease=""
+          case "$GITHUB_REF_NAME" in *-*) prerelease="--prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" dist/*.zip --verify-tag --title "$GITHUB_REF_NAME" \
+            --notes-file release-notes.md $prerelease

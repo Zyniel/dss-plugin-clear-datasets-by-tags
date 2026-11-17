@@ -1,17 +1,25 @@
 # Dataiku Plugin - Clear Datasets by Tags
 
+[![CI](https://github.com/Zyniel/dss-plugin-clear-datasets-by-tags/actions/workflows/ci.yml/badge.svg)](https://github.com/Zyniel/dss-plugin-clear-datasets-by-tags/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/Zyniel/dss-plugin-clear-datasets-by-tags)](https://github.com/Zyniel/dss-plugin-clear-datasets-by-tags/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+![DSS 13 and later](https://img.shields.io/badge/DSS-13%2B-blue)
+
 **Clear Datasets by Tags** is a Dataiku DSS plugin with macros to maintain projects: it clears the data of the datasets selected by their tags, or of all datasets, and reports how the datasets use tags. A macro that changes data simulates by default: it shows what it would do before it changes anything.
+
+> Community plugin: not affiliated with, supported or endorsed by Dataiku. For questions and bugs, open an [issue](https://github.com/Zyniel/dss-plugin-clear-datasets-by-tags/issues).
+
+![The recap of a simulation: 4 datasets would be cleared, 3 are skipped and 1 is excluded](docs/images/recap-clear-datasets-by-tags.png)
 
 | | |
 |---|---|
 | Plugin id | `clear-datasets-by-tags` |
 | Version | 1.0.0 (see the [CHANGELOG](CHANGELOG.md)) |
 | Works with | DSS 13 and later, in the built-in Python 3.9 environment, with no code environment |
-| License | [MIT](LICENSE): free to use for any purpose, keeping the copyright notice and the license text in copies |
 
 ## The macros
 
-In a project, open **Macros**: the macros of the plugin are in the **Project maintenance** section.
+They are in the **Project maintenance** section of the **Macros** page of a project.
 
 | Macro | What it does | Documentation |
 |---|---|---|
@@ -20,71 +28,58 @@ In a project, open **Macros**: the macros of the plugin are in the **Project mai
 
 ## Install
 
-1. Build the zip: `uv run python build_plugin_zip.py`. The zip is in `dist/dss-plugin-clear-datasets-by-tags-<version>.zip`. `uv build` does not build the plugin: it only makes Python wheels, so it stops with a message.
-2. In DSS: **Plugins > Add plugin > Upload**, then select the zip.
-3. In a project: open **Macros**, select a macro and run it. For a macro that changes data, keep "Simulate" checked first, and read the recap before a real run.
+1. Download `dss-plugin-clear-datasets-by-tags-<version>.zip` from the [latest release](https://github.com/Zyniel/dss-plugin-clear-datasets-by-tags/releases/latest).
+2. In DSS, as an administrator: **Plugins > Add plugin > Upload**, then select the zip. To update, read the [CHANGELOG](CHANGELOG.md), then upload the new zip in **Plugins > Installed > Clear Datasets by Tags**.
+3. Set the [plugin settings](#plugin-settings) if needed.
 
-[uv](https://docs.astral.sh/uv/) installs Python 3.9 and the tools the first time. The command is the same in bash and PowerShell.
+To build the zip from the sources, see [development](docs/development.md#build-the-zip).
+
+## Quick start
+
+In DSS:
+
+1. In a project, open **Macros** and select **Clear Datasets by Tags**.
+2. Give the included tags, such as `temporary`, keep **Simulate** checked, and run the macro.
+3. Read the recap: what would be cleared, what is skipped and why. Then uncheck **Simulate** and run it again.
+
+From Python, in a notebook or a scenario of DSS:
+
+```python
+import dataiku
+
+project = dataiku.api_client().get_default_project()
+macro = project.get_macro("pyrunnable_clear-datasets-by-tags_clear-datasets-by-tags")
+run_id = macro.run(params={"included_tags": ["temporary"]})  # A simulation: nothing is cleared
+```
+
+Add `"simulate": False` to clear. The parameters and the result are in [automation](docs/macros/clear-datasets-by-tags/automation.md).
 
 ## Plugin settings
 
-A DSS administrator sets them once, in **Plugins > Installed > Clear Datasets by Tags > Settings**. They apply to all macros.
+An administrator sets them in **Plugins > Installed > Clear Datasets by Tags > Settings**. The details are in the [admin guide](docs/admin-guide.md#plugin-settings).
 
 | Setting | Default | Use |
 |---|---|---|
-| AG Grid URL | AG Grid Community 29.2.0 on cdn.jsdelivr.net | Where a downloaded recap loads AG Grid from, to show its interactive table. Set the URL of an internal mirror, or leave it empty to load nothing: the recap then shows a simple table. |
-| AG Grid integrity hash | The hash of that file | The browser loads the file only if it has this hash. Change it together with the URL. Several hashes, separated by spaces, are accepted. Empty: no check. |
-| Tag categories | Empty | The "Cat. Tags" lists of the forms offer only the tags of these categories, such as `Stage`. Exact names, upper and lower case included. An entry such as `Stage:` or `Stage:Raw` means `Stage`. Empty: all categories. |
-
-Inside DSS, the recap always uses the AG Grid of DSS, never the two AG Grid settings.
-
-## Repository layout
-
-```
-.
-├── plugin.json                Id, version, name and settings of the plugin
-├── python-lib/                All the code, testable without DSS
-│   ├── core/                  Shared: run a macro, read the form, read a project, tags
-│   ├── recap/                 Shared: the HTML recap and the summary dataset
-│   └── macros/                The code of each macro, one folder per macro
-│       ├── clear_datasets_by_tags/
-│       └── report_dataset_tags/
-├── python-runnables/          The macros as DSS sees them, one folder per macro
-│   ├── clear-datasets-by-tags/
-│   │   ├── runnable.json      The form
-│   │   └── runnable.py        The entry point
-│   └── report-dataset-tags/   The same two files
-├── resource/
-│   └── tag_choices.py         Fills the "Cat. Tags" lists of the forms
-├── tests/                     pytest tests: core/, recap/ and macros/ mirror python-lib
-│   ├── core/
-│   ├── recap/
-│   ├── macros/
-│   ├── plugin/                The plugin files of every macro: forms, runnables, imports, zip
-│   ├── integration/           The macros on a real DSS, skipped without a config file
-│   └── support/               Fake DSS objects and test helpers
-├── docs/                      Documentation, see the table below
-│   └── macros/                The user guide and automation page of each macro
-├── README.md                  This page
-├── CHANGELOG.md               The changes of each version
-├── LICENSE                    MIT License
-├── build_plugin_zip.py        Builds the zip to install in DSS
-├── pyproject.toml             Development tools and their settings
-├── uv.lock                    Exact versions of the tools
-├── .python-version            Python 3.9, the version DSS 13 runs
-└── .github/workflows/ci.yml   The CI: checks and tests on each push and pull request
-```
-
-The plugin zip holds `plugin.json`, `README.md`, `LICENSE`, `python-lib/`, `python-runnables/` and `resource/`. The rest is for development.
+| AG Grid URL | AG Grid Community on cdn.jsdelivr.net | Where a downloaded recap loads its interactive table from. Empty: a simple table. |
+| AG Grid integrity hash | The hash of that file | The browser loads the file only if it has this hash. |
+| Tag categories | Empty: all categories | The categories that the "Cat. Tags" lists of the forms offer, such as `Stage`. |
 
 ## Documentation
 
 | Document | Content |
 |---|---|
-| [Admin guide](docs/admin-guide.md) | For DSS administrators: install, rights, what the macros change, network. |
+| [Admin guide](docs/admin-guide.md) | For DSS administrators: install, settings, rights, what the macros change, network. |
 | [Architecture](docs/architecture.md) | How the code is split, the import rules, the steps of a run. |
-| [Development](docs/development.md) | Set up, run the checks and the tests, release a version. |
+| [Development](docs/development.md) | Set up, the repository layout, the checks and the tests, build the zip, release a version. |
 | [Add a macro](docs/adding-a-macro.md) | The steps, in order, to add a macro to the plugin. |
 | [Verification](docs/verification.md) | What the tests prove, and the checks to do on a real DSS. |
 | [Integration tests](docs/integration-tests.md) | Run the macros on a real DSS, as an administrator, an editor and a reader. |
 | [CHANGELOG](CHANGELOG.md) | What changes in each version. |
+
+## Contributing
+
+Bug reports and pull requests are welcome: see [contributing](.github/CONTRIBUTING.md). Report a vulnerability privately, as the [security policy](.github/SECURITY.md) explains.
+
+## License
+
+[MIT](LICENSE)

@@ -11,11 +11,23 @@ What a DSS administrator must know to install the plugin and trust it.
 
 1. Download the zip of a version from the [Releases](https://github.com/Zyniel/dss-plugin-clear-datasets-by-tags/releases) of the repository.
 2. Install: **Plugins > Add plugin > Upload**. Update: **Plugins > Installed > Clear Datasets by Tags**, then upload the new zip.
-3. Set the [plugin settings](../README.md#plugin-settings) if needed.
+3. Set the [plugin settings](#plugin-settings) if needed.
 
 After an update, DSS still shows each user the values of their last run in the form. "Reset to default" shows the new defaults.
 
 Before an update, read the [CHANGELOG](../CHANGELOG.md): a change can change the result of a scenario or a script.
+
+## Plugin settings
+
+Set them once, in **Plugins > Installed > Clear Datasets by Tags > Settings**. They apply to all macros.
+
+| Setting | Default | Use |
+|---|---|---|
+| AG Grid URL | AG Grid Community 29.2.0 on cdn.jsdelivr.net | Where a downloaded recap loads AG Grid from, to show its interactive table. Set the URL of an internal mirror, or leave it empty to load nothing: the recap then shows a simple table. |
+| AG Grid integrity hash | The hash of that file | The browser loads the file only if it has this hash. Change it together with the URL. Several hashes, separated by spaces, are accepted. Empty: no check. |
+| Tag categories | Empty | The "Cat. Tags" lists of the forms offer only the tags of these categories, such as `Stage`. Exact names, upper and lower case included. An entry such as `Stage:` or `Stage:Raw` means `Stage`. Empty: all categories. |
+
+Inside DSS, the recap always uses the AG Grid of DSS, never the two AG Grid settings.
 
 ## Rights
 
