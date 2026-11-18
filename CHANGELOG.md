@@ -2,6 +2,12 @@
 
 The changes of each version of the plugin, the most recent first. The changes not released yet are under **Unreleased**.
 
+## Unreleased
+
+### Plugin
+
+- The README shows each macro with a screenshot of its recap, taken in DSS, and of its form, in a folded block.
+
 ## 1.0.0-beta - 2026-11-18
 
 First version of the Dataiku plugin **Clear Datasets by Tags**.
