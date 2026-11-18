@@ -2,7 +2,7 @@
 
 The changes of each version of the plugin, the most recent first. The changes not released yet are under **Unreleased**.
 
-## Unreleased
+## 1.0.0-beta - 2026-11-18
 
 First version of the Dataiku plugin **Clear Datasets by Tags**.
 
