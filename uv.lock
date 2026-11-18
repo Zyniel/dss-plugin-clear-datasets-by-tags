@@ -219,7 +219,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/34/0e/4d80b69695c6afc54
 
 [[package]]
 name = "dss-plugin-clear-datasets-by-tags"
-version = "1.0.0b0"
+version = "1.0.1b0"
 source = { virtual = "." }
 
 [package.dev-dependencies]
