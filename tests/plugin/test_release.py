@@ -50,13 +50,12 @@ def test_prepare_sets_the_version_everywhere_and_dates_the_changelog(repo: Path)
 
     assert json.loads(text(repo, "plugin.json"))["version"] == "1.1.0"
     assert '\nversion = "1.1.0"\n' in text(repo, "pyproject.toml")
-    assert "\n| Version | 1.1.0 (see the [CHANGELOG](CHANGELOG.md)) |\n" in text(repo, "README.md")
     assert "\n## 1.1.0 - 2026-12-01\n\n### Clear Datasets by Tags\n" in text(repo, "CHANGELOG.md")
     assert "## Unreleased" not in text(repo, "CHANGELOG.md")
 
 
 def test_prepare_changes_only_the_version_lines(repo: Path) -> None:
-    before = {name: text(repo, name).splitlines() for name in ["plugin.json", "pyproject.toml", "README.md"]}
+    before = {name: text(repo, name).splitlines() for name in release.VERSION_LINES}
 
     release.prepare(repo, "1.1.0", DAY)
 

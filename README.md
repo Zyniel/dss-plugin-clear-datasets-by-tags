@@ -11,12 +11,6 @@
 
 ![The recap of a simulation: 4 datasets would be cleared, 3 are skipped and 1 is excluded](docs/images/recap-clear-datasets-by-tags.png)
 
-| | |
-|---|---|
-| Plugin id | `clear-datasets-by-tags` |
-| Version | 1.0.0 (see the [CHANGELOG](CHANGELOG.md)) |
-| Works with | DSS 13 and later, in the built-in Python 3.9 environment, with no code environment |
-
 ## The macros
 
 They are in the **Project maintenance** section of the **Macros** page of a project.
@@ -26,10 +20,15 @@ They are in the **Project maintenance** section of the **Macros** page of a proj
 | Clear Datasets by Tags | Clears the data of the datasets with the included tags, or of all datasets, except the excluded ones. | [User guide](docs/macros/clear-datasets-by-tags/user-guide.md), [automation](docs/macros/clear-datasets-by-tags/automation.md) |
 | Report Dataset Tags | Reports how the datasets use tags: tags in use, unused tags, unknown category tags, datasets with no tag. Changes nothing. | [User guide](docs/macros/report-dataset-tags/user-guide.md), [automation](docs/macros/report-dataset-tags/automation.md) |
 
+## Requirements
+
+- DSS 13 or later.
+- Nothing else to install: the plugin runs in the built-in Python 3.9 environment of DSS, with no code environment.
+
 ## Install
 
 1. Download `dss-plugin-clear-datasets-by-tags-<version>.zip` from the [latest release](https://github.com/Zyniel/dss-plugin-clear-datasets-by-tags/releases/latest).
-2. In DSS, as an administrator: **Plugins > Add plugin > Upload**, then select the zip. To update, read the [CHANGELOG](CHANGELOG.md), then upload the new zip in **Plugins > Installed > Clear Datasets by Tags**.
+2. In DSS, as an administrator: **Plugins > Add plugin > Upload**, then select the zip. DSS lists the plugin as **Clear Datasets by Tags**, with the id `clear-datasets-by-tags`. To update, read the [CHANGELOG](CHANGELOG.md), then upload the new zip in **Plugins > Installed > Clear Datasets by Tags**.
 3. Set the [plugin settings](#plugin-settings) if needed.
 
 To build the zip from the sources, see [development](docs/development.md#build-the-zip).

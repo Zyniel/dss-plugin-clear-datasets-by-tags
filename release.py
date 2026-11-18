@@ -1,7 +1,8 @@
 """Release tools: prepare a version, and write the notes of its GitHub release. See docs/releasing.md.
 
-- `uv run python release.py prepare 1.1.0` sets the version in plugin.json, pyproject.toml and the README, and turns
-  the "## Unreleased" section of the CHANGELOG into "## 1.1.0 - <today>". Run `uv lock` after it.
+- `uv run python release.py prepare 1.1.0` sets the version in plugin.json and pyproject.toml, and turns the
+  "## Unreleased" section of the CHANGELOG into "## 1.1.0 - <today>". Run `uv lock` after it. The README holds no
+  version: a release never changes it.
 - `uv run python release.py notes 1.1.0 --ref 1.1.0 --repository owner/name` prints the CHANGELOG section of the
   version, with its relative links made absolute, so that they work on the release page.
 
@@ -26,7 +27,6 @@ RELATIVE_LINK = re.compile(r"\]\((?!https?://|mailto:|#)([^)\s]+)\)")
 VERSION_LINES = {
     "plugin.json": (r'^    "version": "[^"]*",$', '    "version": "{}",'),
     "pyproject.toml": (r'^version = "[^"]*"$', 'version = "{}"'),
-    "README.md": (r"^\| Version \| \S+ \(", "| Version | {} ("),
 }
 
 
