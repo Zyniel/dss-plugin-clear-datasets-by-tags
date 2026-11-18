@@ -1,0 +1,42 @@
+name: Tag release
+
+# When a release pull request (branch release/<version>) is merged, tags the merge commit with the version, then
+# starts the Release workflow on the tag. A tag pushed with the token of a workflow starts no workflow by itself.
+# See docs/releasing.md.
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  tag:
+    name: Tag the version
+    if: >-
+      github.event.pull_request.merged
+      && startsWith(github.event.pull_request.head.ref, 'release/')
+      && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    env:
+      BRANCH: ${{ github.event.pull_request.head.ref }}
+      MERGE_COMMIT: ${{ github.event.pull_request.merge_commit_sha }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+      - name: Tag the merge commit
+        run: |
+          version=$(python3 -c "import json; print(json.load(open('plugin.json'))['version'])")
+          if [ "$BRANCH" != "release/$version" ]; then
+            echo "::error::The branch is $BRANCH, but plugin.json says $version: tag it by hand, see docs/releasing.md."
+            exit 1
+          fi
+          git tag "$version" "$MERGE_COMMIT"
+          git push origin "refs/tags/$version"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - name: Start the Release workflow on the tag
+        run: gh workflow run release.yml --ref "$VERSION" -f dry_run=false

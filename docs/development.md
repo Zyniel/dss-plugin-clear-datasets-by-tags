@@ -26,44 +26,47 @@ Git uses it for your commits in this repository, and for the commits Claude Code
 
 ```
 .
-├── plugin.json                Id, version, name and settings of the plugin
-├── python-lib/                All the code, testable without DSS
-│   ├── core/                  Shared: run a macro, read the form, read a project, tags
-│   ├── recap/                 Shared: the HTML recap and the summary dataset
-│   └── macros/                The code of each macro, one folder per macro
+├── plugin.json                   Id, version, name and settings of the plugin
+├── python-lib/                   All the code, testable without DSS
+│   ├── core/                     Shared: run a macro, read the form, read a project, tags
+│   ├── recap/                    Shared: the HTML recap and the summary dataset
+│   └── macros/                   The code of each macro, one folder per macro
 │       ├── clear_datasets_by_tags/
 │       └── report_dataset_tags/
-├── python-runnables/          The macros as DSS sees them, one folder per macro
+├── python-runnables/             The macros as DSS sees them, one folder per macro
 │   ├── clear-datasets-by-tags/
-│   │   ├── runnable.json      The form
-│   │   └── runnable.py        The entry point
-│   └── report-dataset-tags/   The same two files
+│   │   ├── runnable.json         The form
+│   │   └── runnable.py           The entry point
+│   └── report-dataset-tags/      The same two files
 ├── resource/
-│   └── tag_choices.py         Fills the "Cat. Tags" lists of the forms
-├── tests/                     pytest tests: core/, recap/ and macros/ mirror python-lib
+│   └── tag_choices.py            Fills the "Cat. Tags" lists of the forms
+├── tests/                        pytest tests: core/, recap/ and macros/ mirror python-lib
 │   ├── core/
 │   ├── recap/
 │   ├── macros/
-│   ├── plugin/                The plugin files of every macro: forms, runnables, imports, zip
-│   ├── integration/           The macros on a real DSS, skipped without a config file
-│   └── support/               Fake DSS objects and test helpers
-├── docs/                      Documentation
-│   ├── images/                The screenshot of the README
-│   └── macros/                The user guide and automation page of each macro
-├── README.md                  For users: what the plugin does, install, settings
-├── CHANGELOG.md               The changes of each version
-├── LICENSE                    MIT License
-├── build_plugin_zip.py        Builds the zip to install in DSS
-├── pyproject.toml             Development tools and their settings
-├── uv.lock                    Exact versions of the tools
-├── .python-version            Python 3.9, the version DSS 13 runs
+│   ├── plugin/                   The plugin files of every macro, the zip, release.py
+│   ├── integration/              The macros on a real DSS, skipped without a config file
+│   └── support/                  Fake DSS objects and test helpers
+├── docs/                         Documentation
+│   ├── images/                   The screenshot of the README
+│   └── macros/                   The user guide and automation page of each macro
+├── README.md                     For users: what the plugin does, install, settings
+├── CHANGELOG.md                  The changes of each version, and the unreleased ones
+├── LICENSE                       MIT License
+├── build_plugin_zip.py           Builds the zip to install in DSS
+├── release.py                    Prepares a release, and writes its notes
+├── pyproject.toml                Development tools and their settings
+├── uv.lock                       Exact versions of the tools
+├── .python-version               Python 3.9, the version DSS 13 runs
 └── .github/
-    ├── workflows/
-    │   ├── ci.yml             Checks and tests on each push and pull request
-    │   └── release.yml        Publishes the release of a version tag, with its zip
-    ├── ISSUE_TEMPLATE/        The bug report form
-    ├── CONTRIBUTING.md        How to contribute
-    └── SECURITY.md            How to report a vulnerability
+    ├── workflows/                See releasing.md for the last three
+    │   ├── ci.yml                Checks and tests on each push and pull request
+    │   ├── prepare-release.yml   Opens the pull request of a release
+    │   ├── tag-release.yml       Tags a merged release pull request
+    │   └── release.yml           Publishes the release of a version tag
+    ├── ISSUE_TEMPLATE/           The bug report form
+    ├── CONTRIBUTING.md           How to contribute
+    └── SECURITY.md               How to report a vulnerability
 ```
 
 ## Run the checks
@@ -133,14 +136,14 @@ The fake objects copy the shape of the DSS answers. If a real DSS answers in ano
 
 ## The CI
 
-`.github/workflows/ci.yml` runs on each push and pull request.
+`.github/workflows/ci.yml` runs on each push and pull request, and when the Prepare release workflow starts it.
 
 | Job | Steps |
 |---|---|
 | Lint, types and plugin zip | `uv sync --locked`, ruff, ruff format, mypy, mypy for each runnable, then the build of the zip, kept as the `plugin-zip` artifact. |
 | Tests on Python 3.9 and 3.13 | `uv run --locked --python <version> pytest`. |
 
-`.github/workflows/release.yml` runs when a version tag is pushed: see [Release a version](#release-a-version).
+Three more workflows release a version: `prepare-release.yml`, `tag-release.yml` and `release.yml`. See [releasing](releasing.md).
 
 ## Change an option
 
@@ -160,16 +163,4 @@ The options of the "Summary" section are the same for all macros, and the "Run" 
 
 ## Release a version
 
-1. **Version:** set the same version in `plugin.json` and `pyproject.toml`, then run `uv lock`. A test checks that the two versions are equal.
-2. **CHANGELOG:** describe the changes in [CHANGELOG.md](../CHANGELOG.md).
-3. **Checks:** run them all, then [build the zip](#build-the-zip).
-4. **Install:** in DSS, update the plugin with the new zip, in **Plugins > Installed**.
-5. **Verify:** simulate the macro on a test project, then do the checks of [verification](verification.md) that the change touches.
-6. **Publish:** push the commits to `main`, then tag the version and push the tag:
-
-```bash
-git tag 1.0.0
-git push origin 1.0.0
-```
-
-The Release workflow checks that the tag is the version of `plugin.json`, runs the checks, builds the zip and publishes the GitHub release, with the section of the version in the CHANGELOG as its notes. A tag with a hyphen, such as `1.1.0-beta`, is published as a pre-release.
+See [releasing](releasing.md). In short: write the changes under `## Unreleased` in the [CHANGELOG](../CHANGELOG.md), run the Prepare release workflow, test the zip of the release pull request on a DSS, and merge it. The workflows set the version, tag it and publish the release with the zip.
