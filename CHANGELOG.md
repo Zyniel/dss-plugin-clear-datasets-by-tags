@@ -1,8 +1,8 @@
 # Changelog
 
-The changes of each version of the plugin, the most recent first.
+The changes of each version of the plugin, the most recent first. The changes not released yet are under **Unreleased**.
 
-## 1.0.0 - 2026-11-16
+## Unreleased
 
 First version of the Dataiku plugin **Clear Datasets by Tags**.
 
@@ -53,6 +53,6 @@ First version of the Dataiku plugin **Clear Datasets by Tags**.
 - Integration tests run the macros on a real DSS, in `tests/integration`. They are skipped without a config file: see [integration tests](docs/integration-tests.md).
 - `uv build` stops with a message that gives the command that builds the plugin zip, instead of making a Python wheel that DSS cannot install.
 - Checked on DSS 13.4.4: see [verification](docs/verification.md).
-- Pushing a version tag publishes the GitHub release, with the plugin zip and the notes of this CHANGELOG: see [development](docs/development.md#release-a-version).
+- Releases: the Prepare release workflow opens the pull request of a version. Merging it tags the version and publishes its GitHub release, with the plugin zip and the notes of this CHANGELOG. A dry run builds them without publishing. See [releasing](docs/releasing.md).
 - A contributing guide, a security policy and a bug report form, in `.github/`.
 - Commits use the GitHub noreply address of each developer: see [development](docs/development.md). `.claude/settings.json` stops Claude Code from adding attribution lines to commits and pull requests.

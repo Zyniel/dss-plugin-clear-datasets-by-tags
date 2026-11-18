@@ -3,6 +3,8 @@ name: CI
 on:
   push:
   pull_request:
+  # Prepare release starts it on the branch of a release pull request, which starts no workflow by itself.
+  workflow_dispatch:
 
 jobs:
   checks:

@@ -1,0 +1,83 @@
+name: Prepare release
+
+# Run it from the Actions tab, with the version to release. It sets the version in every file, turns the
+# "## Unreleased" section of the CHANGELOG into the section of the version, runs the checks, then opens the pull
+# request release/<version> and starts the CI on it. Merging that pull request releases the version: see
+# tag-release.yml and docs/releasing.md.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "The version to release, such as 1.1.0, or 1.1.0-beta for a pre-release"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  prepare:
+    name: Open the release pull request
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
+      BRANCH: release/${{ inputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: astral-sh/setup-uv@v6
+      - name: Check that the version and its branch are new
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/$VERSION" > /dev/null; then
+            echo "::error::$VERSION is released already: choose a new version."
+            exit 1
+          fi
+          if git ls-remote --exit-code --heads origin "refs/heads/$BRANCH" > /dev/null; then
+            echo "::error::The branch $BRANCH exists already: close its pull request and delete it, or merge it."
+            exit 1
+          fi
+      - name: Set the version and date the CHANGELOG
+        run: |
+          uv run python release.py prepare "$VERSION"
+          uv lock
+      # The same checks as the CI, before anything is pushed.
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy
+      - run: for f in python-runnables/*/runnable.py; do uv run mypy "$f" || exit 1; done
+      - run: uv run pytest
+      - name: Push the branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git commit -a -m "Release $VERSION"
+          git push origin "$BRANCH"
+      - name: Open the pull request
+        run: |
+          uv run python release.py notes "$VERSION" --ref "$BRANCH" --repository "$GITHUB_REPOSITORY" > release-notes.md
+          verification="https://github.com/$GITHUB_REPOSITORY/blob/$BRANCH/docs/verification.md"
+          {
+            echo "Prepared by the Prepare release workflow. Merging it tags \`$VERSION\` and publishes its release."
+            echo
+            echo "## Before merging"
+            echo
+            echo "- [ ] The CI of this branch passes."
+            echo "- [ ] The \`plugin-zip\` artifact of that CI run installs on a test DSS, and the checks of"
+            echo "  [verification]($verification) that this release touches pass."
+            echo "- [ ] The notes below read well. To change them, edit \`CHANGELOG.md\` on this branch."
+            echo
+            echo "## Notes of the release"
+            echo
+            cat release-notes.md
+          } > pull-request.md
+          gh pr create --base main --head "$BRANCH" --title "Release $VERSION" --body-file pull-request.md
+      # A pull request opened with the token of a workflow starts no workflow by itself: start the CI on its branch.
+      # Its checks count for the pull request like any other run.
+      - name: Start the CI on the branch
+        run: gh workflow run ci.yml --ref "$BRANCH"
