@@ -70,8 +70,7 @@ An administrator sets them in **Plugins > Installed > Clear Datasets by Tags > S
 |---|---|
 | [Admin guide](docs/admin-guide.md) | For DSS administrators: install, settings, rights, what the macros change, network. |
 | [Architecture](docs/architecture.md) | How the code is split, the import rules, the steps of a run. |
-| [Development](docs/development.md) | Set up, the repository layout, the checks and the tests, build the zip. |
-| [Releasing](docs/releasing.md) | Release a version: the workflows, the steps, what to do if something fails. |
+| [Development](docs/development.md) | Set up, the repository layout, the checks and the tests, build the zip, release a version. |
 | [Add a macro](docs/adding-a-macro.md) | The steps, in order, to add a macro to the plugin. |
 | [Verification](docs/verification.md) | What the tests prove, and the checks to do on a real DSS. |
 | [Integration tests](docs/integration-tests.md) | Run the macros on a real DSS, as an administrator, an editor and a reader. |
