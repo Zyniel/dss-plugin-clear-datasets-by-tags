@@ -17,8 +17,8 @@ They are in the **Project maintenance** section of the **Macros** page of a proj
 
 | Macro | What it does | Documentation |
 |---|---|---|
-| Clear Datasets by Tags | Clears the data of the datasets with the included tags, or of all datasets, except the excluded ones. | [User guide](docs/macros/clear-datasets-by-tags/user-guide.md), [automation](docs/macros/clear-datasets-by-tags/automation.md) |
-| Report Dataset Tags | Reports how the datasets use tags: tags in use, unused tags, unknown category tags, datasets with no tag. Changes nothing. | [User guide](docs/macros/report-dataset-tags/user-guide.md), [automation](docs/macros/report-dataset-tags/automation.md) |
+| Clear Datasets by Tags | Clears the data of datasets selected by tags.<br>Included tags or all datasets, minus the excluded tags. Simulates by default. | [User guide](docs/macros/clear-datasets-by-tags/user-guide.md)<br>[Automation](docs/macros/clear-datasets-by-tags/automation.md) |
+| Report Dataset Tags | Reports how the datasets use tags.<br>Tags in use, unused tags, unknown category tags, untagged datasets. Changes nothing. | [User guide](docs/macros/report-dataset-tags/user-guide.md)<br>[Automation](docs/macros/report-dataset-tags/automation.md) |
 
 ## Requirements
 
