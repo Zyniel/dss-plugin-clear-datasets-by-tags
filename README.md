@@ -10,16 +10,47 @@
 
 > Community plugin: not affiliated with, supported or endorsed by Dataiku. For questions and bugs, open an [issue](https://github.com/Zyniel/dss-plugin-clear-datasets-by-tags/issues).
 
-![The recap of a simulation: 4 datasets would be cleared, 3 are skipped and 1 is excluded](docs/images/recap-clear-datasets-by-tags.png)
-
 ## The macros
 
 They are in the **Project maintenance** section of the **Macros** page of a project.
 
-| Macro | What it does | Documentation |
-|---|---|---|
-| Clear Datasets by Tags | Clears the data of datasets selected by tags.<br>Included tags or all datasets, minus the excluded tags. Simulates by default. | [User guide](docs/macros/clear-datasets-by-tags/user-guide.md)<br>[Automation](docs/macros/clear-datasets-by-tags/automation.md) |
-| Report Dataset Tags | Reports how the datasets use tags.<br>Tags in use, unused tags, unknown category tags, untagged datasets. Changes nothing. | [User guide](docs/macros/report-dataset-tags/user-guide.md)<br>[Automation](docs/macros/report-dataset-tags/automation.md) |
+### Clear Datasets by Tags
+
+Clears the data of datasets selected by tags: the included tags, or all datasets, minus the excluded tags. The definitions, schemas and settings of the datasets stay. Simulates by default.
+
+Documentation: [user guide](docs/macros/clear-datasets-by-tags/user-guide.md), [automation](docs/macros/clear-datasets-by-tags/automation.md).
+
+![The recap of a simulation in DSS: 4 datasets would be cleared, 3 are skipped and 1 is excluded](docs/images/clear-datasets-by-tags/recap.png)
+
+The recap of a simulation: 4 datasets would be cleared, and 1 of them is shared. 3 are skipped: external, partitioned, with no recipe. 1 is excluded.
+
+<details>
+<summary>The form</summary>
+
+<img src="docs/images/clear-datasets-by-tags/form.png" width="600" alt="The form of Clear Datasets by Tags: included tag temporary, excluded tag keep, Simulate checked">
+
+The included tag `temporary`, the excluded tag `keep`, and **Simulate** checked.
+
+</details>
+
+### Report Dataset Tags
+
+Reports how the datasets use tags: tags in use, unused tags, unknown category tags, untagged datasets. Changes nothing.
+
+Documentation: [user guide](docs/macros/report-dataset-tags/user-guide.md), [automation](docs/macros/report-dataset-tags/automation.md).
+
+![The recap of the report in DSS: 2 unknown tags, 1 untagged dataset and 1 unused tag](docs/images/report-dataset-tags/recap.png)
+
+The recap: 2 unknown tags, `Owner:Finance` and `Stage:Ouput` (a typo), 1 dataset with no tag, and 1 tag of the project on no dataset.
+
+<details>
+<summary>The form</summary>
+
+<img src="docs/images/report-dataset-tags/form.png" width="600" alt="The form of Report Dataset Tags, with its default values">
+
+Its default values.
+
+</details>
 
 ## Requirements
 

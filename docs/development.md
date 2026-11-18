@@ -48,7 +48,7 @@ Git uses it for your commits in this repository, and for the commits Claude Code
 │   ├── integration/              The macros on a real DSS, skipped without a config file
 │   └── support/                  Fake DSS objects and test helpers
 ├── docs/                         Documentation
-│   ├── images/                   The screenshot of the README
+│   ├── images/                   The screenshots of the README, a folder per macro
 │   └── macros/                   The user guide and automation page of each macro
 ├── README.md                     For users: what the plugin does, install, settings
 ├── CHANGELOG.md                  The changes of each version, and the unreleased ones

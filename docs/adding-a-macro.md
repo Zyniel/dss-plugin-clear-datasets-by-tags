@@ -69,7 +69,7 @@ Copy `python-runnables/clear-datasets-by-tags/runnable.py` into `python-runnable
 ## 6. The documentation
 
 1. Create `docs/macros/drop-old-partitions/user-guide.md` (for users) and, if the macro runs in scenarios, `automation.md`.
-2. Add the macro to the "The macros" table of the [README](../README.md).
+2. Add a section for the macro to "The macros" of the [README](../README.md), with a screenshot of its recap, then of its form in a folded "The form" block. The screenshots go in `docs/images/drop-old-partitions/`.
 3. Describe the new macro in the [CHANGELOG](../CHANGELOG.md).
 
 ## 7. The check on DSS
