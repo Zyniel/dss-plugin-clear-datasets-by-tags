@@ -13,7 +13,7 @@ from typing import Any, NoReturn, Optional
 ROOT = Path(__file__).resolve().parent
 
 NOT_A_PACKAGE = (
-    "This project is a DSS plugin, not a Python package: uv build cannot make it.\n"
+    "This project is a plugin for Dataiku (DSS), not a Python package: uv build cannot make it.\n"
     "Build the plugin zip with: uv run python build_plugin_zip.py"
 )
 
