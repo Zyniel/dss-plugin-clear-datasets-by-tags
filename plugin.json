@@ -1,6 +1,6 @@
 {
     "id": "clear-datasets-by-tags",
-    "version": "1.0.0-beta",
+    "version": "1.0.1-beta",
     "meta": {
         "label": "Clear Datasets by Tags",
         "description": "Macros to maintain DSS projects: clear the data of datasets selected by their tags, or of all datasets, report the tags of datasets. Macros that change data simulate by default.",
