@@ -6,7 +6,7 @@ import pytest
 
 from core.runner import RunFailed, run_macro
 from macros.report_dataset_tags import MACRO
-from macros.report_dataset_tags.recap import RECAP_COLUMNS
+from macros.report_dataset_tags.recap import SUMMARY_COLUMNS
 from support.dataiku_stub import install_fake_dataiku, load_runnable_class
 from support.fakes import PROJECT_KEY, FakeClient, FakeProject, FakeRecapDataset, make_dataset
 
@@ -26,8 +26,8 @@ def test_the_runnable_reports_writes_the_recap_dataset_and_changes_nothing(monke
     assert progress == [100]
     assert project.cleared == []
     recap_dataset = opened[0][3]
-    assert [column["name"] for column in recap_dataset.schema] == RECAP_COLUMNS
-    records = [dict(zip(RECAP_COLUMNS, row)) for row in recap_dataset.rows]
+    assert [column["name"] for column in recap_dataset.schema] == SUMMARY_COLUMNS
+    records = [dict(zip(SUMMARY_COLUMNS, row)) for row in recap_dataset.rows]
     assert [(record["tag"], record["dataset"]) for record in records] == [("Stage:Raw", "a"), ("tmp", "a"), ("", "b")]
     assert "<strong>Summary written.</strong> 3 rows in dataset recap." in html
 

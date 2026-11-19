@@ -395,7 +395,7 @@ def build_banner(banner: Banner) -> str:
 
 
 def build_run_banners(recap: dict[str, Any]) -> list[Banner]:
-    """Return the banners every recap has, besides those of the macro: the notices, and the recap dataset result."""
+    """Return the banners every recap has, besides those of the macro: the notices, and the summary dataset result."""
     banners = list(recap["notices"])
 
     result = recap["recap_dataset_result"]

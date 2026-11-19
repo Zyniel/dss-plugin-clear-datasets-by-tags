@@ -32,7 +32,7 @@ class RunFailed(Exception):
     """Raised at the end of a run when something went wrong and the form asked to fail the run.
 
     That is "If an error occurs" set to "Fail the run" and a failure in the work, or "If the recap is
-    not written" set to "Fail the run" and a recap dataset that could not be written.
+    not written" set to "Fail the run" and a summary dataset that could not be written.
     """
 
 
@@ -74,14 +74,14 @@ def run_recap(
 
 
 def save_recap(macro: MaintenanceMacro, recap: dict[str, Any], open_dataset: Callable[[str], Any]) -> dict[str, Any]:
-    """Write the recap to the recap dataset. A failure is reported, not raised: the work is already done."""
+    """Write the recap to the summary dataset. A failure is reported, not raised: the work is already done."""
     name = recap["options"]["recap_dataset"]
     result: dict[str, Any] = {"name": name, "rows_written": 0, "error": ""}
     try:
         rows = macro.build_recap_rows(recap)
         dataset = open_dataset(name)
         result["rows_written"] = write_recap_dataset(
-            dataset, macro.recap_columns, rows, recap["options"]["recap_append"]
+            dataset, macro.summary_columns, rows, recap["options"]["recap_append"]
         )
         logger.info("Summary written to dataset %s: %d rows", name, result["rows_written"])
     except Exception as error:
@@ -91,7 +91,7 @@ def save_recap(macro: MaintenanceMacro, recap: dict[str, Any], open_dataset: Cal
 
 
 def build_problems(macro: MaintenanceMacro, recap: dict[str, Any]) -> list[dict[str, Any]]:
-    """Return what went wrong in the run: the work first, then the recap dataset.
+    """Return what went wrong in the run: the work first, then the summary dataset.
 
     Each problem says if it fails the run: only when its choice in the form is "Fail the run".
     """
@@ -115,7 +115,7 @@ def build_problems(macro: MaintenanceMacro, recap: dict[str, Any]) -> list[dict[
 
 
 def update_outcome(macro: MaintenanceMacro, recap: dict[str, Any]) -> None:
-    """Set the problems and the outcome of the run in the recap. Called again after writing the recap dataset."""
+    """Set the problems and the outcome of the run in the recap. Called again after writing the summary dataset."""
     problems = build_problems(macro, recap)
     if any(problem["fail"] for problem in problems):
         outcome = OUTCOME_FAILED
@@ -151,7 +151,7 @@ def run_macro(
     """Run a macro and return its HTML recap.
 
     :param client: client from dataiku.api_client(), acting as the user who runs the macro
-    :param open_dataset: returns a dataiku.Dataset of this project from its name, for the recap dataset
+    :param open_dataset: returns a dataiku.Dataset of this project from its name, for the summary dataset
     :param log_wait_seconds: pause after the last log line. DSS stops reading the log of a macro as
         soon as it returns, and a DSS 13.4.4 run lost the long RECAP_JSON line that way.
     :param plugin_config: the plugin settings, with the AG Grid a recap opened outside DSS loads

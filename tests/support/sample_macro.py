@@ -7,7 +7,7 @@ failed when its name is in config["fail"].
 from collections.abc import Callable
 from typing import Any
 
-from core.macro import MaintenanceMacro, RunStopped
+from core.macro import MaintenanceMacro, RunBlocked
 from core.options import read_recap_options, read_run_options
 from core.project import list_project_datasets
 from recap.page import (
@@ -36,14 +36,14 @@ STATUSES = [
 class SampleMacro(MaintenanceMacro):
     id = "sample-macro"
     label = "Sample Macro"
-    recap_columns = ["run_id", "dataset", "status"]
+    summary_columns = ["run_id", "dataset", "status"]
 
     def run(
         self, project: Any, project_key: str, config: dict[str, Any], progress_callback: Callable[[int], None]
     ) -> dict[str, Any]:
         options = {**read_run_options(config), **read_recap_options(config, project_key)}
         if config.get("stop"):
-            raise RunStopped("Nothing was done.")
+            raise RunBlocked("Nothing was done.")
         failing = config.get("fail") or []
         rows = [
             {"name": dataset["name"], "status": STATUS_FAILED if dataset["name"] in failing else STATUS_DONE}

@@ -4,9 +4,9 @@ from collections.abc import Callable
 from typing import Any
 
 from core.macro import MaintenanceMacro
-from macros.clear_datasets_by_tags.cleanup import run_cleanup
+from macros.clear_datasets_by_tags.clearing import run_clearing
 from macros.clear_datasets_by_tags.recap import (
-    RECAP_COLUMNS,
+    SUMMARY_COLUMNS,
     build_recap_page,
     build_recap_rows,
     describe_counts,
@@ -18,17 +18,17 @@ from recap.page import RecapPage
 class ClearDatasetsByTagsMacro(MaintenanceMacro):
     """Clears the data of the datasets with the included tags, or of all datasets, except the excluded ones.
 
-    Each method calls the function of the same name in cleanup.py or recap.py.
+    Each method calls the function of the same name in clearing.py or recap.py.
     """
 
     id = "clear-datasets-by-tags"
     label = "Clear Datasets by Tags"
-    recap_columns = RECAP_COLUMNS
+    summary_columns = SUMMARY_COLUMNS
 
     def run(
         self, project: Any, project_key: str, config: dict[str, Any], progress_callback: Callable[[int], None]
     ) -> dict[str, Any]:
-        return run_cleanup(project, project_key, config, progress_callback)
+        return run_clearing(project, project_key, config, progress_callback)
 
     def describe_counts(self, recap: dict[str, Any]) -> str:
         return describe_counts(recap)

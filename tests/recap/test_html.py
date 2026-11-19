@@ -209,7 +209,7 @@ def test_the_common_options_of_every_form() -> None:
         Chip("If the summary is not written: Continue"),
     ]
 
-    # No recap dataset: what to do if it is not written does not matter.
+    # No summary dataset: what to do if it is not written does not matter.
     options = {"on_error": "CONTINUE", "recap_dataset": None, "recap_append": True, "on_recap_error": "FAIL"}
     assert build_common_option_chips(options) == [
         Chip("If an error occurs: Continue, run ends as success"),

@@ -183,7 +183,7 @@ class FakeRecapDataset:
     """Stands in for dataiku.Dataset: keeps the schema and the rows written to it.
 
     Like dataiku.Dataset outside a recipe, spec_item["appendMode"] starts false. Reading the rows
-    fails the test: the macros never read a recap dataset.
+    fails the test: the macros never read a summary dataset.
     """
 
     def __init__(
@@ -198,11 +198,11 @@ class FakeRecapDataset:
         self.spec_item: dict[str, Any] = {"appendMode": False}
 
     def read_schema(self, raise_if_empty: bool = True) -> list[dict[str, str]]:
-        assert not raise_if_empty, "an empty recap dataset is expected, it must not raise"
+        assert not raise_if_empty, "an empty summary dataset is expected, it must not raise"
         return self.schema
 
     def iter_tuples(self) -> Iterator[tuple[Any, ...]]:
-        raise AssertionError("a recap dataset is never read: DSS appends the rows")
+        raise AssertionError("a summary dataset is never read: DSS appends the rows")
 
     def write_schema(self, columns: list[dict[str, str]]) -> None:
         self.schema = columns

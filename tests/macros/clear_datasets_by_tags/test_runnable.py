@@ -7,7 +7,7 @@ import pytest
 
 from core.runner import RunFailed
 from macros.clear_datasets_by_tags import MACRO
-from macros.clear_datasets_by_tags.recap import RECAP_COLUMNS
+from macros.clear_datasets_by_tags.recap import SUMMARY_COLUMNS
 from support.dataiku_stub import install_fake_dataiku, load_runnable_class
 from support.fakes import PROJECT_KEY, FakeClient, FakeProject, make_dataset
 
@@ -40,8 +40,8 @@ def test_the_runnable_clears_writes_the_recap_dataset_and_returns_the_recap(monk
         ("recap", PROJECT_KEY, True)
     ]
     recap_dataset = opened[0][3]
-    assert [column["name"] for column in recap_dataset.schema] == RECAP_COLUMNS
-    records = [dict(zip(RECAP_COLUMNS, row)) for row in recap_dataset.rows]
+    assert [column["name"] for column in recap_dataset.schema] == SUMMARY_COLUMNS
+    records = [dict(zip(SUMMARY_COLUMNS, row)) for row in recap_dataset.rows]
     assert [(record["dataset"], record["status"]) for record in records] == [
         ("kept", "EXCLUDED"),
         ("other", "CLEARED"),

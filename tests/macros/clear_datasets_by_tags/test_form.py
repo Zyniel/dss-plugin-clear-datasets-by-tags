@@ -12,7 +12,7 @@ from core.tags import (
     SCOPE_TAGS,
 )
 from macros.clear_datasets_by_tags import MACRO
-from macros.clear_datasets_by_tags.cleanup import OPTION_DEFAULTS, OPTION_LABELS
+from macros.clear_datasets_by_tags.clearing import OPTION_DEFAULTS, OPTION_LABELS
 from support.dataiku_stub import RUNNABLES
 
 # The parameters of the form, top to bottom.
