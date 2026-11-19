@@ -90,12 +90,12 @@ OPTION_LABELS = {
 class Blocker(NamedTuple):
     """Why a real run stops before clearing anything. A simulation shows it."""
 
-    check: str  # What could not be checked, in lower case, such as "sharing".
-    text: str  # What to do, then the error of DSS.
+    reason: str  # In lower case, with no full stop, such as "sharing not checked".
+    text: str  # What to do, then the error of DSS if there is one.
 
     def __str__(self) -> str:
-        """Return the whole message, for the JSON recap, the log and the message of the stopped run."""
-        return f"{self.check.capitalize()} not checked. {self.text}"
+        """Return the whole message, for the JSON recap, the log and the message of the blocked run."""
+        return f"{self.reason[:1].upper()}{self.reason[1:]}. {self.text}"
 
 
 def read_options(config: dict[str, Any], project_key: str) -> dict[str, Any]:
@@ -286,6 +286,8 @@ def build_tag_notices(
 
     included_on_no_dataset = [tag for tag, count in included_tag_counts.items() if not count]
     excluded_on_no_dataset = [tag for tag, count in excluded_tag_counts.items() if not count]
+    if rules.included_scope == SCOPE_ALL_DATASETS and selected_count:
+        excluded_on_no_dataset = []  # A blocker names them: see build_tag_blockers().
     if not selected_count:
         if included_on_no_dataset:
             reason = f"Included tags on no dataset: {', '.join(included_on_no_dataset)}."
@@ -304,6 +306,31 @@ def build_tag_notices(
         count = len(included_on_no_dataset) + len(excluded_on_no_dataset)
         notices.append(Banner(TONE_CAUTION, f"{tags_are(count)} on no dataset.", " ".join(tag_lists)))
     return notices
+
+
+def build_tag_blockers(rules: TagRules, excluded_tag_counts: dict[str, int], selected_count: int) -> list[Blocker]:
+    """Return the blockers about the tags of the form.
+
+    With "All datasets", the excluded tags are the only protection: a typo in one of them, such as
+    "kep" for "keep", would clear every dataset it should keep. Each excluded tag on no dataset blocks
+    a real run, even when the other excluded tags are on datasets. Removing such a tag gives the same
+    result, so a user who means it loses nothing. With no excluded tags, or no dataset to select,
+    nothing is blocked. With the included tags, a notice names the tag instead.
+    """
+    if rules.included_scope != SCOPE_ALL_DATASETS or not selected_count:
+        return []
+    on_no_dataset = [tag for tag, count in excluded_tag_counts.items() if not count]
+    if not on_no_dataset:
+        return []
+    one = len(on_no_dataset) == 1
+    reason = f"{count_of(len(on_no_dataset), 'excluded tag')} {'is' if one else 'are'} on no dataset"
+    all_datasets = SCOPE_CHOICES[SCOPE_ALL_DATASETS]
+    it, protects = ("it", "it protects") if one else ("them", "they protect")
+    text = (
+        f'With "{all_datasets}", {protects} nothing: {", ".join(on_no_dataset)}. '
+        f"Fix {it}, or remove {it} to clear every dataset."
+    )
+    return [Blocker(reason, text)]
 
 
 def run_clearing(
@@ -346,7 +373,7 @@ def run_clearing(
         else:
             label = OPTION_LABELS["purge_shared"]
             action = f'Check "{label}", or ask a project administrator to run the macro.'
-            blockers.append(Blocker("sharing", f"{action} {dss_said(error)}"))
+            blockers.append(Blocker("sharing not checked", f"{action} {dss_said(error)}"))
 
     datasets_without_recipe: Optional[set[str]] = None
     try:
@@ -359,7 +386,7 @@ def run_clearing(
         else:
             label = OPTION_LABELS["purge_without_recipe"]
             action = f'Check "{label}", or run the macro again.'
-            blockers.append(Blocker("recipes", f"{action} {dss_said(error)}"))
+            blockers.append(Blocker("recipes not checked", f"{action} {dss_said(error)}"))
 
     included_tag_counts = {tag: count_datasets_with_tag(project_datasets, tag) for tag in rules.included_tags}
     excluded_tag_counts = {tag: count_datasets_with_tag(project_datasets, tag) for tag in rules.excluded_tags}
@@ -370,6 +397,7 @@ def run_clearing(
     ]
     rows.sort(key=lambda row: row["name"])
     notices += build_tag_notices(config, rules, included_tag_counts, excluded_tag_counts, len(rows))
+    blockers += build_tag_blockers(rules, excluded_tag_counts, len(rows))
 
     for row in rows:
         logger.info("Decision for %s", describe_row(row))

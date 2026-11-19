@@ -4,6 +4,10 @@ The changes of each version of the plugin, the most recent first. The changes no
 
 ## Unreleased
 
+### Clear Datasets by Tags
+
+- With "All datasets", an excluded tag that no dataset has now stops a real run, before anything is cleared, and a simulation shows it in a red banner. The excluded tags are then the only protection: a typo such as `kep` for `keep` used to clear every dataset, with only a yellow notice. Fix the tag, or remove it to clear every dataset. **A scenario that runs the macro with such a tag now ends in error.** "All datasets" with no excluded tag still clears every dataset, and with "Datasets with the included tags", a tag on no dataset is still only a notice.
+
 ### For developers
 
 - `GLOSSARY.md` gives the words of the plugin, such as tag rules, protection, foreign dataset and blocked run. `docs/adr/` records the decisions that are hard to reverse, starting with why "Clear shared datasets" is checked by default. The docs and the code use these words: `RunStopped` is now `RunBlocked`, `TagSelection` is `TagRules`, `recap_columns` is `summary_columns`, and `cleanup.py` is `clearing.py`. The parameters of the forms, the JSON recap and the summary dataset do not change.

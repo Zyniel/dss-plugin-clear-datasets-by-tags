@@ -112,6 +112,8 @@ def test_all_datasets_without_excluded_tags_clears_every_dataset_the_rules_allow
         "shared": SKIP_SHARED,
         "source": SKIP_WITHOUT_RECIPE,
     }
+    # No excluded tags is a valid choice: nothing can be on no dataset.
+    assert recap["blockers"] == []
     assert recap["notices"] == []
 
 
@@ -446,15 +448,66 @@ def test_an_unreadable_flow_is_a_notice_when_the_option_is_checked() -> None:
 # Excluded tags
 
 
-def test_an_excluded_tag_on_no_dataset_does_not_stop_the_run_and_is_named() -> None:
+@pytest.mark.parametrize("field", ["excluded_tags", "excluded_category_tags"])
+def test_with_all_datasets_an_excluded_tag_on_no_dataset_blocks_a_real_run(field: str) -> None:
+    # "kep" is a typo for "keep": the other excluded tag, "prod", matches, and still the run is blocked.
+    project = FakeProject([make_dataset("keep", ["keep"]), make_dataset("prod", ["prod"]), make_dataset("other", [])])
+    config: dict[str, Any] = {"excluded_tags": ["prod"], **ALL_DATASETS, **REAL_RUN}
+    config[field] = [*config.get(field, []), "kep"]
+
+    with pytest.raises(
+        RunBlocked,
+        match=(
+            r'^Nothing was cleared\. 1 excluded tag is on no dataset\. With "All datasets", it protects nothing: '
+            r"kep\. Fix it, or remove it to clear every dataset\.$"
+        ),
+    ):
+        run(MACRO, project, config)
+
+    assert project.cleared == []
+
+
+def test_with_all_datasets_a_simulation_shows_the_excluded_tags_on_no_dataset_as_a_blocker() -> None:
     project = FakeProject([make_dataset("gold", ["Stage:Gold"]), make_dataset("other", [])])
 
-    recap, _ = run(MACRO, project, {"excluded_tags": ["NoInList", "Stage:Gold"], **ALL_DATASETS, **REAL_RUN})
+    recap, _ = run(MACRO, project, {"excluded_tags": ["kep", "Stage:Gold", "tmpp"], **ALL_DATASETS})
 
-    assert project.cleared == ["other"]
-    assert recap["excluded_tag_counts"] == {"NoInList": 0, "Stage:Gold": 1}
+    assert recap["excluded_tag_counts"] == {"kep": 0, "Stage:Gold": 1, "tmpp": 0}
+    assert [str(blocker) for blocker in recap["blockers"]] == [
+        '2 excluded tags are on no dataset. With "All datasets", they protect nothing: kep, tmpp. '
+        "Fix them, or remove them to clear every dataset."
+    ]
+    # The blocker names them: no notice says it again.
+    assert notices_of(recap) == []
+    assert status_of(recap, "other") == STATUS_WOULD_BE_CLEARED
+    assert project.cleared == []
+
+
+def test_with_all_datasets_excluded_tags_that_are_all_on_datasets_do_not_block() -> None:
+    project = FakeProject([make_dataset("gold", ["Stage:Gold"]), make_dataset("other", [])])
+
+    recap, _ = run(MACRO, project, {"excluded_tags": ["Stage:Gold"], **ALL_DATASETS, **REAL_RUN})
+
     assert recap["blockers"] == []
-    assert notices_of(recap) == ["1 tag is on no dataset. Excluded: NoInList."]
+    assert project.cleared == ["other"]
+
+
+def test_with_all_datasets_an_empty_project_is_not_blocked_by_an_excluded_tag() -> None:
+    # Nothing can be cleared, so there is nothing to protect.
+    recap, _ = run(MACRO, FakeProject([]), {"excluded_tags": ["kep"], **ALL_DATASETS, **REAL_RUN})
+
+    assert recap["blockers"] == []
+    assert notices_of(recap) == ["No dataset selected. This project has no dataset."]
+
+
+def test_with_included_tags_an_excluded_tag_on_no_dataset_is_only_a_notice() -> None:
+    project = FakeProject([make_dataset("tmp", ["tmp"]), make_dataset("other", [])])
+
+    recap, _ = run(MACRO, project, {"included_tags": ["tmp"], "excluded_tags": ["kep"], **REAL_RUN})
+
+    assert recap["blockers"] == []
+    assert project.cleared == ["tmp"]
+    assert notices_of(recap) == ["1 tag is on no dataset. Excluded: kep."]
 
 
 def test_an_excluded_tag_counts_every_dataset_carrying_it_not_only_the_selected_ones() -> None:

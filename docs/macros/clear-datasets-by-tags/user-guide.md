@@ -23,7 +23,7 @@ The tag rules of the form say which datasets the macro takes, and which it leave
 | Datasets with the included tags | One or more | None | Clears the datasets with the included tags. |
 | Datasets with the included tags | One or more | One or more | Clears the datasets with the included tags, except the excluded ones. |
 | All datasets | Ignored | None | Clears every dataset of the project. |
-| All datasets | Ignored | One or more | Clears every dataset of the project, except the excluded ones. |
+| All datasets | Ignored | One or more | Clears every dataset of the project, except the excluded ones. An excluded tag on no dataset stops a real run: see [Checks before clearing](#checks-before-clearing). |
 
 In every case, the [options](#the-options) and the [datasets that are never cleared](#datasets-that-are-never-cleared) still apply, and "Simulate" only shows what would be cleared.
 
@@ -43,7 +43,7 @@ Rules:
 
 - **Exact match**, upper and lower case included: `Temporary` does not match `temporary`.
 - **A tag in both lists** is excluded, and a notice names it. Check the two lists.
-- **A tag on no dataset** selects nothing, or excludes nothing. It does not stop the run, and a notice names it: with a typo in an excluded tag, the datasets it should protect are cleared.
+- **A tag on no dataset** selects nothing, or excludes nothing. With "Datasets with the included tags", it does not stop the run, and a notice names it: with a typo in an excluded tag, the datasets it should protect are cleared. With "All datasets", an excluded tag on no dataset stops a real run, since the excluded tags are the only protection.
 
 ## The options
 
@@ -89,6 +89,7 @@ The macro first decides for each dataset, and only then clears. It finds every r
 |---|---|---|
 | Datasets shared with other projects | The recap names the projects of each shared dataset. | DSS gives this list only to project administrators. With "Clear shared datasets" checked (the default), the run continues with a notice. Unchecked, a real run stops: it cannot skip what it cannot find. |
 | Datasets with no recipe | The recap shows them. | Reading the Flow failed. Option unchecked: a real run stops. Checked: the run continues with a notice. |
+| Excluded tags, with "All datasets" | Each excluded tag is on at least one dataset. With no excluded tags, there is nothing to check: the run clears every dataset. | An excluded tag is on no dataset, for example `kep` typed for `keep`: it protects nothing, so a real run stops. Fix the tag, or remove it to clear every dataset. |
 
 So, with "Clear shared datasets" unchecked, a real run by an editor who is not a project administrator stops. Ask a project administrator to run it, or check "Clear shared datasets".
 

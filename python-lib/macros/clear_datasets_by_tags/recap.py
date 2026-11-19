@@ -251,7 +251,7 @@ def build_banners(recap: dict[str, Any]) -> list[Banner]:
         simulate = OPTION_LABELS["simulate"]
         banners.append(Banner(TONE_PENDING, "Simulation, nothing was cleared.", f'Uncheck "{simulate}" to clear.'))
     for blocker in recap["blockers"]:
-        banners.append(Banner(TONE_DANGER, f"A real run would stop: {blocker.check} not checked.", blocker.text))
+        banners.append(Banner(TONE_DANGER, f"A real run would stop: {blocker.reason}.", blocker.text))
     return banners + build_failure_banners(recap) + build_risk_banners(recap)
 
 

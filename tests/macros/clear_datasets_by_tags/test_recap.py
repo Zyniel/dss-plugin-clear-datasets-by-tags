@@ -313,6 +313,19 @@ def test_a_simulation_gives_one_banner_per_reason_to_stop() -> None:
     ) in html
 
 
+def test_a_simulation_with_all_datasets_shows_an_excluded_tag_on_no_dataset_in_red() -> None:
+    project = FakeProject([make_dataset("ds", [])])
+
+    html = recap_html(project, {"included_scope": "ALL_DATASETS", "excluded_tags": ["kep"]})
+
+    assert (
+        '<div class="dtp-banner dtp-banner-danger"><strong>A real run would stop: 1 excluded tag is on no '
+        'dataset.</strong> With "All datasets", it protects nothing: kep. Fix it, or remove it to clear every '
+        "dataset.</div>"
+    ) in html
+    assert "<strong>1 tag is on no dataset.</strong>" not in html
+
+
 def test_a_simulation_counts_the_datasets_to_clear_that_carry_a_risk() -> None:
     project = FakeProject(
         [
