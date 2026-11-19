@@ -447,6 +447,7 @@ def test_an_unreadable_flow_is_a_notice_when_the_option_is_checked() -> None:
 
 
 def test_an_excluded_tag_on_no_dataset_does_not_stop_the_run_and_is_named() -> None:
+    # On purpose, even with "All datasets": see docs/adr/0002-an-excluded-tag-on-no-dataset-is-only-a-notice.md.
     project = FakeProject([make_dataset("gold", ["Stage:Gold"]), make_dataset("other", [])])
 
     recap, _ = run(MACRO, project, {"excluded_tags": ["NoInList", "Stage:Gold"], **ALL_DATASETS, **REAL_RUN})

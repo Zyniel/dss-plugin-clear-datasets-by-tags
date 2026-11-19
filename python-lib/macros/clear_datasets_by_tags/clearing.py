@@ -295,7 +295,8 @@ def build_tag_notices(
             reason = "No dataset has all the included tags."
         notices.append(Banner(TONE_CAUTION, "No dataset selected.", reason))
     elif included_on_no_dataset or excluded_on_no_dataset:
-        # A typo in an excluded tag protects nothing: the datasets it should keep are cleared.
+        # A typo in an excluded tag protects nothing: the datasets it should keep are cleared. Only a
+        # notice, on purpose: see docs/adr/0002-an-excluded-tag-on-no-dataset-is-only-a-notice.md.
         tag_lists = []
         if included_on_no_dataset:
             tag_lists.append(f"Included: {', '.join(included_on_no_dataset)}.")
