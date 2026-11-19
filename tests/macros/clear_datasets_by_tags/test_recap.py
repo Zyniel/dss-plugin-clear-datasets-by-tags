@@ -1,11 +1,11 @@
-"""Tests of the recap: the JSON summary, the recap dataset rows, the failure message and the HTML page."""
+"""Tests of the recap: the JSON recap, the summary dataset rows, the failure message and the HTML page."""
 
 import json
 import re
 from typing import Any
 
 from macros.clear_datasets_by_tags import MACRO
-from macros.clear_datasets_by_tags.cleanup import (
+from macros.clear_datasets_by_tags.clearing import (
     STATUS_CLEARED,
     STATUS_EXCLUDED,
     STATUS_FAILED,
@@ -14,8 +14,8 @@ from macros.clear_datasets_by_tags.cleanup import (
 )
 from macros.clear_datasets_by_tags.recap import (
     COLUMNS,
-    RECAP_COLUMNS,
     STATUSES,
+    SUMMARY_COLUMNS,
     build_recap_page,
     build_recap_rows,
     build_summary,
@@ -92,7 +92,7 @@ def metric(html: str, label: str) -> str:
     return before_label[value_start:].replace("</span>", "")
 
 
-# JSON summary and log
+# JSON recap and log
 
 
 def test_summary_of_a_real_run_is_plain_json() -> None:
@@ -165,9 +165,9 @@ def test_one_recap_row_per_selected_dataset_in_the_column_order() -> None:
 
     rows = build_recap_rows(recap)
 
-    records = [dict(zip(RECAP_COLUMNS, row)) for row in rows]
-    assert MACRO.recap_columns == RECAP_COLUMNS
-    assert all(len(row) == len(RECAP_COLUMNS) for row in rows)
+    records = [dict(zip(SUMMARY_COLUMNS, row)) for row in rows]
+    assert MACRO.summary_columns == SUMMARY_COLUMNS
+    assert all(len(row) == len(SUMMARY_COLUMNS) for row in rows)
     assert records[0]["run_id"] == "r1"
     assert records[0]["simulate"] == "false"
     assert records[0]["shared_with"] == "B, C"
@@ -389,7 +389,7 @@ def test_the_table_does_not_repeat_on_each_row_that_the_sharing_was_not_checked(
     assert build_recap_page(recap).table.rows[0]["detail"] == "Has included tags"
     # The summary dataset and the JSON recap keep it: each of their rows stands alone.
     warning = "Sharing not checked: other projects may use it"
-    assert dict(zip(RECAP_COLUMNS, build_recap_rows(recap)[0]))["warnings"] == warning
+    assert dict(zip(SUMMARY_COLUMNS, build_recap_rows(recap)[0]))["warnings"] == warning
     assert build_summary(recap)["datasets"][0]["warnings"] == [warning]
 
 

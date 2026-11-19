@@ -1,4 +1,4 @@
-"""What the recap of "Report Dataset Tags" holds: the JSON summary, the recap dataset, the HTML page."""
+"""What the recap of "Report Dataset Tags" holds: the JSON recap, the summary dataset, the HTML page."""
 
 from typing import Any
 
@@ -35,7 +35,7 @@ from recap.page import (
 
 # One row per tag and dataset. An unused tag has a row with no dataset, and a dataset with no tag
 # has a row with no tag. Every column is stored as text: see write_recap_dataset().
-RECAP_COLUMNS = [
+SUMMARY_COLUMNS = [
     "run_id",
     "run_started_at",
     "macro",
@@ -69,7 +69,7 @@ COLUMNS_BY_TAG = [
     Column("category", "Category", width=140),
 ]
 
-# "Aggregate by tag" unchecked: one row per tag and dataset, as in the recap dataset.
+# "Aggregate by tag" unchecked: one row per tag and dataset, as in the summary dataset.
 COLUMNS_BY_TAG_AND_DATASET = [
     Column("tag", "Tag", width=200, pinned=True),
     Column("status", "Status", COLUMN_STATUS, width=120),
@@ -133,7 +133,7 @@ def build_summary(recap: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_recap_rows(recap: dict[str, Any]) -> list[list[str]]:
-    """Return the rows of the recap dataset, in the order of RECAP_COLUMNS."""
+    """Return the rows of the summary dataset, in the order of SUMMARY_COLUMNS."""
     run = [recap["run_id"], recap["started_at"], recap["macro"], recap["project_key"], recap["run_by"]]
     types = recap["dataset_types"]
     rows = []
@@ -147,7 +147,7 @@ def build_recap_rows(recap: dict[str, Any]) -> list[list[str]]:
 
 
 def describe_failures(recap: dict[str, Any]) -> str:
-    """A report changes nothing, so nothing in its work can fail. Only the recap dataset can."""
+    """A report changes nothing, so nothing in its work can fail. Only the summary dataset can."""
     return ""
 
 

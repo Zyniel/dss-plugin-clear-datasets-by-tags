@@ -1,4 +1,4 @@
-"""Tests of the shared runner, with a minimal macro: the recap fields, the recap dataset, the log, failing the run."""
+"""Tests of the shared runner, with a minimal macro: the recap fields, the summary dataset, the log, failing the run."""
 
 import json
 import logging
@@ -6,7 +6,7 @@ from typing import Any, Optional
 
 import pytest
 
-from core.macro import RunStopped
+from core.macro import RunBlocked
 from core.runner import RunFailed, run_macro
 from support.fakes import PROJECT_KEY, FakeClient, FakeProject, FakeRecapDataset, make_dataset
 from support.runs import run
@@ -24,7 +24,7 @@ def run_with(
 
     def open_dataset(name: str) -> FakeRecapDataset:
         opened.append(name)
-        assert recap_dataset is not None, "no recap dataset expected"
+        assert recap_dataset is not None, "no summary dataset expected"
         return recap_dataset
 
     html = run_macro(
@@ -86,7 +86,7 @@ def test_the_recap_is_written_to_the_recap_dataset_with_the_columns_of_the_macro
         FakeProject([make_dataset("d1", []), make_dataset("d2", [])]), {"recap_dataset": "r"}, recap_dataset
     )
 
-    assert [column["name"] for column in recap_dataset.schema] == MACRO.recap_columns
+    assert [column["name"] for column in recap_dataset.schema] == MACRO.summary_columns
     assert [row[1:] for row in recap_dataset.rows] == [["d1", "DONE"], ["d2", "DONE"]]
     assert "<strong>Summary written.</strong> 2 rows in dataset r." in html
 
@@ -216,10 +216,10 @@ def test_fail_the_run_returns_the_recap_when_everything_worked() -> None:
     assert "Sample Macro · Project TEST" in html
 
 
-def test_a_stopped_run_writes_no_recap() -> None:
+def test_a_blocked_run_writes_no_recap() -> None:
     recap_dataset = FakeRecapDataset()
 
-    with pytest.raises(RunStopped):
+    with pytest.raises(RunBlocked):
         run_with(FakeProject([make_dataset("ds", [])]), {"stop": True, "recap_dataset": "r"}, recap_dataset)
 
     assert (recap_dataset.schema, recap_dataset.rows) == ([], [])

@@ -1,6 +1,6 @@
 # Clear Datasets by Tags: user guide
 
-The macro clears the data of the datasets of a project, selected by their tags, or of all of them. The definitions, schemas and settings of the datasets stay: only the data is cleared.
+The macro clears the data of the datasets of a project that match its tag rules: the datasets with the included tags, or all of them, minus the ones with the excluded tags. The definitions, schemas and settings of the datasets stay: only the data is cleared.
 
 You cannot undo a clear, and anything that uses a cleared dataset can break until it is rebuilt. The macro only simulates while "Simulate" is checked.
 
@@ -11,6 +11,8 @@ The macro is in **Macros > Project maintenance** of each project, for users who 
 Only project administrators can read which datasets are shared with other projects. See [Checks before clearing](#checks-before-clearing).
 
 ## Select the datasets
+
+The tag rules of the form say which datasets the macro takes, and which it leaves:
 
 1. **Include:** "Datasets with the included tags" (default) selects the datasets with the included tags. "All datasets" selects every dataset of the project.
 2. **Excluded tags:** among the selected datasets, the ones with these tags are excluded, and never cleared.
@@ -63,13 +65,13 @@ DSS remembers the values of your last run of the macro in this project, in this 
 
 ## Datasets that are never cleared
 
-- **Datasets shared by other projects** into this one: they are never selected, and not shown.
+- **Foreign datasets**, shared by other projects into this one: they are never selected, and not shown.
 - **External datasets:** DSS does not manage their data, for example a SQL table created outside DSS. They are skipped, with the reason in the recap.
 - **The summary dataset** of the run.
 
 ## How the macro decides
 
-For each selected dataset, the first rule that applies wins:
+For each selected dataset, the first protection that applies wins:
 
 1. it has the excluded tags: **Excluded**;
 2. it is the summary dataset: **Skipped**;
@@ -115,10 +117,10 @@ Then:
 | Cleared | The data was cleared. The messages of DSS are in the Detail column. |
 | Cleared (Simulate) | Simulation: nothing was cleared, a real run would clear it. |
 | Failed | DSS could not clear it. The error is in the Detail column. The run continued with the next datasets, unless "If an error occurs" is "Raise exception". |
-| Skipped | A rule or an option protected it, or the run stopped before it ("Not tried: the run stopped"). The reason is in the Detail column. |
+| Skipped | A protection kept it, or the run stopped before it ("Not tried: the run stopped"). The reason is in the Detail column. |
 | Excluded | It has the excluded tags. |
 
-The Detail column says why: "Has included tags", "Has excluded tags", or "Has all included tags" and "Has all excluded tags" with "All". With "All datasets", a dataset to clear has no reason to show. A skipped dataset says why, for example "Is external" or "Has no recipe; 'Clear datasets with no recipe' is unchecked". It also gives the warnings of cleared datasets: shared, partitioned, or with no recipe. When the user cannot read the sharing, a banner says it once: the summary dataset and the JSON recap have "Sharing not checked" on each dataset.
+The Detail column says why: "Has included tags", "Has excluded tags", or "Has all included tags" and "Has all excluded tags" with "All". With "All datasets", a dataset to clear has no reason to show. A skipped dataset says why, for example "Is external" or "Has no recipe; 'Clear datasets with no recipe' is unchecked". It also gives the risks of cleared datasets: shared, partitioned, or with no recipe. When the user cannot read the sharing, a banner says it once: the summary dataset and the JSON recap have "Sharing not checked" on each dataset.
 
 ## Good practice
 

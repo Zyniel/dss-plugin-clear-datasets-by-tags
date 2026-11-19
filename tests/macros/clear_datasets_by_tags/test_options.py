@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 
 from core.options import RECAP_OPTION_DEFAULTS, RUN_OPTION_DEFAULTS
-from macros.clear_datasets_by_tags.cleanup import OPTION_DEFAULTS, read_options
+from macros.clear_datasets_by_tags.clearing import OPTION_DEFAULTS, read_options
 from support.fakes import PROJECT_KEY
 
 

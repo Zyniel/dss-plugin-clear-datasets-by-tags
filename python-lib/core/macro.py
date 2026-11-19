@@ -7,8 +7,8 @@ from typing import Any
 from recap.page import RecapPage
 
 
-class RunStopped(Exception):
-    """Raised before changing anything, when a real run must not go on."""
+class RunBlocked(Exception):
+    """Raised when a blocker stops a real run, before anything changes."""
 
 
 class MaintenanceMacro(ABC):
@@ -30,7 +30,7 @@ class MaintenanceMacro(ABC):
 
     id: str  # Its folder in python-runnables.
     label: str  # Its name on the Macros page, as in its runnable.json.
-    recap_columns: list[str]  # The columns of its recap dataset.
+    summary_columns: list[str]  # The columns of its summary dataset.
 
     @abstractmethod
     def run(
@@ -42,7 +42,7 @@ class MaintenanceMacro(ABC):
         :param config: values of the macro form
         :param progress_callback: called with the percentage of the work done
         :raises ValueError: if the form is not valid, before changing anything
-        :raises RunStopped: in a real run, if a check fails, before changing anything
+        :raises RunBlocked: in a real run, if a blocker stops it, before changing anything
         """
 
     @abstractmethod
@@ -51,7 +51,7 @@ class MaintenanceMacro(ABC):
 
     @abstractmethod
     def build_recap_rows(self, recap: dict[str, Any]) -> list[list[str]]:
-        """Return the rows of the recap dataset, as texts in the order of recap_columns."""
+        """Return the rows of the summary dataset, as texts in the order of summary_columns."""
 
     @abstractmethod
     def build_recap_page(self, recap: dict[str, Any]) -> RecapPage:
@@ -67,5 +67,5 @@ class MaintenanceMacro(ABC):
 
         The runner logs it, and fails the run with it when "If an error occurs" is "Fail the run". When
         the run goes on, DSS shows a success, so build_recap_page() must show the failure in a banner.
-        The runner handles the recap dataset itself. A macro that only reads returns "".
+        The runner handles the summary dataset itself. A macro that only reads returns "".
         """

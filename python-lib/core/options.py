@@ -4,11 +4,10 @@ Every macro form ends with the "Summary" section. A macro that changes data also
 section, just before it. The options of these two sections are read here.
 
 Each section has its own choice for errors: "If an error occurs" for the work, in the "Run" section,
-and "If the summary is not written" for the recap dataset, in the "Summary" section.
+and "If the summary is not written" for the summary dataset, in the "Summary" section.
 
-The form calls the recap dataset "Summary dataset". The code keeps the word recap, as in the
-parameter names (recap_to_dataset, recap_dataset, recap_append, on_recap_error) that scenarios and
-API calls use.
+The parameter names keep the word recap (recap_to_dataset, recap_dataset, recap_append,
+on_recap_error): scenarios and API calls use them. Everywhere else, it is the summary dataset.
 """
 
 from typing import Any, Optional
@@ -80,7 +79,7 @@ def option_unchecked(label: str) -> str:
 
 
 def read_recap_dataset_name(config: dict[str, Any], project_key: str) -> Optional[str]:
-    """Return the name of the recap dataset, or None when the form does not ask for one.
+    """Return the name of the summary dataset, or None when the form does not ask for one.
 
     The DSS dataset picker has no empty entry, so unchecking "Write to a dataset" is how a
     user stops using a dataset picked earlier. Only a real false turns it off: an API call that gives

@@ -17,7 +17,7 @@ For the datasets of the project, the macro gives:
 - **unused tags:** tags of the project tag list that no dataset has;
 - **unknown tags:** tags that look like category tags (`<category>:<value>`, for example `Stage:Raw`), but whose category or value does not exist in the tag categories of DSS. Maybe a typo.
 
-Datasets shared by other projects into this one are not in the report.
+Foreign datasets, shared by other projects into this one, are not in the recap.
 
 Each row of the table has a status:
 
@@ -33,7 +33,7 @@ Good to know:
 - **The project tag list** also contains the tags of other objects of the project, such as recipes or notebooks. So an "Unused" tag can still be on a recipe.
 - **The tag categories** are set by a DSS administrator, in **Administration > Settings > Global tag categories**. Only DSS administrators can read them. For other users, the macro does not check category tags: all tags in use are "Used", and the recap shows a notice.
 - **A tag with no category**, like `temporary`, is never unknown.
-- **The summary dataset** is a dataset of the project, so it is in the report too.
+- **The summary dataset** is a dataset of the project, so it is in the recap too.
 
 ## The options
 
@@ -41,7 +41,7 @@ Good to know:
 |---|---|---|
 | Show unused tags | Checked | Adds the tags of the project tag list that no dataset has. |
 | Aggregate by tag | Checked | Checked: one row per tag, with the names of its datasets. Unchecked: one row per tag and dataset. |
-| Write to a dataset | Unchecked | Keeps the report in a dataset: see [automation](automation.md#summary-dataset). |
+| Write to a dataset | Unchecked | Keeps the recap in a dataset: see [automation](automation.md#summary-dataset). |
 | Summary dataset | None | Visible when the option above is checked. |
 | Append mode | Checked | Visible when "Write to a dataset" is checked. Unchecked: each run replaces the content of the dataset. |
 | If the summary is not written | Continue | Visible when "Write to a dataset" is checked. "Fail the run" is for scenarios: see [automation](automation.md#scenarios). |

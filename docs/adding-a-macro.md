@@ -16,7 +16,7 @@ Create `python-lib/macros/drop_old_partitions/` with:
 | File | Content |
 |---|---|
 | `__init__.py` | A docstring that presents the macro, then `from macros.drop_old_partitions.macro import MACRO`. |
-| `macro.py` | The subclass of `MaintenanceMacro`, with `id`, `label`, `recap_columns`, and an instance `MACRO`. Each method calls a function of the two next files. |
+| `macro.py` | The subclass of `MaintenanceMacro`, with `id`, `label`, `summary_columns`, and an instance `MACRO`. Each method calls a function of the two next files. |
 | A file for the work, for example `partitions.py` | Read the form, decide, then act. |
 | `recap.py` | The JSON of the recap, the rows of the summary dataset, the `RecapPage`, and `describe_failures()`: what failed in the work, as counts. |
 
@@ -26,7 +26,7 @@ Rules:
 - **Never import another macro.** If code of another macro is useful, move it to `core` or `recap`, with its tests.
 - **Simulate by default.** A macro that changes data simulates by default ("Simulate" checked). Choose the default of each other option with care: an API call that sends no value gets it. A macro that only reads has no "Simulate" option.
 - **Stop at the first error when asked.** When `options["on_error"]` is `ON_ERROR_STOP` ("Raise exception"), stop the work at the first failure, and mark the items not tried. The runner then ends the run in error.
-- **Decide before you act.** Find all the reasons to stop before you change anything, then raise `RunStopped` if needed.
+- **Decide before you act.** Find all the blockers before you change anything, then raise `RunBlocked` if there is one.
 - **Report, do not crash.** A failure on one item goes into the recap, and the run continues with the next items. When the run goes on, show the failure in a banner: DSS shows a success.
 - **Count, do not list.** A banner gives counts for what the summary dataset holds, and details only for what it cannot give, such as an error of DSS (use `dss_said()`) or a tag of the form. A message must not grow with the project.
 - **Absolute imports:** `from core.tags import matches`.
@@ -43,7 +43,7 @@ Create `python-runnables/drop-old-partitions/runnable.json`. The easiest way: co
 - Then, at the end, the sections below, **copied with no change**:
   - for a macro that changes data only: the "Run" section, with `on_error`. Change only the descriptions of the section and of `on_error`, to say which errors your macro can have;
   - for every macro: the "Summary" section, with `recap_to_dataset`, `recap_dataset`, `recap_append`, `on_recap_error`.
-- A macro that only reads, like a report, has no "Run" section. Only its summary dataset can fail the run, with `on_recap_error`.
+- A macro that only reads, like the Report Dataset Tags macro, has no "Run" section. Only its summary dataset can fail the run, with `on_recap_error`.
 - Each list (`STRINGS`, `MULTISELECT`) has its own `"defaultValue": []`.
 - For lists of category tags, add `"paramsPythonSetup": "tag_choices.py"`.
 

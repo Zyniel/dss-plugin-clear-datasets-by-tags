@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 ![DSS 13 and later](https://img.shields.io/badge/DSS-13%2B-blue)
 
-**Clear Datasets by Tags** is a plugin for Dataiku (DSS) with macros to maintain projects: it clears the data of the datasets selected by their tags, or of all datasets, and reports how the datasets use tags. A macro that changes data simulates by default: it shows what it would do before it changes anything.
+**Clear Datasets by Tags** is a plugin for Dataiku (DSS) with macros to maintain projects: it clears the data of the datasets that match tag rules, and reports how the datasets use tags. A macro that changes data simulates by default: it shows what it would do before it changes anything.
 
 > Community plugin: not affiliated with, supported or endorsed by Dataiku. For questions and bugs, open an [issue](https://github.com/Zyniel/dss-plugin-clear-datasets-by-tags/issues).
 
@@ -16,7 +16,7 @@ They are in the **Project maintenance** section of the **Macros** page of a proj
 
 ### Clear Datasets by Tags
 
-Clears the data of datasets selected by tags: the included tags, or all datasets, minus the excluded tags. The definitions, schemas and settings of the datasets stay. Simulates by default.
+Clears the data of the datasets that match its tag rules: the datasets with the included tags, or all of them, minus the ones with the excluded tags. The definitions, schemas and settings of the datasets stay. Simulates by default.
 
 Documentation: [user guide](docs/macros/clear-datasets-by-tags/user-guide.md), [automation](docs/macros/clear-datasets-by-tags/automation.md).
 
@@ -39,7 +39,7 @@ Reports how the datasets use tags: tags in use, unused tags, unknown category ta
 
 Documentation: [user guide](docs/macros/report-dataset-tags/user-guide.md), [automation](docs/macros/report-dataset-tags/automation.md).
 
-![The recap of the report in DSS: 2 unknown tags, 1 untagged dataset and 1 unused tag](docs/images/report-dataset-tags/recap.png)
+![The recap of the Report Dataset Tags macro in DSS: 2 unknown tags, 1 untagged dataset and 1 unused tag](docs/images/report-dataset-tags/recap.png)
 
 The recap: 2 unknown tags, `Owner:Finance` and `Stage:Ouput` (a typo), 1 dataset with no tag, and 1 tag of the project on no dataset.
 

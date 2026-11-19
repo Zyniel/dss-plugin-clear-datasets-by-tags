@@ -6,9 +6,9 @@ Tests that run the macros on a real DSS, in `tests/integration`. The other tests
 
 | File | Tests | Rows of [verification](verification.md) |
 |---|---|---|
-| `test_clear_datasets_by_tags.py` | A simulation clears nothing. A real run clears only the selected datasets. An uploaded dataset is never cleared. "All datasets" clears every managed dataset except the excluded ones. Excluded tags alone are refused. | 9, 10, 11, 28 |
+| `test_clear_datasets_by_tags.py` | A simulation clears nothing. A real run clears only the datasets that match the tag rules. An uploaded dataset is never cleared. "All datasets" clears every managed dataset except the excluded ones. Excluded tags alone are refused. | 9, 10, 11, 28 |
 | `test_summary_dataset.py` | "Append mode" keeps the earlier runs. "Fail the run" fails the step of a scenario, "Continue" does not. | 15, 25 |
-| `test_permissions.py` | An editor sees both macros, clears without reading the sharing, and cannot skip shared datasets. A reader sees only the report, cannot clear data, and runs the report without the tag categories of the instance. | 8, 13, 22, 24 |
+| `test_permissions.py` | An editor sees both macros, clears without reading the sharing, and cannot skip shared datasets. A reader sees only the Report Dataset Tags macro, cannot clear data, and runs it without the tag categories of the instance. | 8, 13, 22, 24 |
 
 ## What you need
 

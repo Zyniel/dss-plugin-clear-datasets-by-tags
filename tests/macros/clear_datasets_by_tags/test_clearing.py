@@ -1,18 +1,18 @@
-"""Tests of the cleanup: which datasets the macro selects, excludes and skips, and how it clears them."""
+"""Tests of the clearing: which datasets the macro selects, excludes and skips, and how it clears them."""
 
 import logging
 from typing import Any
 
 import pytest
 
-from core.macro import RunStopped
+from core.macro import RunBlocked
 from macros.clear_datasets_by_tags import MACRO
-from macros.clear_datasets_by_tags.cleanup import (
+from macros.clear_datasets_by_tags.clearing import (
     SKIP_EXTERNAL,
     SKIP_PARTITIONED,
-    SKIP_RECAP_DATASET,
     SKIP_SHARED,
     SKIP_STOPPED,
+    SKIP_SUMMARY_DATASET,
     SKIP_WITHOUT_RECIPE,
     STATUS_CLEARED,
     STATUS_EXCLUDED,
@@ -108,7 +108,7 @@ def test_all_datasets_without_excluded_tags_clears_every_dataset_the_rules_allow
     assert {row["name"]: row["skip_code"] for row in recap["datasets"] if row["status"] == STATUS_SKIPPED} == {
         "external": SKIP_EXTERNAL,
         "partitioned": SKIP_PARTITIONED,
-        "recap": SKIP_RECAP_DATASET,
+        "recap": SKIP_SUMMARY_DATASET,
         "shared": SKIP_SHARED,
         "source": SKIP_WITHOUT_RECIPE,
     }
@@ -269,7 +269,7 @@ def test_the_recap_dataset_is_never_cleared_by_its_own_run() -> None:
 
     assert project.cleared == ["data"]
     assert (row_of(recap, "recap")["skip_code"], row_of(recap, "recap")["detail"]) == (
-        SKIP_RECAP_DATASET,
+        SKIP_SUMMARY_DATASET,
         "Is the summary dataset",
     )
 
@@ -318,7 +318,7 @@ def test_a_real_run_of_an_editor_that_skips_shared_datasets_stops_since_they_can
     project = FakeProject([make_dataset("ds", ["a"])], is_admin=False)
 
     with pytest.raises(
-        RunStopped,
+        RunBlocked,
         match=(
             r'^Nothing was cleared\. Sharing not checked\. Check "Clear shared datasets", or ask a project '
             r"administrator to run the macro\. DSS said: Action forbidden, you are not admin of this project\.$"
@@ -422,7 +422,7 @@ def test_an_unreadable_flow_stops_a_real_run_by_default() -> None:
     project = FakeProject([make_dataset("ds", ["a"])], flow_error=RuntimeError("timeout"))
 
     with pytest.raises(
-        RunStopped,
+        RunBlocked,
         match=(
             r'^Nothing was cleared\. Recipes not checked\. Check "Clear datasets with no recipe", or run the macro '
             r"again\. DSS said: timeout\.$"

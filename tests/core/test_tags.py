@@ -9,14 +9,14 @@ from core.tags import (
     MATCH_ANY,
     SCOPE_ALL_DATASETS,
     SCOPE_TAGS,
-    TagSelection,
+    TagRules,
     describe_match,
     ignored_included_tags,
     list_category_tag_choices,
     matches,
     read_listed_tag_categories,
     read_tag_list,
-    read_tag_selection,
+    read_tag_rules,
     select_datasets,
     split_category_tag,
     tags_in_both,
@@ -49,11 +49,11 @@ def test_both_lists_are_read_with_how_they_match() -> None:
         "excluded_category_tags": ["Stage:Gold"],
     }
 
-    assert read_tag_selection(config) == TagSelection(["a", "Stage:Raw"], MATCH_ALL, ["k", "Stage:Gold"], MATCH_ANY)
+    assert read_tag_rules(config) == TagRules(["a", "Stage:Raw"], MATCH_ALL, ["k", "Stage:Gold"], MATCH_ANY)
 
 
 def test_an_empty_excluded_list_excludes_nothing() -> None:
-    assert read_tag_selection({"included_tags": ["a"]}).excluded_tags == []
+    assert read_tag_rules({"included_tags": ["a"]}).excluded_tags == []
 
 
 @pytest.mark.parametrize(
@@ -67,24 +67,24 @@ def test_an_empty_excluded_list_excludes_nothing() -> None:
 )
 def test_the_included_tags_need_at_least_one_tag(config: dict[str, Any]) -> None:
     with pytest.raises(ValueError, match=r"^Give at least one included tag, or choose 'All datasets' in 'Include'\.$"):
-        read_tag_selection(config)
+        read_tag_rules(config)
 
 
 @pytest.mark.parametrize("value", [None, ""])
 def test_include_defaults_to_the_included_tags(value: Any) -> None:
-    assert read_tag_selection({"included_scope": value, "included_tags": ["a"]}).included_scope == SCOPE_TAGS
+    assert read_tag_rules({"included_scope": value, "included_tags": ["a"]}).included_scope == SCOPE_TAGS
 
 
 @pytest.mark.parametrize("value", ["all", "ALL", "TAGS ", 1, ["ALL_DATASETS"]])
 def test_include_is_tags_or_all_datasets(value: Any) -> None:
     with pytest.raises(ValueError, match="included_scope must be TAGS or ALL_DATASETS"):
-        read_tag_selection({"included_scope": value, "included_tags": ["a"]})
+        read_tag_rules({"included_scope": value, "included_tags": ["a"]})
 
 
 def test_all_datasets_needs_no_tag() -> None:
-    selection = read_tag_selection({"included_scope": SCOPE_ALL_DATASETS})
+    rules = read_tag_rules({"included_scope": SCOPE_ALL_DATASETS})
 
-    assert selection == TagSelection([], MATCH_ANY, [], MATCH_ANY, SCOPE_ALL_DATASETS)
+    assert rules == TagRules([], MATCH_ANY, [], MATCH_ANY, SCOPE_ALL_DATASETS)
 
 
 def test_all_datasets_ignores_the_included_tags_and_names_them() -> None:
@@ -96,29 +96,29 @@ def test_all_datasets_ignores_the_included_tags_and_names_them() -> None:
         "excluded_tags": ["a"],
     }
 
-    selection = read_tag_selection(config)
+    rules = read_tag_rules(config)
 
-    assert (selection.included_tags, selection.excluded_tags) == ([], ["a"])
-    assert ignored_included_tags(config, selection) == ["a", "Stage:Raw"]
-    assert tags_in_both(selection) == []
+    assert (rules.included_tags, rules.excluded_tags) == ([], ["a"])
+    assert ignored_included_tags(config, rules) == ["a", "Stage:Raw"]
+    assert tags_in_both(rules) == []
 
 
 def test_no_included_tag_is_ignored_with_the_included_tags() -> None:
     config = {"included_tags": ["a"]}
-    assert ignored_included_tags(config, read_tag_selection(config)) == []
+    assert ignored_included_tags(config, read_tag_rules(config)) == []
 
 
 def test_a_tag_in_both_lists_does_not_stop_reading_the_form() -> None:
-    selection = read_tag_selection({"included_category_tags": ["Stage:Raw"], "excluded_category_tags": ["Stage:Raw"]})
+    rules = read_tag_rules({"included_category_tags": ["Stage:Raw"], "excluded_category_tags": ["Stage:Raw"]})
 
-    assert selection.included_tags == selection.excluded_tags == ["Stage:Raw"]
-    assert tags_in_both(selection) == ["Stage:Raw"]
+    assert rules.included_tags == rules.excluded_tags == ["Stage:Raw"]
+    assert tags_in_both(rules) == ["Stage:Raw"]
 
 
 @pytest.mark.parametrize("value", ["any", "both", 1])
 def test_a_match_is_any_or_all(value: Any) -> None:
     with pytest.raises(ValueError, match="included_match must be ANY or ALL"):
-        read_tag_selection({"included_tags": ["a"], "included_match": value})
+        read_tag_rules({"included_tags": ["a"], "included_match": value})
 
 
 # Matching
@@ -164,9 +164,9 @@ def test_included_tags_select_and_excluded_tags_flag() -> None:
         make_dataset("both", ["keep", "tmp"]),
         make_dataset("neither", ["other"]),
     ]
-    selection = TagSelection(["tmp"], MATCH_ANY, ["keep"], MATCH_ANY)
+    rules = TagRules(["tmp"], MATCH_ANY, ["keep"], MATCH_ANY)
 
-    selected = select_datasets(datasets, selection)
+    selected = select_datasets(datasets, rules)
 
     assert [(tagged.dataset["name"], tagged.is_excluded) for tagged in selected] == [
         ("included_only", False),
@@ -182,7 +182,7 @@ def test_included_tags_select_and_excluded_tags_flag() -> None:
 def test_all_datasets_selects_every_dataset(excluded_tags: list[str], expected: list[tuple[str, bool]]) -> None:
     datasets = [make_dataset("untagged", []), make_dataset("gold", ["Stage:Gold"])]
 
-    selected = select_datasets(datasets, TagSelection([], MATCH_ANY, excluded_tags, MATCH_ANY, SCOPE_ALL_DATASETS))
+    selected = select_datasets(datasets, TagRules([], MATCH_ANY, excluded_tags, MATCH_ANY, SCOPE_ALL_DATASETS))
 
     assert [(tagged.dataset["name"], tagged.is_excluded) for tagged in selected] == expected
 
@@ -192,13 +192,13 @@ def test_an_empty_included_list_selects_nothing(match: str) -> None:
     # all([]) is true: without this rule, ALL would select every dataset.
     datasets = [make_dataset("untagged", []), make_dataset("tagged", ["a"])]
 
-    assert select_datasets(datasets, TagSelection([], match, [], MATCH_ANY)) == []
+    assert select_datasets(datasets, TagRules([], match, [], MATCH_ANY)) == []
 
 
 def test_all_excluded_tags_exclude_only_the_datasets_carrying_every_one() -> None:
     datasets = [make_dataset("both", ["k1", "k2"]), make_dataset("one", ["k1"])]
 
-    selected = select_datasets(datasets, TagSelection([], MATCH_ANY, ["k1", "k2"], MATCH_ALL, SCOPE_ALL_DATASETS))
+    selected = select_datasets(datasets, TagRules([], MATCH_ANY, ["k1", "k2"], MATCH_ALL, SCOPE_ALL_DATASETS))
 
     assert [tagged.is_excluded for tagged in selected] == [True, False]
 

@@ -2,6 +2,12 @@
 
 The changes of each version of the plugin, the most recent first. The changes not released yet are under **Unreleased**.
 
+## Unreleased
+
+### For developers
+
+- `GLOSSARY.md` gives the words of the plugin, such as tag rules, protection, foreign dataset and blocked run. `docs/adr/` records the decisions that are hard to reverse, starting with why "Clear shared datasets" is checked by default. The docs and the code use these words: `RunStopped` is now `RunBlocked`, `TagSelection` is `TagRules`, `recap_columns` is `summary_columns`, and `cleanup.py` is `clearing.py`. The parameters of the forms, the JSON recap and the summary dataset do not change.
+
 ## 1.0.1-beta - 2026-11-18
 
 ### Plugin

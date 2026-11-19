@@ -11,7 +11,7 @@ def format_flag(value: Optional[bool]) -> str:
 
 
 def write_recap_dataset(dataset: Any, columns: list[str], rows: list[list[str]], keep_earlier_runs: bool) -> int:
-    """Write the recap rows to the recap dataset and return how many were written.
+    """Write the recap rows to the summary dataset and return how many were written.
 
     Every column is stored as text. DSS still detects booleans and numbers when the dataset is
     explored.
@@ -21,7 +21,7 @@ def write_recap_dataset(dataset: Any, columns: list[str], rows: list[list[str]],
     write at the same time both keep their rows. Otherwise the rows replace the data.
 
     :param dataset: a dataiku.Dataset, or any object with the same methods
-    :param columns: the columns of the recap dataset of the macro
+    :param columns: the columns of the summary dataset of the macro
     :raises ValueError: if the dataset already holds other columns, so that its data is never replaced
     """
     current_columns = [column["name"] for column in dataset.read_schema(raise_if_empty=False)]

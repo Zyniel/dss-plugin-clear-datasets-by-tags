@@ -1,9 +1,9 @@
-"""What the recap of "Clear Datasets by Tags" holds: the JSON summary, the recap dataset, the HTML page."""
+"""What the recap of "Clear Datasets by Tags" holds: the JSON recap, the summary dataset, the HTML page."""
 
 from typing import Any
 
 from core.tags import SCOPE_ALL_DATASETS, SCOPE_LABEL
-from macros.clear_datasets_by_tags.cleanup import (
+from macros.clear_datasets_by_tags.clearing import (
     OPTION_LABELS,
     SKIP_STOPPED,
     STATUS_CLEARED,
@@ -44,7 +44,7 @@ from recap.page import (
 )
 
 # Every column is stored as text: see write_recap_dataset().
-RECAP_COLUMNS = [
+SUMMARY_COLUMNS = [
     "run_id",
     "run_started_at",
     "macro",
@@ -161,7 +161,7 @@ def build_summary(recap: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_recap_rows(recap: dict[str, Any]) -> list[list[str]]:
-    """Return one row per selected dataset, in the order of RECAP_COLUMNS."""
+    """Return one row per selected dataset, in the order of SUMMARY_COLUMNS."""
     rows = []
     for row in recap["datasets"]:
         shared_with = ""
@@ -245,7 +245,7 @@ def build_risk_banners(recap: dict[str, Any]) -> list[Banner]:
 
 
 def build_banners(recap: dict[str, Any]) -> list[Banner]:
-    """Return the banners of this macro. The shared code adds the notices and the recap dataset result."""
+    """Return the banners of this macro. The shared code adds the notices and the summary dataset result."""
     banners = []
     if recap["simulate"]:
         simulate = OPTION_LABELS["simulate"]

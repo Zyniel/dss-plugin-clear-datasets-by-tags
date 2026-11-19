@@ -22,7 +22,7 @@ python-lib/
     clear_datasets_by_tags/
       __init__.py            Exposes MACRO
       macro.py               The class of the macro, which connects the two next files
-      cleanup.py             The work: read the form, decide, clear
+      clearing.py            The work: read the form, decide, clear
       recap.py               The content of the recap: JSON, rows of the summary dataset, HTML page
     report_dataset_tags/   Same layout, with report.py for the work: read and count the tags
 ```
@@ -54,8 +54,8 @@ Each macro defines a subclass of `MaintenanceMacro` (in `core/macro.py`) and one
 |---|---|
 | `id` | The name of its folder in `python-runnables`, for example `clear-datasets-by-tags`. |
 | `label` | Its name on the Macros page, the same as in its `runnable.json`. |
-| `recap_columns` | The columns of its summary dataset. |
-| `run()` | Does the work and returns the recap (a dict). Raises `ValueError` if the form is not valid, and `RunStopped` if a real run must stop. Both happen before anything changes. |
+| `summary_columns` | The columns of its summary dataset. |
+| `run()` | Does the work and returns the recap (a dict). Raises `ValueError` if the form is not valid, and `RunBlocked` if a blocker stops a real run. Both happen before anything changes. |
 | `describe_counts()` | The totals of the run, for the log. |
 | `build_recap_rows()` | The rows of the summary dataset. |
 | `build_recap_page()` | The description of the HTML recap (`RecapPage`), with the recap as JSON in its `summary`: for the API, the hidden block of the HTML and the `RECAP_JSON` log line. |
@@ -82,7 +82,7 @@ The smallest possible macro is in `tests/support/sample_macro.py`. The tests of 
 | Error | Raised by | When |
 |---|---|---|
 | `ValueError` | `macro.run()` | The form is not valid. Nothing changed. |
-| `RunStopped` | `macro.run()` | A real run must stop. Nothing changed. |
+| `RunBlocked` | `macro.run()` | A blocker stops a real run. Nothing changed. |
 | `RunFailed` | `run_macro()` | A problem whose option asks to end the run in error. The summary dataset and the log are written first. |
 
 DSS shows the message of the error as the result of the run.

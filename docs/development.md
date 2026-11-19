@@ -48,9 +48,11 @@ Git uses it for your commits in this repository, and for the commits Claude Code
 │   ├── integration/              The macros on a real DSS, skipped without a config file
 │   └── support/                  Fake DSS objects and test helpers
 ├── docs/                         Documentation
+│   ├── adr/                      The decisions that are hard to reverse, and why
 │   ├── images/                   The screenshots of the README, a folder per macro
 │   └── macros/                   The user guide and automation page of each macro
 ├── README.md                     For users: what the plugin does, install, settings
+├── GLOSSARY.md                   The words of the plugin, and the ones to avoid
 ├── CHANGELOG.md                  The changes of each version, and the unreleased ones
 ├── LICENSE                       MIT License
 ├── build_plugin_zip.py           Builds the zip to install in DSS
@@ -149,7 +151,7 @@ Three more workflows release a version: `prepare-release.yml`, `tag-release.yml`
 
 Example with an option of Clear Datasets by Tags:
 
-1. **Code:** in `macros/clear_datasets_by_tags/cleanup.py`, add it to `OPTION_DEFAULTS` and `OPTION_LABELS`. The default value must be the safe side.
+1. **Code:** in `macros/clear_datasets_by_tags/clearing.py`, add it to `OPTION_DEFAULTS` and `OPTION_LABELS`. The default value must be the safe side.
 2. **Form:** add it to `python-runnables/clear-datasets-by-tags/runnable.json`. A test checks that the default value and the label are the same as in the code.
 3. **Tests:** add it to `OPTION_PARAMS` in `tests/macros/clear_datasets_by_tags/test_form.py`, and test its effect.
 4. **Docs:** the user guide of the macro, its automation page, and the CHANGELOG.

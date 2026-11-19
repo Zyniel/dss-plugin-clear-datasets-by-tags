@@ -1,4 +1,4 @@
-"""Clear the data of the datasets selected by their tags.
+"""Clear the data of the datasets that match tag rules.
 
 A run has two steps. Step 1 decides what to do with each dataset, before clearing anything, so that
 any reason to stop is found while nothing is cleared yet. Step 2 clears the datasets, one by one.
@@ -9,7 +9,7 @@ import time
 from collections.abc import Callable
 from typing import Any, NamedTuple, Optional
 
-from core.macro import RunStopped
+from core.macro import RunBlocked
 from core.options import (
     ON_ERROR_STOP,
     option_unchecked,
@@ -28,11 +28,11 @@ from core.tags import (
     SCOPE_CHOICES,
     SCOPE_LABEL,
     TaggedDataset,
-    TagSelection,
+    TagRules,
     count_datasets_with_tag,
     describe_match,
     ignored_included_tags,
-    read_tag_selection,
+    read_tag_rules,
     select_datasets,
     tags_in_both,
 )
@@ -60,8 +60,8 @@ STATUS_LABELS = {
     STATUS_EXCLUDED: "Excluded",
 }
 
-# Why a dataset is skipped, for the readers of the recap dataset and of the JSON recap.
-SKIP_RECAP_DATASET = "RECAP_DATASET"
+# Why a dataset is skipped, for the readers of the summary dataset and of the JSON recap.
+SKIP_SUMMARY_DATASET = "RECAP_DATASET"
 SKIP_EXTERNAL = "EXTERNAL"
 SKIP_SHARED = "SHARED"
 SKIP_PARTITIONED = "PARTITIONED"
@@ -113,7 +113,7 @@ def read_options(config: dict[str, Any], project_key: str) -> dict[str, Any]:
 
 def decide(
     tagged: TaggedDataset,
-    selection: TagSelection,
+    rules: TagRules,
     options: dict[str, Any],
     shared_datasets: Optional[dict[str, list[str]]],
     datasets_without_recipe: Optional[set[str]],
@@ -147,7 +147,7 @@ def decide(
         "status": STATUS_TO_CLEAR,
         "skip_code": "",
         # With "All datasets", there is no included tag and nothing to say.
-        "detail": describe_match("included", selection.included_match) if selection.included_tags else "",
+        "detail": describe_match("included", rules.included_match) if rules.included_tags else "",
         "warnings": [],
         "duration": None,
     }
@@ -157,10 +157,10 @@ def decide(
         return row
 
     if tagged.is_excluded:
-        row.update(status=STATUS_EXCLUDED, detail=describe_match("excluded", selection.excluded_match))
+        row.update(status=STATUS_EXCLUDED, detail=describe_match("excluded", rules.excluded_match))
         return row
     if name == options["recap_dataset"]:
-        return skip(SKIP_RECAP_DATASET, "Is the summary dataset")
+        return skip(SKIP_SUMMARY_DATASET, "Is the summary dataset")
     if dataset.get("managed") is not True:
         # DSS does not manage the data of an external dataset, so it is never cleared.
         return skip(SKIP_EXTERNAL, f"Is external (connection {connection})" if connection else "Is external")
@@ -254,15 +254,15 @@ def tags_are(count: int) -> str:
 
 def build_tag_notices(
     config: dict[str, Any],
-    selection: TagSelection,
+    rules: TagRules,
     included_tag_counts: dict[str, int],
     excluded_tag_counts: dict[str, int],
     selected_count: int,
 ) -> list[Banner]:
-    """Return the notices about the tags of the form. They name the tags: no row of the recap dataset can."""
+    """Return the notices about the tags of the form. They name the tags: no row of the summary dataset can."""
     notices = []
 
-    ignored = ignored_included_tags(config, selection)
+    ignored = ignored_included_tags(config, rules)
     if ignored:
         all_datasets = SCOPE_CHOICES[SCOPE_ALL_DATASETS]
         notices.append(
@@ -273,7 +273,7 @@ def build_tag_notices(
             )
         )
 
-    in_both = tags_in_both(selection)
+    in_both = tags_in_both(rules)
     if in_both:
         they_count = "It counts" if len(in_both) == 1 else "They count"
         notices.append(
@@ -289,7 +289,7 @@ def build_tag_notices(
     if not selected_count:
         if included_on_no_dataset:
             reason = f"Included tags on no dataset: {', '.join(included_on_no_dataset)}."
-        elif selection.included_scope == SCOPE_ALL_DATASETS:
+        elif rules.included_scope == SCOPE_ALL_DATASETS:
             reason = "This project has no dataset."
         else:
             reason = "No dataset has all the included tags."
@@ -306,7 +306,7 @@ def build_tag_notices(
     return notices
 
 
-def run_cleanup(
+def run_clearing(
     project: Any, project_key: str, config: dict[str, Any], progress_callback: Callable[[int], None]
 ) -> dict[str, Any]:
     """Clear the selected datasets and return what the recap needs.
@@ -316,18 +316,18 @@ def run_cleanup(
     :param config: values of the macro form
     :param progress_callback: called with the percentage of datasets processed
     :raises ValueError: if the form is not valid, before clearing anything
-    :raises RunStopped: in a real run, if a check fails, before clearing anything
+    :raises RunBlocked: in a real run, if a check fails, before clearing anything
     """
-    selection = read_tag_selection(config)
+    rules = read_tag_rules(config)
     options = read_options(config, project_key)
     simulate = options["simulate"]
 
     logger.info("%s", "Simulation, nothing is cleared" if simulate else "Real run, data is cleared")
-    if selection.included_scope == SCOPE_ALL_DATASETS:
+    if rules.included_scope == SCOPE_ALL_DATASETS:
         included = "All datasets"
     else:
-        included = f"Included tags ({selection.included_match}): {selection.included_tags}"
-    logger.info("%s | excluded tags (%s): %s", included, selection.excluded_match, selection.excluded_tags or "none")
+        included = f"Included tags ({rules.included_match}): {rules.included_tags}"
+    logger.info("%s | excluded tags (%s): %s", included, rules.excluded_match, rules.excluded_tags or "none")
     logger.info("Options: %s", options)
 
     # Step 1: decide what to do with each dataset, before clearing anything.
@@ -361,15 +361,15 @@ def run_cleanup(
             action = f'Check "{label}", or run the macro again.'
             blockers.append(Blocker("recipes", f"{action} {dss_said(error)}"))
 
-    included_tag_counts = {tag: count_datasets_with_tag(project_datasets, tag) for tag in selection.included_tags}
-    excluded_tag_counts = {tag: count_datasets_with_tag(project_datasets, tag) for tag in selection.excluded_tags}
+    included_tag_counts = {tag: count_datasets_with_tag(project_datasets, tag) for tag in rules.included_tags}
+    excluded_tag_counts = {tag: count_datasets_with_tag(project_datasets, tag) for tag in rules.excluded_tags}
 
     rows = [
-        decide(tagged, selection, options, shared_datasets, datasets_without_recipe)
-        for tagged in select_datasets(project_datasets, selection)
+        decide(tagged, rules, options, shared_datasets, datasets_without_recipe)
+        for tagged in select_datasets(project_datasets, rules)
     ]
     rows.sort(key=lambda row: row["name"])
-    notices += build_tag_notices(config, selection, included_tag_counts, excluded_tag_counts, len(rows))
+    notices += build_tag_notices(config, rules, included_tag_counts, excluded_tag_counts, len(rows))
 
     for row in rows:
         logger.info("Decision for %s", describe_row(row))
@@ -379,7 +379,7 @@ def run_cleanup(
         logger.warning("A real run stops here: %s", blocker)
 
     if blockers and not simulate:
-        raise RunStopped("Nothing was cleared. " + " ".join(str(blocker) for blocker in blockers))
+        raise RunBlocked("Nothing was cleared. " + " ".join(str(blocker) for blocker in blockers))
 
     # Step 2: clear the datasets, one after the other. A simulation only marks them. With "Raise
     # exception", the first failure stops the clearing: the datasets after it are not tried, and the
@@ -407,11 +407,11 @@ def run_cleanup(
     return {
         "simulate": simulate,
         "options": options,
-        "included_scope": selection.included_scope,
-        "included_tags": selection.included_tags,
-        "included_match": selection.included_match,
-        "excluded_tags": selection.excluded_tags,
-        "excluded_match": selection.excluded_match,
+        "included_scope": rules.included_scope,
+        "included_tags": rules.included_tags,
+        "included_match": rules.included_match,
+        "excluded_tags": rules.excluded_tags,
+        "excluded_match": rules.excluded_match,
         "included_tag_counts": included_tag_counts,
         "excluded_tag_counts": excluded_tag_counts,
         "sharing_checked": shared_datasets is not None,

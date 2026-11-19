@@ -1,4 +1,4 @@
-"""Tests of the recap: the JSON summary, the recap dataset rows and the HTML page."""
+"""Tests of the recap: the JSON recap, the summary dataset rows and the HTML page."""
 
 import json
 from typing import Any, Optional
@@ -8,7 +8,7 @@ from macros.report_dataset_tags.recap import (
     COLUMNS_BY_TAG,
     COLUMNS_BY_TAG_AND_DATASET,
     NO_TAG,
-    RECAP_COLUMNS,
+    SUMMARY_COLUMNS,
     build_recap_page,
     build_recap_rows,
     build_summary,
@@ -77,9 +77,9 @@ def test_describe_counts_for_the_log() -> None:
 def test_recap_rows_hold_one_row_per_tag_and_dataset() -> None:
     recap = sample_recap()
 
-    records = [dict(zip(RECAP_COLUMNS, row)) for row in build_recap_rows(recap)]
+    records = [dict(zip(SUMMARY_COLUMNS, row)) for row in build_recap_rows(recap)]
 
-    assert MACRO.recap_columns == RECAP_COLUMNS
+    assert MACRO.summary_columns == SUMMARY_COLUMNS
     assert [(r["tag"], r["tag_category"], r["tag_status"], r["dataset"]) for r in records] == [
         ("old", "", "UNUSED", ""),
         ("Stage:Raw", "Stage", "USED", "a"),

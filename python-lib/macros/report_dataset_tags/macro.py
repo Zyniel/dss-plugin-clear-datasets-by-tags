@@ -5,7 +5,7 @@ from typing import Any
 
 from core.macro import MaintenanceMacro
 from macros.report_dataset_tags.recap import (
-    RECAP_COLUMNS,
+    SUMMARY_COLUMNS,
     build_recap_page,
     build_recap_rows,
     describe_counts,
@@ -23,7 +23,7 @@ class ReportDatasetTagsMacro(MaintenanceMacro):
 
     id = "report-dataset-tags"
     label = "Report Dataset Tags"
-    recap_columns = RECAP_COLUMNS
+    summary_columns = SUMMARY_COLUMNS
 
     def run(
         self, project: Any, project_key: str, config: dict[str, Any], progress_callback: Callable[[int], None]
