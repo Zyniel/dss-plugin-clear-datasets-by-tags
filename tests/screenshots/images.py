@@ -5,7 +5,6 @@ the test files of this folder.
 """
 
 import io
-from pathlib import Path
 
 from support.dataiku_stub import ROOT
 
@@ -19,6 +18,9 @@ SCALE = 2
 FRAME_WIDTH = SCALE
 FRAME_COLOUR = (208, 215, 222)
 
+# The edges of a dialog of DSS are white: a darker line inside the frame is the page behind the dialog.
+WHITE_ENOUGH = 245
+
 
 def build_readme_image(screenshot: bytes) -> bytes:
     """Return the README image of a screenshot, as a PNG: framed, and reduced to a palette of 256 colours."""
@@ -30,17 +32,35 @@ def build_readme_image(screenshot: bytes) -> bytes:
     return buffer.getvalue()
 
 
-def read_size(png: bytes) -> tuple[int, int]:
-    """Return the width and the height of an image, in pixels."""
+def find_page_edges(png: bytes) -> list[str]:
+    """Return the edges of a README image, such as "top", where the line inside the frame is not white.
+
+    Such a line is the page behind the dialog: most of its pixels are dark. A separator of the dialog crosses its
+    left and right edges on a few pixels only. The corners are left out: the dialog may round them.
+    """
     from PIL import Image
 
     with Image.open(io.BytesIO(png)) as image:
-        size: tuple[int, int] = image.size
-    return size
+        rgb = image.convert("RGB")
+    width, height = rgb.size
+    inner = FRAME_WIDTH
+    lines = {
+        "top": [(x, inner) for x in range(width // 10, width - width // 10)],
+        "bottom": [(x, height - inner - 1) for x in range(width // 10, width - width // 10)],
+        "left": [(inner, y) for y in range(height // 10, height - height // 10)],
+        "right": [(width - inner - 1, y) for y in range(height // 10, height - height // 10)],
+    }
+    return [
+        edge
+        for edge, pixels in lines.items()
+        if sum(min(rgb.getpixel(pixel)) < WHITE_ENOUGH for pixel in pixels) > len(pixels) // 2
+    ]
 
 
-def write_readme_image(macro_id: str, image_name: str, png: bytes) -> Path:
-    """Write a README image of a macro in place of the old one, such as its "form", and return its path."""
-    path = IMAGES / macro_id / f"{image_name}.png"
-    path.write_bytes(png)
-    return path
+def write_readme_images(images: dict[tuple[str, str], bytes]) -> None:
+    """Write README images in place of the old ones, once all of them are built.
+
+    :param images: each PNG by the id of its macro and its name, such as ("report-dataset-tags", "form")
+    """
+    for (macro_id, image_name), png in images.items():
+        (IMAGES / macro_id / f"{image_name}.png").write_bytes(png)

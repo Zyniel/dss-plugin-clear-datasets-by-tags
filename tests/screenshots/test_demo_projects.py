@@ -1,40 +1,14 @@
-"""The demo projects of the README screenshots on the test DSS, and the results the README states for them.
+"""The guard of the demo projects of the README screenshots, on the test DSS: see docs/screenshots.md.
 
-The guard is tested on scratch projects of the integration tests: they stand for a project with a demo key.
-See docs/screenshots.md.
+It is tested on scratch projects of the integration tests: they stand for a project with a demo key. The refresh
+test creates the demo projects and checks their results: see test_readme_screenshots.py.
 """
 
 from typing import Any
 
 import pytest
 
-from integration.dss import CLEAR, REPORT, run_macro
-from screenshots.demo_projects import (
-    CLEAR_FORM,
-    EXPECTED_CLEAR,
-    EXPECTED_REPORT,
-    REPORT_FORM,
-    DemoProjectError,
-    DemoProjects,
-    check_demo_key_is_free,
-    delete_demo_project,
-    describe_differences,
-    mark_demo_project,
-    read_clear_results,
-    read_report_results,
-)
-from support.forms import read_form
-
-
-def test_the_demo_projects_give_the_results_the_readme_states(demo_projects: DemoProjects) -> None:
-    clear_recap = run_macro(demo_projects.sales, CLEAR, CLEAR_FORM)
-    report_recap = run_macro(demo_projects.sales, REPORT, REPORT_FORM)
-
-    clear_label = read_form("clear-datasets-by-tags")["meta"]["label"]
-    report_label = read_form("report-dataset-tags")["meta"]["label"]
-    differences = describe_differences(clear_label, EXPECTED_CLEAR, read_clear_results(clear_recap))
-    differences += describe_differences(report_label, EXPECTED_REPORT, read_report_results(report_recap))
-    assert not differences, "The recaps differ from what the README states:\n" + "\n".join(differences)
+from screenshots.demo_projects import DemoProjectError, check_demo_key_is_free, delete_demo_project, mark_demo_project
 
 
 def test_a_project_with_a_demo_key_and_no_mark_stops_the_refresh(admin: Any, scratch_project: Any) -> None:

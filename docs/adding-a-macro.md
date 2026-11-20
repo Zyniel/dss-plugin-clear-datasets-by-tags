@@ -70,7 +70,12 @@ Copy `python-runnables/clear-datasets-by-tags/runnable.py` into `python-runnable
 ## 6. The documentation
 
 1. Create `docs/macros/drop-old-partitions/user-guide.md` (for users) and, if the macro runs in scenarios, `automation.md`.
-2. Add a section for the macro to "The macros" of the [README](../README.md), with a screenshot of its recap, then of its form in a folded "The form" block. The screenshots go in `docs/images/drop-old-partitions/`.
+2. Add a section for the macro to "The macros" of the [README](../README.md), with the image of its recap, then of its form in a folded "The form" block: `docs/images/drop-old-partitions/recap.png` and `form.png`. The refresh of the [screenshots](screenshots.md) takes them on a test DSS. In `tests/screenshots/demo_projects.py`:
+   - add to `SALES_DATASETS` the datasets the recap of the macro must show, and a row for each to the table of the screenshots page;
+   - write the form of its run, as the README describes it, and the results the README states: a `NamedTuple` of the results, added to `Results`, and the function that reads them from the JSON recap. The refresh fills only the fields of type `STRINGS` and `BOOLEAN`: for another type, extend `fill_form()` in `tests/screenshots/dss_ui.py`;
+   - add the macro to `list_readme_macros()`.
+
+   Then run the refresh, and write the captions and the alt texts of the README from the expected results.
 3. Describe the new macro in the [CHANGELOG](../CHANGELOG.md).
 
 ## 7. The check on DSS
