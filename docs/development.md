@@ -46,6 +46,7 @@ Git uses it for your commits in this repository, and for the commits Claude Code
 │   ├── macros/
 │   ├── plugin/                   The plugin files of every macro, the zip, release.py
 │   ├── integration/              The macros on a real DSS, skipped without a config file
+│   ├── screenshots/              The README screenshots on a real DSS, skipped without --screenshots
 │   └── support/                  Fake DSS objects and test helpers
 ├── docs/                         Documentation
 │   ├── adr/                      The decisions that are hard to reverse, and why
@@ -127,6 +128,9 @@ The tests have the same layout as `python-lib`:
 | `tests/macros/<macro>/` | One macro: its work, its options, its recap, its form, its `runnable.py`. |
 | `tests/plugin/` | The plugin files, for **each** macro: form, `runnable.py`, import rules, zip. A new macro gets these tests with nothing to write. |
 | `tests/integration/` | The macros on a real DSS. Skipped unless you give a config file: see [integration tests](integration-tests.md). |
+| `tests/screenshots/` | The README screenshots, taken on the test DSS of the integration tests, with their fixtures. Skipped unless pytest gets `--screenshots`, even with a config file: running the tests never rewrites the README images. |
+
+`tests/conftest.py` shares the fixtures of the integration tests with every test folder, and adds the `--screenshots` option. pytest takes pytest plugins and options only from the `conftest.py` files it loads at startup, and the one at the root of the tests is always among them.
 
 To run only a part:
 

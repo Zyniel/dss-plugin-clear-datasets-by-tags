@@ -1,5 +1,9 @@
 """Fixtures of the integration tests: a real DSS, its users, and a scratch project for each test.
 
+tests/conftest.py registers this module as a pytest plugin, so that other test folders use these fixtures too, such
+as the screenshot tests of tests/screenshots. Each session fixture then runs once for all of them: the zip of the
+plugin is installed, or its version checked, once.
+
 The tests run only when the environment variable DSS_INTEGRATION_CONFIG gives the path of a config file.
 Without it, they are skipped: `uv run pytest` and the CI never need a DSS. See docs/integration-tests.md.
 """
