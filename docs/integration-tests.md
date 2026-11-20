@@ -79,7 +79,7 @@ The fixtures are in `tests/integration/fixtures.py`. `tests/conftest.py` registe
 | `connection` | The connection of the managed datasets: `managed_connection`, or `filesystem_managed`. |
 | `scratch_project` | A new, empty project, `DSSPM_IT_<random>`, owned by `project_owner`. Deleted at the end of the test, also when it fails. The delete refuses any key without the `DSSPM_IT_` prefix. |
 
-The helpers are in `tests/integration/dss.py`. They fill a scratch project (`add_built_dataset`, `add_uploaded_dataset`, `add_empty_dataset`, `set_tags`, `add_macro_scenario`), run a macro and read its JSON recap (`run_macro`, `row_of`), and check what the run did (`count_rows`, `list_macro_ids`, `dss_error`). `give_access` gives the editor or the reader access to a scratch project. `CLEAR` and `REPORT` are the ids of the macros, `ROW_COUNT` the rows of each test dataset, and `PROJECT_PREFIX` the prefix of the scratch projects.
+The helpers are in `tests/integration/dss.py`. They fill a scratch project (`add_built_dataset`, from a new uploaded dataset or from a dataset you give, `add_uploaded_dataset`, `add_empty_dataset`, `add_partitioned_dataset`, `set_tags`, `set_recipe_tags`, `share_dataset`, `add_macro_scenario`), run a macro and read its JSON recap (`run_macro`, `row_of`), and check what the run did (`count_rows`, `list_macro_ids`, `dss_error`). `give_access` gives the editor or the reader access to a scratch project. `delete_whole_project` deletes a project with its data, with no check: the fixtures check first that the project is a scratch project. `CLEAR` and `REPORT` are the ids of the macros, `ROW_COUNT` the rows of each test dataset, and `PROJECT_PREFIX` the prefix of the scratch projects.
 
 ## Add a test
 

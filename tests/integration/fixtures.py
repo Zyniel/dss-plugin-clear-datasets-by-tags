@@ -8,7 +8,6 @@ The tests run only when the environment variable DSS_INTEGRATION_CONFIG gives th
 Without it, they are skipped: `uv run pytest` and the CI never need a DSS. See docs/integration-tests.md.
 """
 
-import contextlib
 import json
 import os
 import subprocess
@@ -20,7 +19,7 @@ from typing import Any
 
 import pytest
 
-from integration.dss import PLUGIN_ID, PROJECT_PREFIX
+from integration.dss import PLUGIN_ID, PROJECT_PREFIX, delete_whole_project
 
 CONFIG_VARIABLE = "DSS_INTEGRATION_CONFIG"
 ROOT = Path(__file__).resolve().parents[2]
@@ -106,13 +105,12 @@ def connection(config: dict[str, Any]) -> str:
 
 
 def delete_project(client: Any, project_key: str) -> None:
-    """Delete a scratch project, with the data of its managed datasets."""
+    """Delete a scratch project, with the data of its managed datasets.
+
+    :raises RuntimeError: when the project is still there after the delete.
+    """
     assert project_key.startswith(PROJECT_PREFIX), f"{project_key} is not a scratch project."
-    # DSS 13.4.4 answers the delete with an empty body, which the client cannot read.
-    with contextlib.suppress(Exception):
-        client.get_project(project_key).delete(clear_managed_datasets=True, clear_output_managed_folders=True)
-    if project_key in client.list_project_keys():
-        raise RuntimeError(f"The scratch project {project_key} could not be deleted.")
+    delete_whole_project(client, project_key)
 
 
 @pytest.fixture

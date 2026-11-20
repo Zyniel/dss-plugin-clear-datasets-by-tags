@@ -1,8 +1,10 @@
-"""The opt-in of the screenshot tests, and their browser: they take the README screenshots on the test DSS.
+"""The fixtures of the screenshot tests: their opt-in, the check of the DSS, the demo projects, and the browser.
 
-They use the fixtures of the integration tests: see tests/integration/fixtures.py. They run only when pytest gets
---screenshots, even when DSS_INTEGRATION_CONFIG is set, so that running the tests never rewrites the README images.
-With the option, they are still skipped without a config file, like the integration tests.
+The screenshot tests take the README screenshots on the test DSS of the integration tests, and use their fixtures:
+see tests/integration/fixtures.py. They run only when pytest gets --screenshots, even when DSS_INTEGRATION_CONFIG is
+set, so that running the tests never rewrites the README images. With the option, they are still skipped without a
+config file, like the integration tests. A DSS that is not ready for the demo projects stops them all, before any
+change.
 
 Without the option, pytest still imports the test files of this folder. Import the dependencies of the screenshots
 inside the tests, or with pytest.importorskip(): the CI does not install them.
@@ -13,7 +15,17 @@ from typing import Any, NamedTuple
 
 import pytest
 
+from integration.fixtures import connect
 from screenshots import dss_ui
+from screenshots.demo_projects import (
+    DEMO_KEYS,
+    DemoProjectError,
+    DemoProjects,
+    check_demo_key_is_free,
+    check_tag_categories,
+    create_demo_projects,
+    delete_demo_projects,
+)
 from screenshots.images import SCALE
 
 
@@ -46,6 +58,32 @@ def ui_login(config: dict[str, Any]) -> UiLogin:
             pytrace=False,
         )
     return UiLogin(login, password)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def ready_for_demo_projects(skip_without_screenshots_option: None, config: dict[str, Any]) -> None:
+    """Stop the whole refresh, before any change, when the DSS is not ready for the demo projects.
+
+    Its tag categories must give the recap of the README, and no project it did not make may have a demo key. It
+    reads them with a client of its own, before the admin fixture, which installs the plugin. It comes after the
+    opt-in: pytest orders the autouse fixtures of a file by name, so it asks for the opt-in by name.
+    """
+    client = connect(config, "admin")
+    try:
+        check_tag_categories(client)
+        for project_key in DEMO_KEYS:
+            check_demo_key_is_free(client, project_key)
+    except DemoProjectError as error:
+        pytest.exit(str(error), returncode=pytest.ExitCode.TESTS_FAILED)
+
+
+@pytest.fixture
+def demo_projects(admin: Any, config: dict[str, Any], connection: str) -> Iterator[DemoProjects]:
+    """Return the demo projects, made for the test. They are deleted at the end, also when the test fails."""
+    try:
+        yield create_demo_projects(admin, config["project_owner"], connection)
+    finally:
+        delete_demo_projects(admin)
 
 
 @pytest.fixture(scope="session")
