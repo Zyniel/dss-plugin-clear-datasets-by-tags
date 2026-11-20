@@ -3,8 +3,8 @@
 import pytest
 
 from core.project import (
+    format_projects,
     list_project_datasets,
-    name_projects,
     read_datasets_without_recipe,
     read_shared_datasets,
 )
@@ -35,5 +35,5 @@ def test_datasets_without_recipe_are_the_source_datasets_of_the_flow() -> None:
 
 
 def test_name_projects() -> None:
-    assert name_projects(["A", "B"]) == "A, B"
-    assert name_projects([]) == "other projects"
+    assert format_projects(["A", "B"]) == "A, B"
+    assert format_projects([]) == "other projects"

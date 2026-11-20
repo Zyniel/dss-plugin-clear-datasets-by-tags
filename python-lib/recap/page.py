@@ -10,6 +10,7 @@ Each macro fills a RecapPage. recap/html.py lays it out the same way for every m
 5. the table, interactive in DSS.
 """
 
+from collections.abc import Sequence
 from typing import Any, NamedTuple
 
 # Colours of statuses, figures, chips and banners.
@@ -77,7 +78,7 @@ class Section(NamedTuple):
 
     title: str
     note: str = ""
-    chips: tuple[Chip, ...] = ()
+    chips: Sequence[Chip] = ()  # A list, or the empty default: a list default would be shared by every section.
     text: str = ""
 
 

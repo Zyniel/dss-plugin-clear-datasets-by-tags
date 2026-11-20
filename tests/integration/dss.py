@@ -4,9 +4,9 @@ Each function takes handles of the DSS API client (`dataikuapi`). See docs/integ
 """
 
 import io
-import json
-import re
 from typing import Any
+
+from support.pages import read_summary
 
 PLUGIN_ID = "clear-datasets-by-tags"
 CLEAR = f"pyrunnable_{PLUGIN_ID}_clear-datasets-by-tags"
@@ -76,20 +76,12 @@ def count_rows(project: Any, name: str) -> int:
         raise
 
 
-def read_recap(html: str) -> dict[str, Any]:
-    """Return the JSON recap of the hidden block of an HTML result."""
-    block = re.search(r'<script type="application/json" id="dtp-recap-data">(.*?)</script>', html, re.DOTALL)
-    assert block, "The result of the macro has no JSON recap."
-    recap: dict[str, Any] = json.loads(block.group(1))
-    return recap
-
-
 def run_macro(project: Any, macro_id: str, params: dict[str, Any]) -> dict[str, Any]:
     """Run a macro, wait for its end, and return its JSON recap. A run that fails raises an exception."""
     macro = project.get_macro(macro_id)
     run_id = macro.run(params=params, wait=True)
     html = macro.get_result(run_id, as_type="string")
-    return read_recap(html.decode("utf-8") if isinstance(html, bytes) else html)
+    return read_summary(html.decode("utf-8") if isinstance(html, bytes) else html)
 
 
 def row_of(recap: dict[str, Any], name: str) -> dict[str, Any]:

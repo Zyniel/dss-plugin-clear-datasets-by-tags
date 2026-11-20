@@ -18,8 +18,8 @@ from typing import Any, NamedTuple
 
 from core.macro import MaintenanceMacro
 from core.options import FAILING_ON_ERROR, ON_ERROR_FAIL
-from recap.html import dss_said
 from recap.page import TONE_CAUTION, TONE_DANGER, Banner, RecapPage
+from recap.text import describe_dss_error
 
 OUTCOME_SUCCESS = "SUCCESS"  # Nothing went wrong.
 OUTCOME_WARNING = "WARNING"  # Something went wrong, and the run went on.
@@ -56,13 +56,13 @@ def add_summary_dataset_problem(recap: dict[str, Any]) -> None:
     result = recap["recap_dataset_result"]
     if not (result and result["error"]):
         return
-    error = dss_said(result["error"])
+    error = describe_dss_error(result["error"])
     problem = Problem(
         f"Summary not written to dataset {result['name']}. {error}",
         recap["options"].get("on_recap_error") == ON_ERROR_FAIL,
         Banner(TONE_CAUTION, "Summary not written.", f"Dataset {result['name']}. {error}"),
     )
-    set_problems(recap, recap["problems"] + [problem])
+    set_problems(recap, [*recap["problems"], problem])
 
 
 def set_problems(recap: dict[str, Any], problems: list[Problem]) -> None:
@@ -90,7 +90,10 @@ def with_problems(page: RecapPage, recap: dict[str, Any]) -> RecapPage:
 
 
 def log_problems(recap: dict[str, Any], logger: logging.Logger) -> None:
-    """Log each problem, as an ERROR when it fails the run, else as a WARNING, then the outcome."""
+    """Log each problem, as an ERROR when it fails the run, else as a WARNING, then the outcome.
+
+    :param logger: the logger of the runner, so that these lines come from core.runner, like the rest of the run
+    """
     for problem in recap["problems"]:
         log = logger.error if problem.fails_run else logger.warning
         log("Problem: %s", problem.message)
@@ -106,4 +109,4 @@ def build_failure_message(recap: dict[str, Any]) -> str:
     result = recap["recap_dataset_result"]
     written = result and not result["error"]
     details = f"Details in the summary dataset {result['name']}." if written else "Details in the run log."
-    return " ".join(messages + [details])
+    return " ".join([*messages, details])

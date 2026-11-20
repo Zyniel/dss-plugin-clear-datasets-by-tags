@@ -3,9 +3,11 @@
 from typing import Any, Optional
 
 from core.macro import WorkFailure
-from core.tags import SCOPE_ALL_DATASETS, SCOPE_LABEL
+from core.project import format_projects
+from core.tags import INCLUDE_ALL_DATASETS, INCLUDE_LABEL
 from macros.clear_datasets_by_tags.clearing import (
     OPTION_LABELS,
+    RISK_SHARING_NOT_CHECKED,
     SKIP_STOPPED,
     STATUS_CLEARED,
     STATUS_EXCLUDED,
@@ -13,11 +15,10 @@ from macros.clear_datasets_by_tags.clearing import (
     STATUS_LABELS,
     STATUS_SKIPPED,
     STATUS_WOULD_BE_CLEARED,
-    WARNING_SHARING_NOT_CHECKED,
     count_by_status,
 )
 from recap.dataset import format_flag
-from recap.html import build_common_option_chips, count_of, format_duration, yes_no
+from recap.html import build_common_option_chips
 from recap.page import (
     ALL_STATUSES,
     COLUMN_LONG_TEXT,
@@ -43,6 +44,7 @@ from recap.page import (
     Status,
     Table,
 )
+from recap.text import format_count, format_duration, format_yes_no
 
 # Every column is stored as text: see write_recap_dataset().
 SUMMARY_COLUMNS = [
@@ -165,9 +167,7 @@ def build_recap_rows(recap: dict[str, Any]) -> list[list[str]]:
     """Return one row per selected dataset, in the order of SUMMARY_COLUMNS."""
     rows = []
     for row in recap["datasets"]:
-        shared_with = ""
-        if row["is_shared"]:
-            shared_with = ", ".join(row["shared_with"]) or "other projects"
+        shared_with = format_projects(row["shared_with"]) if row["is_shared"] else ""
         duration = "" if row["duration"] is None else f"{row['duration']:.3f}"
         rows.append(
             [
@@ -203,7 +203,7 @@ def describe_failures(recap: dict[str, Any]) -> Optional[WorkFailure]:
         return None
 
     not_tried = sum(1 for row in recap["datasets"] if row["skip_code"] == SKIP_STOPPED)
-    message = f"{failed} of {count_of(failed + cleared + not_tried, 'dataset')} failed"
+    message = f"{failed} of {format_count(failed + cleared + not_tried, 'dataset')} failed"
     if cleared:
         message += f", {cleared} cleared"
     if not_tried:
@@ -213,7 +213,7 @@ def describe_failures(recap: dict[str, Any]) -> Optional[WorkFailure]:
 
 
 def build_risk_banners(recap: dict[str, Any]) -> list[Banner]:
-    """Return the banner counting the datasets to clear that carry a risk. The table has their warnings."""
+    """Return the banner counting the datasets to clear that carry a risk. The table has their risks."""
     final_status = STATUS_WOULD_BE_CLEARED if recap["simulate"] else STATUS_CLEARED
     rows = [row for row in recap["datasets"] if row["status"] == final_status]
     risks = {
@@ -227,9 +227,9 @@ def build_risk_banners(recap: dict[str, Any]) -> list[Banner]:
 
     carry = "carries" if at_risk == 1 else "carry"
     if recap["simulate"]:
-        title = f"{count_of(at_risk, 'dataset')} to clear {carry} a risk."
+        title = f"{format_count(at_risk, 'dataset')} to clear {carry} a risk."
     else:
-        title = f"{count_of(at_risk, 'cleared dataset')} {carry} a risk."
+        title = f"{format_count(at_risk, 'cleared dataset')} {carry} a risk."
     counts = ", ".join(f"{len(names)} {risk}" for risk, names in risks.items() if names)
     return [Banner(TONE_CAUTION, title, f"{counts}.")]
 
@@ -240,8 +240,10 @@ def build_banners(recap: dict[str, Any]) -> list[Banner]:
     if recap["simulate"]:
         simulate = OPTION_LABELS["simulate"]
         banners.append(Banner(TONE_PENDING, "Simulation, nothing was cleared.", f'Uncheck "{simulate}" to clear.'))
-    for blocker in recap["blockers"]:
-        banners.append(Banner(TONE_DANGER, f"A real run would stop: {blocker.check} not checked.", blocker.text))
+    banners.extend(
+        Banner(TONE_DANGER, f"A real run would stop: {blocker.check} not checked.", blocker.text)
+        for blocker in recap["blockers"]
+    )
     return banners + build_risk_banners(recap)
 
 
@@ -270,21 +272,21 @@ def build_metrics(recap: dict[str, Any]) -> list[Metric]:
 
 def build_tag_section(title: str, match: str, tag_counts: dict[str, int], highlight_unmatched: bool) -> Section:
     """Return a list of tags with how it matches and the number of datasets carrying each tag."""
-    chips = tuple(
+    chips = [
         Chip(f"{tag} ({count})", TONE_CAUTION if highlight_unmatched and not count else "")
         for tag, count in tag_counts.items()
-    )
+    ]
     return Section(title, f"(Matching {match.title()})", chips)
 
 
 def build_sections(recap: dict[str, Any]) -> list[Section]:
     """Return the options of the run, then the included and excluded tags."""
     options = recap["options"]
-    option_chips = [Chip(f"{OPTION_LABELS[option]}: {yes_no(options[option])}") for option in SHOWN_OPTIONS]
-    sections = [Section("Options", chips=tuple(option_chips + build_common_option_chips(options)))]
+    option_chips = [Chip(f"{OPTION_LABELS[option]}: {format_yes_no(options[option])}") for option in SHOWN_OPTIONS]
+    sections = [Section("Options", chips=option_chips + build_common_option_chips(options))]
 
-    if recap["included_scope"] == SCOPE_ALL_DATASETS:
-        sections.append(Section(SCOPE_LABEL, text="All datasets of the project."))
+    if recap["included_scope"] == INCLUDE_ALL_DATASETS:
+        sections.append(Section(INCLUDE_LABEL, text="All datasets of the project."))
     else:
         # An included tag on no dataset selects nothing: it stands out, it may be a typo.
         sections.append(build_tag_section("Included tags", recap["included_match"], recap["included_tag_counts"], True))
@@ -303,7 +305,7 @@ def build_table(recap: dict[str, Any]) -> Table:
             "status": row["status"],
             # A notice already says that the sharing was not checked: each row does not repeat it.
             "detail": "; ".join(
-                part for part in [row["detail"], *row["warnings"]] if part and part != WARNING_SHARING_NOT_CHECKED
+                part for part in [row["detail"], *row["warnings"]] if part and part != RISK_SHARING_NOT_CHECKED
             ),
             "included_tags": row["included_tags"],
             "excluded_tags": row["excluded_tags"],
@@ -312,7 +314,7 @@ def build_table(recap: dict[str, Any]) -> Table:
         }
         for row in recap["datasets"]
     ]
-    if recap["included_scope"] == SCOPE_ALL_DATASETS:
+    if recap["included_scope"] == INCLUDE_ALL_DATASETS:
         empty_message = "This project has no dataset."
     else:
         empty_message = "No dataset of this project matches the included tags."

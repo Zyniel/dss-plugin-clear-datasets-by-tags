@@ -30,7 +30,7 @@ First version, under the [MIT License](LICENSE). Details on [GitHub](https://git
 
 @pytest.fixture
 def repo(tmp_path: Path) -> Path:
-    """A copy of the files release.py changes, with a CHANGELOG that has unreleased changes.
+    """Return a copy of the files release.py changes, with a CHANGELOG that has unreleased changes.
 
     The copies are at version 1.0.0, whatever the version of the repository: the tests must pass in every release.
     """
@@ -42,6 +42,7 @@ def repo(tmp_path: Path) -> Path:
 
 
 def text(repo: Path, name: str) -> str:
+    """Return the text of a file of the copy."""
     return (repo / name).read_text(encoding="utf-8")
 
 

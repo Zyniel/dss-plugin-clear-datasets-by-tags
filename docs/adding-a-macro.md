@@ -22,14 +22,15 @@ Create `python-lib/macros/drop_old_partitions/` with:
 
 Rules:
 
-- **Use the shared code:** `core/options.py` to read the form, `core/project.py` to read the project, `core/tags.py` to select datasets by tags, `recap/page.py` to describe the recap.
+- **Use the shared code:** `core/options.py` to read the form, `core/project.py` to read the project, `core/tags.py` to select datasets by tags, `recap/page.py` to describe the recap, `recap/text.py` for the text of the messages.
 - **Never import another macro.** If code of another macro is useful, move it to `core` or `recap`, with its tests.
 - **Simulate by default.** A macro that changes data simulates by default ("Simulate" checked). Choose the default of each other option with care: an API call that sends no value gets it. A macro that only reads has no "Simulate" option.
 - **Stop at the first error when asked.** When `options["on_error"]` is `ON_ERROR_STOP` ("Raise exception"), stop the work at the first failure, and mark the items not tried. The runner then ends the run in error.
-- **Decide before you act.** Find all the blockers before you change anything, then raise `RunBlocked` if there is one.
+- **Decide before you act.** Find all the blockers before you change anything, then raise `RunBlockedError` if there is one.
 - **Report, do not crash.** A failure on one item goes into the recap, and the run continues with the next items. Then `describe_failures()` says what failed: the runner shows it in a red banner, because DSS shows a run that goes on as a success. Do not draw that banner in `build_recap_page()`.
-- **Count, do not list.** A banner gives counts for what the summary dataset holds, and details only for what it cannot give, such as an error of DSS (use `dss_said()`) or a tag of the form. A message must not grow with the project.
+- **Count, do not list.** A banner gives counts for what the summary dataset holds, and details only for what it cannot give, such as an error of DSS (use `describe_dss_error()`) or a tag of the form. A message must not grow with the project.
 - **Absolute imports:** `from core.tags import matches`.
+- **Follow the [coding standards](../CODING_STANDARDS.md):** names, records, messages, docstrings and tests.
 
 ## 3. The form
 

@@ -73,9 +73,9 @@ def read_choice(config: dict[str, Any], name: str, choices: dict[str, str], defa
     return value if isinstance(value, str) and value in choices else default
 
 
-def option_unchecked(label: str) -> str:
-    """Return the text saying that an option of the form is unchecked."""
-    return f"'{label}' is unchecked"
+def describe_unchecked(label: str) -> str:
+    """Return the clause saying that an option of the form is unchecked, such as '"Simulate" is unchecked'."""
+    return f'"{label}" is unchecked'
 
 
 def read_recap_dataset_name(config: dict[str, Any], project_key: str) -> Optional[str]:
@@ -96,7 +96,7 @@ def read_recap_dataset_name(config: dict[str, Any], project_key: str) -> Optiona
         if owner != project_key:
             raise ValueError(f"The summary dataset must belong to this project, not to project {owner}.")
     if not name and to_dataset is True:
-        raise ValueError(f"Pick a summary dataset, or uncheck '{RECAP_OPTION_LABELS['recap_to_dataset']}'.")
+        raise ValueError(f'Pick a summary dataset, or uncheck "{RECAP_OPTION_LABELS["recap_to_dataset"]}".')
     return name or None
 
 
@@ -106,7 +106,10 @@ def read_run_options(config: dict[str, Any]) -> dict[str, Any]:
 
 
 def read_recap_options(config: dict[str, Any], project_key: str) -> dict[str, Any]:
-    """Return the options of the "Summary" section of the form."""
+    """Return the options of the "Summary" section of the form.
+
+    :raises ValueError: if the summary dataset belongs to another project, or if none is picked while checked
+    """
     recap_dataset = read_recap_dataset_name(config, project_key)
     return {
         "recap_to_dataset": recap_dataset is not None,

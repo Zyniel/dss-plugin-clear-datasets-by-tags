@@ -7,11 +7,18 @@ The changes of each version of the plugin, the most recent first. The changes no
 ### Clear Datasets by Tags
 
 - When datasets fail and the run goes on, the red banner gives all the counts in bold, then how to list the failed datasets: **2 of 4 datasets failed, 2 cleared.** Click "Failed" to list them. The log, the JSON recap and the message of a failed run do not change.
+- The messages put the labels of the form between double quotes, as the banners do. The detail of a skipped dataset reads `Has no recipe; "Clear datasets with no recipe" is unchecked`, in the recap, the JSON recap and the summary dataset. The error of a form with no included tag reads `Give at least one included tag, or choose "All datasets" in "Include".`
+- In the log, the decision for a dataset to clear gives each of its risks after "risk:", no longer after "warning:".
+
+### Every macro
+
+- The error of a "Summary" section with no dataset picked puts the label between double quotes: `Pick a summary dataset, or uncheck "Write to a dataset".`
 
 ### For developers
 
-- `GLOSSARY.md` gives the words of the plugin, such as tag rules, protection, foreign dataset and blocked run. `docs/adr/` records the decisions that are hard to reverse, such as why "Clear shared datasets" is checked by default, and why an excluded tag on no dataset is only a notice. The docs and the code use these words: `RunStopped` is now `RunBlocked`, `TagSelection` is `TagRules`, `recap_columns` is `summary_columns`, and `cleanup.py` is `clearing.py`. The parameters of the forms, the JSON recap and the summary dataset do not change.
+- `GLOSSARY.md` gives the words of the plugin, such as tag rules, protection, foreign dataset and blocked run. `docs/adr/` records the decisions that are hard to reverse, such as why "Clear shared datasets" is checked by default, and why an excluded tag on no dataset is only a notice. The docs and the code use these words: `RunStopped` is now `RunBlockedError`, `TagSelection` is `TagRules`, `recap_columns` is `summary_columns`, and `cleanup.py` is `clearing.py`. The parameters of the forms, the JSON recap and the summary dataset do not change.
 - The problems of a run are handled in one module, `core/problems.py`. It gives each problem its banner, its log line and its part of the message of a failed run, and it sets the outcome. A macro only says what failed in its work, once: `describe_failures()` returns a `WorkFailure`, with the message and a hint for the banner, or `None`. A macro no longer draws the banner of its failures: the runner always does.
+- `CODING_STANDARDS.md` gives the Python conventions that ruff cannot check, and ruff checks more: docstrings (`D`), names (`N`), and the rules `C4`, `PERF`, `PIE`, `PT`, `RET`, `RUF` and `SIM`. The code follows them. The functions that return HTML are `render_*`, the ones that return data `build_*`. The text helpers are `format_*` or `describe_*`, in the new `recap/text.py`: `count_of()` is now `format_count()`, `dss_said()` is `describe_dss_error()`, and `text()` is `escape_text()`. `RunFailed` is now `RunFailedError`. The dataset row, the tag row, the summary dataset result and the AG Grid of the plugin settings are `TypedDict`s. The words of the glossary replace scope (`INCLUDE_*`, `read_include()`) and warning (`RISK_SHARING_NOT_CHECKED`). The test helpers that two files need are in `tests/support`. The parameters of the forms, the fields of the JSON recap and the columns of the summary dataset do not change.
 
 ## 1.0.1-beta - 2026-11-18
 

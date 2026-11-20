@@ -48,7 +48,8 @@ def load_module(path: Path) -> Any:
     """Load a Python file DSS runs, such as a runnable.py. Install the fake dataiku package first."""
     name = "_".join(path.relative_to(ROOT).with_suffix("").parts).replace("-", "_")
     spec = importlib.util.spec_from_file_location(name, path)
-    assert spec and spec.loader
+    assert spec
+    assert spec.loader
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module

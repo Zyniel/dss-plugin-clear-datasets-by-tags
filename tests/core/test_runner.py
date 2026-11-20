@@ -2,14 +2,14 @@
 
 import json
 import logging
-import re
 from typing import Any, Optional
 
 import pytest
 
-from core.macro import RunBlocked
-from core.runner import RunFailed, run_macro
+from core.macro import RunBlockedError
+from core.runner import RunFailedError, run_macro
 from support.fakes import PROJECT_KEY, FakeClient, FakeProject, FakeRecapDataset, make_dataset
+from support.pages import read_summary
 from support.runs import run
 from support.sample_macro import MACRO
 
@@ -21,6 +21,7 @@ def run_with(
     client: Optional[FakeClient] = None,
     plugin_config: Optional[dict[str, Any]] = None,
 ) -> str:
+    """Run the sample macro through the runner and return its HTML recap. Checks which summary dataset it opens."""
     opened: list[str] = []
 
     def open_dataset(name: str) -> FakeRecapDataset:
@@ -43,6 +44,7 @@ def run_with(
 
 
 def logged_summary(caplog: pytest.LogCaptureFixture) -> dict[str, Any]:
+    """Return the JSON recap of the RECAP_JSON line of the log. Fails the test unless there is exactly one."""
     lines = [record.getMessage() for record in caplog.records if record.getMessage().startswith("RECAP_JSON ")]
     assert len(lines) == 1
     summary: dict[str, Any] = json.loads(lines[0][len("RECAP_JSON ") :])
@@ -122,7 +124,7 @@ def test_a_run_with_no_problem_has_the_outcome_success(caplog: pytest.LogCapture
 
 
 def test_a_failed_item_fails_the_run_by_default() -> None:
-    with pytest.raises(RunFailed, match=r"^Failed: d2\."):
+    with pytest.raises(RunFailedError, match=r"^Failed: d2\."):
         run_with(FakeProject([make_dataset("d1", []), make_dataset("d2", [])]), {"fail": ["d2"]})
 
 
@@ -145,7 +147,7 @@ def test_on_error_fail_fails_the_run_after_the_work(caplog: pytest.LogCaptureFix
     caplog.set_level(logging.INFO)
     project = FakeProject([make_dataset("d1", []), make_dataset("d2", [])])
 
-    with pytest.raises(RunFailed, match=r"^Failed: d2\. Details in the run log\.$"):
+    with pytest.raises(RunFailedError, match=r"^Failed: d2\. Details in the run log\.$"):
         run_with(project, {"fail": ["d2"], "on_error": "FAIL"})
 
     summary = logged_summary(caplog)  # The run log has the recap anyway.
@@ -157,7 +159,7 @@ def test_a_failed_run_points_to_the_summary_dataset_when_it_was_written() -> Non
     project = FakeProject([make_dataset("d1", []), make_dataset("d2", [])])
     config = {"fail": ["d2"], "on_error": "FAIL", "recap_dataset": "r"}
 
-    with pytest.raises(RunFailed, match=r"^Failed: d2\. Details in the summary dataset r\.$"):
+    with pytest.raises(RunFailedError, match=r"^Failed: d2\. Details in the summary dataset r\.$"):
         run_with(project, config, FakeRecapDataset())
 
 
@@ -182,9 +184,8 @@ def test_on_recap_error_fail_fails_the_run(caplog: pytest.LogCaptureFixture) -> 
     recap_dataset = FakeRecapDataset(write_error=OSError("disk full"))
     config = {"on_recap_error": "FAIL", "recap_dataset": "r"}
 
-    with pytest.raises(
-        RunFailed, match=r"^Summary not written to dataset r\. DSS said: OSError: disk full\. Details in the run log\.$"
-    ):
+    message = r"^Summary not written to dataset r\. DSS said: OSError: disk full\. Details in the run log\.$"
+    with pytest.raises(RunFailedError, match=message):
         run_with(FakeProject([make_dataset("ds", [])]), config, recap_dataset)
 
     assert logged_summary(caplog)["outcome"] == "FAILED"
@@ -206,7 +207,7 @@ def test_both_problems_make_one_message_the_work_first() -> None:
     config = {"fail": ["ds"], "on_error": "FAIL", "on_recap_error": "FAIL", "recap_dataset": "r"}
 
     with pytest.raises(
-        RunFailed,
+        RunFailedError,
         match=(
             r"^Failed: ds\. Summary not written to dataset r\. DSS said: OSError: disk full\. "
             r"Details in the run log\.$"
@@ -219,7 +220,7 @@ def test_a_failed_run_message_also_gives_the_problems_that_do_not_fail_it() -> N
     recap_dataset = FakeRecapDataset(write_error=OSError("disk full"))
     config = {"fail": ["ds"], "on_error": "CONTINUE", "on_recap_error": "FAIL", "recap_dataset": "r"}
 
-    with pytest.raises(RunFailed, match=r"^Failed: ds\. Summary not written"):
+    with pytest.raises(RunFailedError, match=r"^Failed: ds\. Summary not written"):
         run_with(FakeProject([make_dataset("ds", [])]), config, recap_dataset)
 
 
@@ -232,7 +233,7 @@ def test_fail_the_run_returns_the_recap_when_everything_worked() -> None:
 def test_a_blocked_run_writes_no_recap() -> None:
     recap_dataset = FakeRecapDataset()
 
-    with pytest.raises(RunBlocked):
+    with pytest.raises(RunBlockedError):
         run_with(FakeProject([make_dataset("ds", [])]), {"stop": True, "recap_dataset": "r"}, recap_dataset)
 
     assert (recap_dataset.schema, recap_dataset.rows) == ([], [])
@@ -249,7 +250,7 @@ def test_the_plugin_settings_choose_the_ag_grid_of_a_downloaded_recap() -> None:
 def test_raise_exception_also_fails_the_run(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO)
 
-    with pytest.raises(RunFailed, match=r"^Failed: d1\. Details in the run log\.$"):
+    with pytest.raises(RunFailedError, match=r"^Failed: d1\. Details in the run log\.$"):
         run_with(FakeProject([make_dataset("d1", [])]), {"fail": ["d1"], "on_error": "STOP"})
 
     assert logged_summary(caplog)["outcome"] == "FAILED"
@@ -276,8 +277,7 @@ def test_the_page_and_its_summary_are_built_once(
     summary = logged_summary(caplog)
     assert summary["run_id"] == calls[0]
     assert (summary["outcome"], summary["problems"]) == ("SUCCESS", [])
-    hidden = re.search(r'<script type="application/json" id="dtp-recap-data">(.*?)</script>', html, re.DOTALL)
-    assert hidden and json.loads(hidden.group(1)) == summary
+    assert read_summary(html) == summary
 
 
 def test_the_macro_says_what_failed_once_even_with_a_summary_dataset(monkeypatch: pytest.MonkeyPatch) -> None:

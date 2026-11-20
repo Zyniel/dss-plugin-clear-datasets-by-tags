@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from core.macro import RunBlocked
+from core.macro import RunBlockedError
 from macros.clear_datasets_by_tags import MACRO
 from macros.clear_datasets_by_tags.clearing import (
     SKIP_EXTERNAL,
@@ -29,6 +29,7 @@ ALL_DATASETS = {"included_scope": "ALL_DATASETS"}
 
 
 def notices_of(recap: dict[str, Any]) -> list[str]:
+    """Return the notices of the recap, as texts."""
     return [str(notice) for notice in recap["notices"]]
 
 
@@ -119,7 +120,7 @@ def test_only_excluded_tags_are_refused_before_clearing_anything() -> None:
     # To clear every dataset except the excluded ones, "All datasets" must be chosen.
     project = FakeProject([make_dataset("ds", [])])
 
-    with pytest.raises(ValueError, match="Give at least one included tag, or choose 'All datasets' in 'Include'"):
+    with pytest.raises(ValueError, match='Give at least one included tag, or choose "All datasets" in "Include"'):
         run(MACRO, project, {"excluded_tags": ["keep"], **REAL_RUN})
 
     assert project.cleared == []
@@ -286,12 +287,12 @@ def test_shared_datasets_are_skipped_when_the_option_is_unchecked() -> None:
     assert project.cleared == ["local"]
     row = row_of(recap, "shared")
     assert (row["status"], row["skip_code"]) == (STATUS_SKIPPED, SKIP_SHARED)
-    assert row["detail"] == "Is shared with PROJ_B; 'Clear shared datasets' is unchecked"
+    assert row["detail"] == 'Is shared with PROJ_B; "Clear shared datasets" is unchecked'
     assert recap["sharing_checked"] is True
 
 
 @pytest.mark.parametrize("purge_shared", [None, True, "false", 0])
-def test_shared_datasets_are_cleared_by_default_with_a_warning_naming_the_projects(purge_shared: Any) -> None:
+def test_shared_datasets_are_cleared_by_default_with_a_risk_naming_the_projects(purge_shared: Any) -> None:
     project = FakeProject([make_dataset("shared", ["a"])], shared={"shared": ["PROJ_C", "PROJ_B"]})
     config = {"included_tags": ["a"], **REAL_RUN}
     if purge_shared is not None:
@@ -318,7 +319,7 @@ def test_a_real_run_of_an_editor_that_skips_shared_datasets_stops_since_they_can
     project = FakeProject([make_dataset("ds", ["a"])], is_admin=False)
 
     with pytest.raises(
-        RunBlocked,
+        RunBlockedError,
         match=(
             r'^Nothing was cleared\. Sharing not checked\. Check "Clear shared datasets", or ask a project '
             r"administrator to run the macro\. DSS said: Action forbidden, you are not admin of this project\.$"
@@ -381,10 +382,10 @@ def test_partitioned_datasets_are_skipped_unless_the_option_is_true(purge_partit
     assert project.cleared == []
     row = row_of(recap, "partitioned")
     assert row["skip_code"] == SKIP_PARTITIONED
-    assert row["detail"] == "Is partitioned by day, country; 'Clear partitioned datasets' is unchecked"
+    assert row["detail"] == 'Is partitioned by day, country; "Clear partitioned datasets" is unchecked'
 
 
-def test_checked_partitioned_datasets_are_cleared_with_a_warning() -> None:
+def test_checked_partitioned_datasets_are_cleared_with_a_risk() -> None:
     project = FakeProject([make_dataset("partitioned", ["a"], partitioned=True)])
 
     recap, _ = run(MACRO, project, {"included_tags": ["a"], "purge_partitioned": True, **REAL_RUN})
@@ -404,11 +405,11 @@ def test_datasets_no_recipe_builds_are_skipped_by_default() -> None:
     assert project.cleared == ["built"]
     row = row_of(recap, "source")
     assert row["skip_code"] == SKIP_WITHOUT_RECIPE
-    assert row["detail"] == "Has no recipe; 'Clear datasets with no recipe' is unchecked"
+    assert row["detail"] == 'Has no recipe; "Clear datasets with no recipe" is unchecked'
     assert row_of(recap, "built")["built_by_recipe"] is True
 
 
-def test_checked_datasets_no_recipe_builds_are_cleared_with_a_warning() -> None:
+def test_checked_datasets_no_recipe_builds_are_cleared_with_a_risk() -> None:
     project = FakeProject([make_dataset("source", ["a"]), make_dataset("built", ["a"])], without_recipe=["source"])
 
     recap, _ = run(MACRO, project, {"included_tags": ["a"], "purge_without_recipe": True, **REAL_RUN})
@@ -422,7 +423,7 @@ def test_an_unreadable_flow_stops_a_real_run_by_default() -> None:
     project = FakeProject([make_dataset("ds", ["a"])], flow_error=RuntimeError("timeout"))
 
     with pytest.raises(
-        RunBlocked,
+        RunBlockedError,
         match=(
             r'^Nothing was cleared\. Recipes not checked\. Check "Clear datasets with no recipe", or run the macro '
             r"again\. DSS said: timeout\.$"
@@ -508,6 +509,19 @@ def test_the_log_gives_each_decision_in_the_same_words_in_both_modes(
         "Decision for external: Skipped - Is external (connection pg_prod)",
     ]
     assert status_of(recap, "ds") == final_status
+
+
+def test_the_log_gives_the_risks_of_a_dataset_to_clear(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO)
+    project = FakeProject([make_dataset("ds", ["a"], partitioned=True)], without_recipe=["ds"])
+
+    run(MACRO, project, {"included_tags": ["a"], "purge_partitioned": True, "purge_without_recipe": True})
+
+    assert (
+        "Decision for ds: To clear - Has included tags"
+        " - risk: All partitions are cleared (partitioned by day, country)"
+        " - risk: No recipe builds it: its data cannot be rebuilt"
+    ) in caplog.messages
 
 
 @pytest.mark.parametrize(
@@ -666,6 +680,14 @@ def test_raise_exception_stops_the_clearing_at_the_first_failure() -> None:
     assert progress == [25, 50, 75, 100]
 
 
+def test_the_log_says_why_the_clearing_stops(caplog: pytest.LogCaptureFixture) -> None:
+    project = FakeProject([make_dataset("d1", ["a"])], clear_answers={"d1": RuntimeError("boom")})
+
+    run(MACRO, project, {"included_tags": ["a"], "on_error": "STOP", **REAL_RUN})
+
+    assert 'The run stops at the first error, as "If an error occurs" asks' in caplog.messages
+
+
 @pytest.mark.parametrize("on_error", ["CONTINUE", "FAIL"])
 def test_the_other_choices_try_every_dataset(on_error: str) -> None:
     project = FakeProject(
@@ -677,7 +699,7 @@ def test_the_other_choices_try_every_dataset(on_error: str) -> None:
     assert project.cleared == ["d1", "d2", "d3"]
 
 
-def test_no_sharing_warning_when_the_sharing_was_read() -> None:
+def test_no_sharing_risk_when_the_sharing_was_read() -> None:
     project = FakeProject([make_dataset("local", ["a"])])
 
     recap, _ = run(MACRO, project, {"included_tags": ["a"]})

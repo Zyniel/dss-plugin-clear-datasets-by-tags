@@ -18,6 +18,7 @@ python-lib/
   recap/                 Shared by all macros
     page.py                RecapPage: the description of a recap (banners, figures, table...)
     html.py                Builds the HTML recap and its interactive table
+    text.py                The text of the messages: counts, durations, errors of DSS
     dataset.py             Writes the summary dataset
   macros/                One folder per macro
     clear_datasets_by_tags/
@@ -56,7 +57,7 @@ Each macro defines a subclass of `MaintenanceMacro` (in `core/macro.py`) and one
 | `id` | The name of its folder in `python-runnables`, for example `clear-datasets-by-tags`. |
 | `label` | Its name on the Macros page, the same as in its `runnable.json`. |
 | `summary_columns` | The columns of its summary dataset. |
-| `run()` | Does the work and returns the recap (a dict). Raises `ValueError` if the form is not valid, and `RunBlocked` if a blocker stops a real run. Both happen before anything changes. |
+| `run()` | Does the work and returns the recap (a dict). Raises `ValueError` if the form is not valid, and `RunBlockedError` if a blocker stops a real run. Both happen before anything changes. |
 | `describe_counts()` | The totals of the run, for the log. |
 | `build_recap_rows()` | The rows of the summary dataset. |
 | `build_recap_page()` | The description of the HTML recap (`RecapPage`), with the recap as JSON in its `summary`: for the API, the hidden block of the HTML and the `RECAP_JSON` log line. |
@@ -78,13 +79,13 @@ The smallest possible macro is in `tests/support/sample_macro.py`. The tests of 
    - `WARNING`: problems, and the run goes on. DSS shows the run as a success: it cannot show a macro run as a warning. So the recap shows each problem in a banner: red for the work, yellow for the summary dataset;
    - `FAILED`: a problem whose option asks to end the run in error.
 5. **The log:** writes the totals, one line per problem (WARNING, or ERROR when it fails the run), the outcome, then the `RECAP_JSON` line with the whole recap, then waits half a second. Without this wait, DSS 13.4.4 once lost this last line.
-6. **The end:** if the outcome is `FAILED`, raises `RunFailed`. Its message gives every problem, then where the details are: the summary dataset if it was written, else the run log. Otherwise, builds the HTML recap from `macro.build_recap_page()` and returns it.
+6. **The end:** if the outcome is `FAILED`, raises `RunFailedError`. Its message gives every problem, then where the details are: the summary dataset if it was written, else the run log. Otherwise, builds the HTML recap from `macro.build_recap_page()` and returns it.
 
 | Error | Raised by | When |
 |---|---|---|
 | `ValueError` | `macro.run()` | The form is not valid. Nothing changed. |
-| `RunBlocked` | `macro.run()` | A blocker stops a real run. Nothing changed. |
-| `RunFailed` | `run_macro()` | A problem whose option asks to end the run in error. The summary dataset and the log are written first. |
+| `RunBlockedError` | `macro.run()` | A blocker stops a real run. Nothing changed. |
+| `RunFailedError` | `run_macro()` | A problem whose option asks to end the run in error. The summary dataset and the log are written first. |
 
 DSS shows the message of the error as the result of the run.
 
@@ -113,7 +114,7 @@ The HTML contains a simple table. In DSS, a script replaces it with an AG Grid t
 ## Security
 
 - **No extra rights.** The macros run with the rights of the user (`"impersonate": true`).
-- **Escaped text.** Dataset names, tags and DSS messages are free text: they all go through `text()` (`html.escape`).
+- **Escaped text.** Dataset names, tags and DSS messages are free text: they all go through `escape_text()` (`html.escape`).
 - **No AngularJS.** DSS shows the HTML of a macro without filtering it, and passes it through AngularJS. The whole recap is inside an element with `ng-non-bindable`: a `{{...}}` in a dataset name is not evaluated.
 - **Inactive JSON blocks.** The recap and the rows of the table are in `<script type="application/json">` blocks, which the browser does not run. `<`, `>` and `&` are escaped inside, so a name like `</script>` cannot close the block.
 - **A script with no data.** The script of the table contains no data of the project: it reads the JSON block and shows each value as text.

@@ -15,7 +15,8 @@ def test_options_default_to_a_simulation_that_clears_shared_datasets_only() -> N
     assert options == {**OPTION_DEFAULTS, **RUN_OPTION_DEFAULTS, **RECAP_OPTION_DEFAULTS, "recap_dataset": None}
     assert options["simulate"] is True
     assert options["purge_shared"] is True
-    assert not options["purge_partitioned"] and not options["purge_without_recipe"]
+    assert not options["purge_partitioned"]
+    assert not options["purge_without_recipe"]
 
 
 @pytest.mark.parametrize("option", ["purge_partitioned", "purge_without_recipe"])

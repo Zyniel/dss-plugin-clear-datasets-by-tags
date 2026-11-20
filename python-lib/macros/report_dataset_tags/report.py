@@ -13,13 +13,13 @@ The datasets with no tag get their own row, with the status Untagged.
 
 import logging
 from collections.abc import Callable
-from typing import Any, Optional
+from typing import Any, Optional, TypedDict
 
 from core.options import read_checkbox, read_recap_options
 from core.project import list_project_datasets
 from core.tags import split_category_tag
-from recap.html import dss_said
 from recap.page import TONE_CAUTION, Banner
+from recap.text import describe_dss_error
 
 logger = logging.getLogger(__name__)
 
@@ -35,14 +35,27 @@ STATUS_LABELS = {
 }
 
 # Default value and label of the options of this macro, as in its form. A test checks that the form
-# agrees. The options of the "Summary" section are in core/options.py. A report changes nothing, so
-# it has no "Run" section: only "If the summary is not written" can fail the run.
+# agrees. The options of the "Summary" section are in core/options.py. This macro only reads, so it
+# has no "Run" section: only "If the summary is not written" can fail the run.
 OPTION_DEFAULTS = {"show_unused_tags": True, "aggregate_by_tag": True}
 OPTION_LABELS = {"show_unused_tags": "Show unused tags", "aggregate_by_tag": "Aggregate by tag"}
 
 
+class TagRow(TypedDict):
+    """A tag of the project, and the datasets that have it."""
+
+    tag: str
+    category: str  # "" for a tag with no category.
+    status: str
+    detail: str  # Why the tag is unknown or unused, else "".
+    datasets: list[str]  # Empty for an unused tag.
+
+
 def read_options(config: dict[str, Any], project_key: str) -> dict[str, Any]:
-    """Return the options of the form. An "on_error" sent through the API is ignored."""
+    """Return the options of the form. An "on_error" sent through the API is ignored.
+
+    :raises ValueError: if the summary dataset belongs to another project, or if none is picked while checked
+    """
     options = {name: read_checkbox(config, name, default) for name, default in OPTION_DEFAULTS.items()}
     options.update(read_recap_options(config, project_key))
     return options
@@ -65,7 +78,7 @@ def read_tag_categories(project: Any) -> dict[str, set[str]]:
     }
 
 
-def check_category_tag(tag: str, categories: dict[str, set[str]]) -> str:
+def describe_unknown_tag(tag: str, categories: dict[str, set[str]]) -> str:
     """Return why a category tag is unknown, or "" when it is known. A tag without a category is never unknown."""
     category, value = split_category_tag(tag)
     if not category:
@@ -77,15 +90,9 @@ def check_category_tag(tag: str, categories: dict[str, set[str]]) -> str:
     return ""
 
 
-def make_tag_row(tag: str, status: str, detail: str, datasets: list[str]) -> dict[str, Any]:
-    """Return the row of one tag in the report."""
-    return {
-        "tag": tag,
-        "category": split_category_tag(tag)[0],
-        "status": status,
-        "detail": detail,
-        "datasets": datasets,
-    }
+def build_tag_row(tag: str, status: str, detail: str, datasets: list[str]) -> TagRow:
+    """Return the row of one tag in the recap."""
+    return TagRow(tag=tag, category=split_category_tag(tag)[0], status=status, detail=detail, datasets=datasets)
 
 
 def run_report(
@@ -101,7 +108,7 @@ def run_report(
     """
     options = read_options(config, project_key)
     logger.info("Options: %s", options)
-    notices: list[Banner] = []  # What the reader must know. The report is still made.
+    notices: list[Banner] = []  # What the reader must know. The run goes on.
 
     datasets = sorted(list_project_datasets(project, project_key), key=lambda dataset: dataset["name"])
 
@@ -110,7 +117,7 @@ def run_report(
         categories = read_tag_categories(project)
     except Exception as error:
         logger.warning("Could not read the tag categories: %s", error)
-        text = f"Only DSS administrators can read the categories. {dss_said(error)}"
+        text = f"Only DSS administrators can read the categories. {describe_dss_error(error)}"
         notices.append(Banner(TONE_CAUTION, "Category tags not checked.", text))
 
     project_tags: list[str] = []
@@ -119,7 +126,7 @@ def run_report(
             project_tags = read_project_tags(project)
         except Exception as error:
             logger.warning("Could not read the project tag list: %s", error)
-            text = f"The project tag list could not be read. {dss_said(error)}"
+            text = f"The project tag list could not be read. {describe_dss_error(error)}"
             notices.append(Banner(TONE_CAUTION, "Unused tags not listed.", text))
 
     datasets_by_tag: dict[str, list[str]] = {}
@@ -133,11 +140,13 @@ def run_report(
 
     rows = []
     for tag, names in datasets_by_tag.items():
-        detail = "" if categories is None else check_category_tag(tag, categories)
-        rows.append(make_tag_row(tag, STATUS_UNKNOWN if detail else STATUS_USED, detail, names))
-    for tag in project_tags:
-        if tag not in datasets_by_tag:
-            rows.append(make_tag_row(tag, STATUS_UNUSED, "In the project tag list, on no dataset", []))
+        detail = "" if categories is None else describe_unknown_tag(tag, categories)
+        rows.append(build_tag_row(tag, STATUS_UNKNOWN if detail else STATUS_USED, detail, names))
+    rows.extend(
+        build_tag_row(tag, STATUS_UNUSED, "In the project tag list, on no dataset", [])
+        for tag in project_tags
+        if tag not in datasets_by_tag
+    )
     rows.sort(key=lambda row: (row["tag"].lower(), row["tag"]))
 
     for row in rows:

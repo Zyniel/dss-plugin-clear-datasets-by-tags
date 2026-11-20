@@ -27,6 +27,7 @@ from core.options import (
 from recap.html import AG_GRID_DEFAULT_INTEGRITY, AG_GRID_DEFAULT_URL
 from support.dataiku_stub import RESOURCES, ROOT, RUNNABLES, install_fake_dataiku, load_module, load_runnable_class
 from support.fakes import PROJECT_KEY, FakeClient, FakeProject, make_dataset
+from support.forms import named_params, read_form
 
 PLUGIN_ID = "clear-datasets-by-tags"
 # The heading of the macros of the plugin on the Macros page of a project.
@@ -49,6 +50,7 @@ MACRO_PACKAGES = sorted(
 
 
 def read_json(path: Any) -> Any:
+    """Return the content of a JSON file."""
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -57,10 +59,6 @@ def macro_of(folder: str) -> MaintenanceMacro:
     module = importlib.import_module(f"macros.{folder.replace('-', '_')}")
     macro: MaintenanceMacro = module.MACRO
     return macro
-
-
-def named_params(form: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    return {param["name"]: param for param in form["params"] if "name" in param}
 
 
 # plugin.json
@@ -105,13 +103,14 @@ def test_each_macro_folder_has_its_macro_package_and_back() -> None:
 
 @pytest.mark.parametrize("folder", MACRO_FOLDERS)
 def test_the_form_describes_its_macro(folder: str) -> None:
-    form = read_json(RUNNABLES / folder / "runnable.json")
+    form = read_form(folder)
     macro = macro_of(folder)
 
     assert macro.id == folder
     assert form["meta"]["label"] == macro.label
     assert form["meta"]["category"] == CATEGORY
-    assert form["meta"]["description"] and form["meta"]["icon"]
+    assert form["meta"]["description"]
+    assert form["meta"]["icon"]
     assert form["impersonate"] is True  # The macro acts with the rights of the user who runs it.
     assert form["permissions"]
     assert form["resultType"] == "HTML"
@@ -121,12 +120,14 @@ def test_the_form_describes_its_macro(folder: str) -> None:
 
 
 def separators_of(form: dict[str, Any]) -> list[str]:
+    """Return the titles of the sections of a form, in their order."""
     return [param["label"] for param in form["params"] if param["type"] == "SEPARATOR"]
 
 
 def check_defaults_and_labels(
     params: dict[str, dict[str, Any]], defaults: dict[str, Any], labels: dict[str, str]
 ) -> None:
+    """Check that the parameters of a form have the default values and the labels of the code."""
     for option, default in defaults.items():
         value = params[option]["defaultValue"]
         assert (value, type(value)) == (default, type(default)), option
@@ -136,7 +137,7 @@ def check_defaults_and_labels(
 
 @pytest.mark.parametrize("folder", MACRO_FOLDERS)
 def test_the_form_ends_with_the_recap_options(folder: str) -> None:
-    form = read_json(RUNNABLES / folder / "runnable.json")
+    form = read_form(folder)
     params = named_params(form)
 
     assert list(params)[-len(RECAP_PARAMS) :] == RECAP_PARAMS
@@ -149,7 +150,7 @@ def test_the_form_ends_with_the_recap_options(folder: str) -> None:
 
 @pytest.mark.parametrize("folder", MACRO_FOLDERS)
 def test_the_error_choices_are_select_lists_with_the_choices_of_the_code(folder: str) -> None:
-    params = named_params(read_json(RUNNABLES / folder / "runnable.json"))
+    params = named_params(read_form(folder))
 
     for name, choices in ERROR_CHOICE_PARAMS.items():
         if name in params:
@@ -160,7 +161,7 @@ def test_the_error_choices_are_select_lists_with_the_choices_of_the_code(folder:
 
 @pytest.mark.parametrize("folder", MACRO_FOLDERS)
 def test_only_a_macro_that_changes_data_has_the_run_options(folder: str) -> None:
-    form = read_json(RUNNABLES / folder / "runnable.json")
+    form = read_form(folder)
     params = named_params(form)
     changes_data = "simulate" in params
 
@@ -174,7 +175,7 @@ def test_only_a_macro_that_changes_data_has_the_run_options(folder: str) -> None
 
 @pytest.mark.parametrize("folder", MACRO_FOLDERS)
 def test_the_form_parameters_are_well_formed(folder: str) -> None:
-    form = read_json(RUNNABLES / folder / "runnable.json")
+    form = read_form(folder)
     params = named_params(form)
 
     assert len(params) == len([param for param in form["params"] if "name" in param])
@@ -185,7 +186,8 @@ def test_the_form_parameters_are_well_formed(folder: str) -> None:
         condition = param.get("visibilityCondition")
         if condition:
             match = VISIBILITY_CONDITION.fullmatch(condition)
-            assert match and match.group(1) in params, condition
+            assert match, condition
+            assert match.group(1) in params, condition
             if match.group(2):
                 choices = [choice["value"] for choice in params[match.group(1)]["selectChoices"]]
                 assert match.group(2) in choices, condition

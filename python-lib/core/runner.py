@@ -23,17 +23,19 @@ from core.problems import (
     set_work_problem,
     with_problems,
 )
-from recap.dataset import write_recap_dataset
-from recap.html import build_recap_html, read_grid_cdn
+from recap.dataset import SummaryDatasetResult, write_recap_dataset
+from recap.html import read_grid_cdn, render_recap_html
+from recap.text import format_error
 
 logger = logging.getLogger(__name__)
 
 
-class RunFailed(Exception):
-    """Raised at the end of a run when something went wrong and the form asked to fail the run.
+class RunFailedError(Exception):
+    """Raised at the end of a run when a problem asks to end the run in error.
 
-    That is "If an error occurs" set to "Fail the run" and a failure in the work, or "If the recap is
-    not written" set to "Fail the run" and a summary dataset that could not be written.
+    That is a failure in the work with "If an error occurs" set to "Continue, run ends in error" or
+    "Raise exception", or a summary dataset that could not be written with "If the summary is not
+    written" set to "Fail the run". See core/problems.py.
     """
 
 
@@ -54,7 +56,11 @@ def run_recap(
     progress_callback: Callable[[int], None],
     run_by: str = "",
 ) -> dict[str, Any]:
-    """Do the work of a macro and return its recap, with the fields every recap has."""
+    """Do the work of a macro and return its recap, with the fields every recap has.
+
+    :raises ValueError: if the form is not valid, before anything changes
+    :raises RunBlockedError: in a real run, if a blocker stops it, before anything changes
+    """
     started_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     start_time = time.time()
     logger.info("%s | project %s | run by %s", macro.label, project_key, run_by or "unknown user")
@@ -74,10 +80,12 @@ def run_recap(
     return recap
 
 
-def save_recap(macro: MaintenanceMacro, recap: dict[str, Any], open_dataset: Callable[[str], Any]) -> dict[str, Any]:
+def save_recap(
+    macro: MaintenanceMacro, recap: dict[str, Any], open_dataset: Callable[[str], Any]
+) -> SummaryDatasetResult:
     """Write the recap to the summary dataset. A failure is reported, not raised: the work is already done."""
     name = recap["options"]["recap_dataset"]
-    result: dict[str, Any] = {"name": name, "rows_written": 0, "error": ""}
+    result = SummaryDatasetResult(name=name, rows_written=0, error="")
     try:
         rows = macro.build_recap_rows(recap)
         dataset = open_dataset(name)
@@ -86,7 +94,7 @@ def save_recap(macro: MaintenanceMacro, recap: dict[str, Any], open_dataset: Cal
         )
         logger.info("Summary written to dataset %s: %d rows", name, result["rows_written"])
     except Exception as error:
-        result["error"] = f"{type(error).__name__}: {error}"
+        result["error"] = format_error(error)
         logger.error("The summary could not be written to dataset %s: %s", name, result["error"])
     return result
 
@@ -108,7 +116,9 @@ def run_macro(
     :param log_wait_seconds: pause after the last log line. DSS stops reading the log of a macro as
         soon as it returns, and a DSS 13.4.4 run lost the long RECAP_JSON line that way.
     :param plugin_config: the plugin settings, with the AG Grid a recap opened outside DSS loads
-    :raises RunFailed: after the run, if something went wrong and the form asked to fail the run
+    :raises ValueError: if the form is not valid, before anything changes
+    :raises RunBlockedError: in a real run, if a blocker stops it, before anything changes
+    :raises RunFailedError: after the run, if a problem asks to end the run in error
     """
     run_by = read_run_by(client)
     project = client.get_project(project_key)
@@ -128,5 +138,5 @@ def run_macro(
     time.sleep(log_wait_seconds)
 
     if recap["outcome"] == OUTCOME_FAILED:
-        raise RunFailed(build_failure_message(recap))
-    return build_recap_html(recap, page, read_grid_cdn(plugin_config))
+        raise RunFailedError(build_failure_message(recap))
+    return render_recap_html(recap, page, read_grid_cdn(plugin_config))

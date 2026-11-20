@@ -1,5 +1,6 @@
-"""Who sees and runs each macro, with users who are not DSS administrators. Rows 8, 13, 22 and 24 of
-docs/verification.md.
+"""Who sees and runs each macro, with users who are not DSS administrators.
+
+Rows 8, 13, 22 and 24 of docs/verification.md.
 
 These tests need the API keys of an editor and a reader in the config file. Without them, they are skipped.
 """
@@ -51,7 +52,7 @@ def test_an_editor_cannot_skip_shared_datasets(scratch_project: Any, editor: Any
     assert count_rows(scratch_project, "sales") == ROW_COUNT
 
 
-def test_a_reader_sees_only_the_report(scratch_project: Any, reader: Any) -> None:
+def test_a_reader_sees_only_the_report_dataset_tags_macro(scratch_project: Any, reader: Any) -> None:
     project = give_access(scratch_project, reader, write=False)
 
     macro_ids = list_macro_ids(project)
@@ -70,7 +71,7 @@ def test_a_reader_cannot_clear_data(scratch_project: Any, reader: Any, connectio
     assert count_rows(scratch_project, "sales") == ROW_COUNT
 
 
-def test_a_reader_runs_the_report_without_the_global_categories(
+def test_a_reader_runs_the_report_dataset_tags_macro_without_the_global_categories(
     scratch_project: Any, reader: Any, connection: str
 ) -> None:
     add_built_dataset(scratch_project, "sales", ["Stage:Raw"], connection)

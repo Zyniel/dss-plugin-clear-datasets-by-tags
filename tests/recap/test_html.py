@@ -1,7 +1,6 @@
 """Tests of the HTML recap, with a page made by hand: layout, escaping, the hidden JSON and the grid script."""
 
 import json
-import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -16,11 +15,8 @@ from recap.html import (
     ICON_SHAPES,
     STYLE,
     build_common_option_chips,
-    build_recap_html,
-    count_of,
-    dss_said,
-    format_duration,
     read_grid_cdn,
+    render_recap_html,
     to_html_script_json,
 )
 from recap.page import (
@@ -42,6 +38,7 @@ from recap.page import (
     Section,
     Table,
 )
+from support.pages import read_summary, read_table_rows
 from support.sample_macro import STATUS_DONE, STATUS_FAILED, STATUSES
 
 COLUMNS = [
@@ -55,6 +52,7 @@ COLUMNS = [
 
 
 def make_row(name: str, status: str = STATUS_DONE, **values: Any) -> dict[str, Any]:
+    """Return a row of the table of the sample page, with a value for each column."""
     row: dict[str, Any] = {
         "name": name,
         "status": status,
@@ -68,6 +66,7 @@ def make_row(name: str, status: str = STATUS_DONE, **values: Any) -> dict[str, A
 
 
 def make_recap(**values: Any) -> dict[str, Any]:
+    """Return the fields every recap has, as the runner adds them, for the page of a run."""
     recap: dict[str, Any] = {
         "run_id": "r1",
         "macro_label": "Sample Macro",
@@ -82,6 +81,7 @@ def make_recap(**values: Any) -> dict[str, Any]:
 
 
 def make_page(rows: Any = None, **values: Any) -> RecapPage:
+    """Return a page with a figure and a table of two rows, one done and one failed, unless rows are given."""
     rows = [make_row("a_ok", seconds=0.123), make_row("z_ko", STATUS_FAILED)] if rows is None else rows
     table = Table("Datasets", COLUMNS, STATUSES, rows, "Nothing to show.", "Search datasets", "sample.csv")
     page = RecapPage([], [Metric("Selected", str(len(rows)), status=ALL_STATUSES)], [], table, {"datasets": rows})
@@ -89,28 +89,13 @@ def make_page(rows: Any = None, **values: Any) -> RecapPage:
 
 
 def html_of(page: RecapPage, **recap_values: Any) -> str:
-    return build_recap_html(make_recap(**recap_values), page)
+    """Return the HTML recap of a page, for a run with these recap values."""
+    return render_recap_html(make_recap(**recap_values), page)
 
 
 def grid_script_of(html: str) -> str:
+    """Return the code of the grid script, the last script of the recap."""
     return html[html.rindex("<script>") + len("<script>") : html.rindex("</script>")]
-
-
-def test_count_of() -> None:
-    assert (count_of(0, "row"), count_of(1, "row"), count_of(2, "dataset")) == ("0 rows", "1 row", "2 datasets")
-
-
-def test_format_duration() -> None:
-    assert format_duration(0.421) == "0.42 s"
-    assert format_duration(90) == "1.5 min"
-
-
-def test_dss_said_ends_with_one_period_and_cuts_a_long_error() -> None:
-    assert dss_said("disk full") == "DSS said: disk full."
-    assert dss_said("disk full.") == "DSS said: disk full."
-    assert dss_said(" line one\n  line two ") == "DSS said: line one line two."
-    assert dss_said(TimeoutError()) == "DSS said: TimeoutError."
-    assert dss_said("x" * 500) == f"DSS said: {'x' * 200}..."
 
 
 def test_a_banner_as_text_is_its_whole_message() -> None:
@@ -210,7 +195,7 @@ def test_the_common_options_of_every_form() -> None:
         Chip("Summary dataset: none"),
     ]
 
-    # A form without the "Run" section, such as a report.
+    # A form without the "Run" section, such as the one of a macro that only reads.
     options = {"recap_dataset": None, "recap_append": True, "on_recap_error": "CONTINUE"}
     assert build_common_option_chips(options) == [Chip("Summary dataset: none")]
 
@@ -299,7 +284,8 @@ def test_free_text_is_escaped_and_angularjs_is_kept_out() -> None:
     assert html.rindex("{{") < html.index("</div><script>")
     # The grid script after it holds no data: it reads the escaped JSON block of the table.
     grid_script = grid_script_of(html)
-    assert "alert" not in grid_script and "constructor" not in grid_script
+    assert "alert" not in grid_script
+    assert "constructor" not in grid_script
 
 
 def test_json_for_a_script_element_cannot_close_it_and_reads_back_the_same() -> None:
@@ -308,7 +294,8 @@ def test_json_for_a_script_element_cannot_close_it_and_reads_back_the_same() -> 
     json_text = to_html_script_json(data)
 
     assert "</script>" not in json_text
-    assert "<" not in json_text and ">" not in json_text
+    assert "<" not in json_text
+    assert ">" not in json_text
     assert json.loads(json_text) == data
 
 
@@ -317,11 +304,8 @@ def test_the_hidden_json_blocks_hold_the_summary_and_the_rows() -> None:
 
     html = html_of(page)
 
-    summary = re.search(r'<script type="application/json" id="dtp-recap-data">(.*?)</script>', html, re.DOTALL)
-    rows = re.search(r'<script type="application/json" class="dtp-table-data">(.*?)</script>', html, re.DOTALL)
-    assert summary and rows
-    assert json.loads(summary.group(1)) == page.summary
-    assert json.loads(rows.group(1)) == page.table.rows
+    assert read_summary(html) == page.summary
+    assert read_table_rows(html) == page.table.rows
 
 
 # The interactive table
@@ -347,9 +331,9 @@ def test_the_grid_script_enhances_the_static_table_of_this_run() -> None:
 def test_the_grid_uses_community_features_only() -> None:
     script = grid_script_of(html_of(make_page()))
 
-    assert "agSetColumnFilter" not in script and "filter: true" not in script
+    for enterprise_only in ["agSetColumnFilter", "filter: true", "exportDataAsExcel", "rowGroup"]:
+        assert enterprise_only not in script
     assert "suppressContextMenu: true" in script
-    assert "exportDataAsExcel" not in script and "rowGroup" not in script
 
 
 def test_the_grid_shows_icons_and_chips_but_exports_plain_values() -> None:
@@ -363,7 +347,8 @@ def test_the_grid_shows_icons_and_chips_but_exports_plain_values() -> None:
     # Numbers are right aligned with column settings of AG Grid, also in the flex cells of DSS: no grid CSS.
     assert 'def.type = "numericColumn";' in script
     assert 'def.cellStyle = {justifyContent: "flex-end"};' in script
-    assert "ag-right-aligned" not in STYLE and "toFixed" not in script
+    assert "ag-right-aligned" not in STYLE
+    assert "toFixed" not in script
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js checks the syntax of the grid script")
@@ -426,14 +411,14 @@ def test_the_grid_cdn_of_the_plugin_settings(settings: dict[str, Any], expected:
 def test_the_grid_cdn_goes_into_the_script_without_closing_it() -> None:
     cdn = read_grid_cdn({"ag_grid_url": "https://repo.example.com/ag.js</script><script>alert(1)//"})
 
-    html = build_recap_html(make_recap(), make_page(), cdn)
+    html = render_recap_html(make_recap(), make_page(), cdn)
 
     assert html.count("</script>") == 3  # The two JSON blocks and the grid script.
     assert "https://repo.example.com/ag.js\\u003c/script\\u003e" in grid_script_of(html)
 
 
 def test_no_grid_cdn_when_turned_off() -> None:
-    script = grid_script_of(build_recap_html(make_recap(), make_page(), read_grid_cdn({"ag_grid_url": ""})))
+    script = grid_script_of(render_recap_html(make_recap(), make_page(), read_grid_cdn({"ag_grid_url": ""})))
 
     assert 'var cdn = {"url": "", "integrity": ""};' in script
     assert "cdn.jsdelivr.net" not in script

@@ -26,6 +26,8 @@ class FakeDatasetHandle:
 
 
 class FakeSettings:
+    """Stands in for the settings of a project: here, only the datasets it shares with other projects."""
+
     def __init__(self, shared: dict[str, list[str]]) -> None:
         self.shared = shared
 
@@ -39,6 +41,8 @@ class FakeSettings:
 
 
 class FakeGraph:
+    """Stands in for the graph of the Flow: here, only the datasets no recipe builds."""
+
     def __init__(self, without_recipe: list[str]) -> None:
         self.without_recipe = without_recipe
 
@@ -49,6 +53,8 @@ class FakeGraph:
 
 
 class FakeFlow:
+    """Stands in for the Flow of a project. Reading its graph raises the flow_error of the project, if any."""
+
     def __init__(self, project: "FakeProject") -> None:
         self.project = project
 
@@ -158,8 +164,10 @@ class FakeClient:
 
 
 class FakeWriter:
-    """Stands in for the writer of dataiku.Dataset: like DSS, closing it replaces the data, or adds
-    the rows to it when spec_item["appendMode"] is true."""
+    """Stands in for the writer of dataiku.Dataset.
+
+    Like DSS, closing it replaces the data, or adds the rows to it when spec_item["appendMode"] is true.
+    """
 
     def __init__(self, dataset: "FakeRecapDataset") -> None:
         self.dataset = dataset

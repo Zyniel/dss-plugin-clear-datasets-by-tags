@@ -111,7 +111,7 @@ def test_only_a_real_false_turns_the_recap_dataset_off(value: Any, expected: Any
 
 
 def test_writing_the_recap_to_a_dataset_needs_a_dataset() -> None:
-    with pytest.raises(ValueError, match="Pick a summary dataset, or uncheck 'Write to a dataset'"):
+    with pytest.raises(ValueError, match='Pick a summary dataset, or uncheck "Write to a dataset"'):
         read_recap_options({"recap_to_dataset": True, "recap_dataset": ""}, PROJECT_KEY)
 
 

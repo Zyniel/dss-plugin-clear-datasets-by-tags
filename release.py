@@ -35,7 +35,10 @@ class ReleaseError(Exception):
 
 
 def parse_version(version: str) -> tuple[int, int, int]:
-    """Return the three numbers of a version, or raise ReleaseError if it is not one."""
+    """Return the three numbers of a version.
+
+    :raises ReleaseError: if it is not a version
+    """
     match = VERSION.match(version)
     if not match:
         raise ReleaseError(f"{version!r} is not a version such as 1.1.0, or 1.1.0-beta for a pre-release.")
@@ -61,7 +64,10 @@ def changelog_section(changelog: str, heading: str) -> Optional[str]:
 
 
 def replace_line(text: str, pattern: str, line: str, file_name: str) -> str:
-    """Replace the one line of a text that matches `pattern`."""
+    """Replace the one line of a text that matches `pattern`.
+
+    :raises ReleaseError: if no line or several lines match
+    """
     new_text, count = re.subn(pattern, lambda _: line, text, flags=re.M)
     if count != 1:
         raise ReleaseError(f"{file_name}: expected one line that matches {pattern}, found {count}.")
@@ -69,7 +75,11 @@ def replace_line(text: str, pattern: str, line: str, file_name: str) -> str:
 
 
 def prepare(root: Path, version: str, today: datetime.date) -> None:
-    """Set the version in every file, and date the "## Unreleased" section of the CHANGELOG with it."""
+    """Set the version in every file, and date the "## Unreleased" section of the CHANGELOG with it.
+
+    :raises ReleaseError: if the version is not one, is lower than the current one or already has a section, or
+        if the "## Unreleased" section is missing or empty
+    """
     current = json.loads((root / "plugin.json").read_text(encoding="utf-8"))["version"]
     if parse_version(version) < parse_version(current):
         raise ReleaseError(f"{version} is lower than the version of plugin.json, {current}.")
@@ -93,6 +103,7 @@ def release_notes(changelog: str, version: str, ref: str, repository: str, or_un
     """Return the CHANGELOG section of a version, with its relative links pointing to the files at `ref` on GitHub.
 
     :param or_unreleased: if the version has no section, use the "## Unreleased" one: a dry run before the release
+    :raises ReleaseError: if the CHANGELOG has no section for the version
     """
     section = changelog_section(changelog, f"## {version}")
     if (section is None or not section.strip()) and or_unreleased:
@@ -104,6 +115,10 @@ def release_notes(changelog: str, version: str, ref: str, repository: str, or_un
 
 
 def main(argv: Optional[list[str]] = None) -> None:
+    """Run the command of the command line: prepare, or notes.
+
+    :raises SystemExit: with the reason, if the release cannot go on
+    """
     parser = argparse.ArgumentParser(description="Prepare a release, or write its notes. See docs/releasing.md.")
     commands = parser.add_subparsers(dest="command", required=True)
     prepare_command = commands.add_parser("prepare", help="Set the version, and date the CHANGELOG.")

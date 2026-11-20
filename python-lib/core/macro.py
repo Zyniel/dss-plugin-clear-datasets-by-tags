@@ -7,7 +7,7 @@ from typing import Any, NamedTuple, Optional
 from recap.page import RecapPage
 
 
-class RunBlocked(Exception):
+class RunBlockedError(Exception):
     """Raised when a blocker stops a real run, before anything changes."""
 
 
@@ -32,7 +32,7 @@ class MaintenanceMacro(ABC):
     - "blockers": why a real run would stop. Only a simulation returns with blockers.
 
     A macro that changes data also returns "simulate": True when the run changed nothing. A macro
-    that only reads, such as a report, has no simulation.
+    that only reads, such as the Report Dataset Tags macro, has no simulation.
 
     The runner then adds the fields every recap has: run_id, macro, macro_label, project_key, run_by,
     started_at, duration, recap_dataset_result, problems and outcome.
@@ -52,7 +52,7 @@ class MaintenanceMacro(ABC):
         :param config: values of the macro form
         :param progress_callback: called with the percentage of the work done
         :raises ValueError: if the form is not valid, before changing anything
-        :raises RunBlocked: in a real run, if a blocker stops it, before changing anything
+        :raises RunBlockedError: in a real run, if a blocker stops it, before changing anything
         """
 
     @abstractmethod

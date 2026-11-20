@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from core.runner import RunFailed
+from core.runner import RunFailedError
 from macros.clear_datasets_by_tags import MACRO
 from macros.clear_datasets_by_tags.recap import SUMMARY_COLUMNS
 from support.dataiku_stub import install_fake_dataiku, load_runnable_class
@@ -15,6 +15,7 @@ from support.fakes import PROJECT_KEY, FakeClient, FakeProject, make_dataset
 def run_runnable(
     monkeypatch: pytest.MonkeyPatch, project: FakeProject, config: dict[str, Any], opened: list[Any]
 ) -> tuple[str, list[int]]:
+    """Run the runnable.py of the macro with the fake dataiku package, and return its HTML and its progress."""
     install_fake_dataiku(monkeypatch, FakeClient(project), opened)
     runnable_class = load_runnable_class(MACRO.id)
     settings = {"ag_grid_url": "https://repo.example.com/ag-grid.js", "ag_grid_integrity": ""}
@@ -60,7 +61,7 @@ def test_on_error_fail_counts_the_failed_datasets(
     )
     config = {"included_tags": ["a"], "simulate": False, "on_error": "FAIL"}
 
-    with pytest.raises(RunFailed, match=r"^1 of 3 datasets failed, 2 cleared\. Details in the run log\.$"):
+    with pytest.raises(RunFailedError, match=r"^1 of 3 datasets failed, 2 cleared\. Details in the run log\.$"):
         run_runnable(monkeypatch, project, config, [])
 
     assert project.cleared == ["d1", "d2", "d3"]
@@ -76,7 +77,7 @@ def test_raise_exception_fails_the_run_at_the_first_error(monkeypatch: pytest.Mo
     )
     config = {"included_tags": ["a"], "simulate": False, "on_error": "STOP"}
 
-    with pytest.raises(RunFailed, match=r"^1 of 3 datasets failed, 2 not tried\. Details in the run log\.$"):
+    with pytest.raises(RunFailedError, match=r"^1 of 3 datasets failed, 2 not tried\. Details in the run log\.$"):
         run_runnable(monkeypatch, project, config, [])
 
     assert project.cleared == ["d1"]
