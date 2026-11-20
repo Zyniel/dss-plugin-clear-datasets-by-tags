@@ -46,12 +46,8 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
       # The same checks as the CI: a release is never built from code that fails them.
       - run: uv sync --locked
-      - run: uv run ruff check .
-      - run: uv run ruff format --check .
-      - run: uv run mypy
-      - run: for f in python-runnables/*/runnable.py; do uv run mypy "$f" || exit 1; done
-      - run: uv run pytest
-      - run: uv run python build_plugin_zip.py
+      # It also builds the plugin zip, which the release publishes.
+      - run: uv run --locked python check.py
       # The section of the version in the CHANGELOG. A dry run before the release falls back on "## Unreleased".
       - name: Write the release notes
         env:

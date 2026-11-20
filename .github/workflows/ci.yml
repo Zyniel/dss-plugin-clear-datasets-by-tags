@@ -15,12 +15,8 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       # Python 3.9 comes from .python-version: the version DSS 13 runs the plugin with.
       - run: uv sync --locked
-      - run: uv run ruff check .
-      - run: uv run ruff format --check .
-      - run: uv run mypy
-      # The runnables all have the same file name, so mypy checks them one at a time.
-      - run: for f in python-runnables/*/runnable.py; do uv run mypy "$f" || exit 1; done
-      - run: uv run python build_plugin_zip.py
+      # Ruff, ruff format, mypy, mypy for each runnable and the plugin zip. The tests job runs pytest.
+      - run: uv run --locked python check.py --no-tests
       - uses: actions/upload-artifact@v4
         with:
           name: plugin-zip

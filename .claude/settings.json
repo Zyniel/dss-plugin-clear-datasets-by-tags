@@ -2,5 +2,20 @@
   "attribution": {
     "commit": "",
     "pr": ""
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --frozen --quiet --project \"$CLAUDE_PROJECT_DIR\" python \"$CLAUDE_PROJECT_DIR/.claude/hooks/ruff_after_edit.py\"",
+            "timeout": 60,
+            "statusMessage": "Checking the file with ruff"
+          }
+        ]
+      }
+    ]
   }
 }

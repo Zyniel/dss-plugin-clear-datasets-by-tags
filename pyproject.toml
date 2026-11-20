@@ -61,9 +61,8 @@ strict = true
 mypy_path = "python-lib:tests"
 explicit_package_bases = true
 disallow_subclassing_any = false
-# The runnables all have the same file name, so mypy checks them one at a time:
-# for f in python-runnables/*/runnable.py; do uv run mypy "$f"; done
-files = ["python-lib", "resource", "tests", "build_plugin_zip.py", "release.py"]
+# The runnables all have the same file name, so check.py runs mypy on them one at a time.
+files = ["python-lib", "resource", "tests", "build_plugin_zip.py", "check.py", "release.py"]
 
 [[tool.mypy.overrides]]
 module = ["dataiku", "dataiku.*", "dataikuapi", "dataikuapi.*", "PIL", "PIL.*", "playwright", "playwright.*"]

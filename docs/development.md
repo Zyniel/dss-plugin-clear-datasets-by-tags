@@ -58,6 +58,7 @@ Git uses it for your commits in this repository, and for the commits Claude Code
 ├── CHANGELOG.md                  The changes of each version, and the unreleased ones
 ├── LICENSE                       MIT License
 ├── build_plugin_zip.py           Builds the zip to install in DSS
+├── check.py                      Runs the checks of the CI
 ├── release.py                    Prepares a release, and writes its notes
 ├── pyproject.toml                Development tools and their settings
 ├── uv.lock                       Exact versions of the tools
@@ -75,33 +76,20 @@ Git uses it for your commits in this repository, and for the commits Claude Code
 
 ## Run the checks
 
-Bash:
-
 ```bash
-uv run pytest
-uv run ruff check .
-uv run ruff format --check .
-uv run mypy
-for f in python-runnables/*/runnable.py; do uv run mypy "$f"; done
+uv run python check.py
 ```
 
-PowerShell:
-
-```powershell
-uv run pytest
-uv run ruff check .
-uv run ruff format --check .
-uv run mypy
-Get-ChildItem python-runnables\*\runnable.py | ForEach-Object { uv run mypy $_.FullName }
-```
+It runs the checks of the CI, one after the other: ruff, ruff format, mypy, mypy for each runnable, the build of the zip, then pytest on Python 3.9 and 3.13. It prints `ok` or `FAIL` for each, the output of those that fail only, and ends in error if one fails. The command is the same in bash and PowerShell. `--no-tests` skips pytest.
 
 Good to know:
 
+- **One check at a time.** `check.py` lists the command of each check, such as `uv run pytest` or `uv run ruff check .`.
 - **`uv run ruff format .`** fixes the format. `uv run ruff check --fix .` fixes what it can.
 - **The conventions.** Ruff checks those it can, with the rules of `pyproject.toml`. [CODING_STANDARDS.md](../CODING_STANDARDS.md) gives the others.
-- **mypy, one runnable at a time.** All runnables are named `runnable.py`, and mypy refuses two files with the same name in one run. This is why there is a loop.
+- **mypy, one runnable at a time.** All runnables are named `runnable.py`, and mypy refuses two files with the same name in one run. This is why `check.py` runs mypy on each.
 - **mypy 1.x.** mypy 2 cannot check code for Python 3.9 any more.
-- **Another Python version.** To run the tests on Python 3.13, like the CI: `uv run --isolated --python 3.13 --group dev pytest`.
+- **Another Python version.** `check.py` runs the tests on Python 3.13 with `uv run --isolated --locked --python 3.13 pytest`. `--isolated` leaves the environment of the project on Python 3.9.
 - **Node.js.** If it is installed, a test also checks the syntax of the script of the interactive table.
 
 ## Build the zip
@@ -148,7 +136,7 @@ The fake objects copy the shape of the DSS answers. If a real DSS answers in ano
 
 | Job | Steps |
 |---|---|
-| Lint, types and plugin zip | `uv sync --locked`, ruff, ruff format, mypy, mypy for each runnable, then the build of the zip, kept as the `plugin-zip` artifact. |
+| Lint, types and plugin zip | `uv sync --locked`, then `check.py --no-tests`: ruff, ruff format, mypy, mypy for each runnable, and the build of the zip, kept as the `plugin-zip` artifact. |
 | Tests on Python 3.9 and 3.13 | `uv run --locked --python <version> pytest`. |
 
 Three more workflows release a version: `prepare-release.yml`, `tag-release.yml` and `release.yml`. See [releasing](releasing.md).
