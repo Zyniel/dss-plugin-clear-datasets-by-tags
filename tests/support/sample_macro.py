@@ -1,7 +1,7 @@
 """A minimal macro, to test the shared code without any real macro.
 
 It also shows the least a macro must provide. It marks each dataset of the project as done, or as
-failed when its name is in config["fail"].
+failed when its name is in config["fail"]. It gives a yellow notice when config["notice"] holds one.
 """
 
 from collections.abc import Callable
@@ -15,8 +15,10 @@ from recap.page import (
     COLUMN_STATUS,
     ICON_CHECK,
     ICON_CROSS,
+    TONE_CAUTION,
     TONE_DANGER,
     TONE_SUCCESS,
+    Banner,
     Column,
     Metric,
     RecapPage,
@@ -59,7 +61,7 @@ class SampleMacro(MaintenanceMacro):
         progress_callback(100)
         return {
             "options": options,
-            "notices": [],
+            "notices": [Banner(TONE_CAUTION, config["notice"])] if config.get("notice") else [],
             "blockers": [],
             "datasets": rows,
         }
