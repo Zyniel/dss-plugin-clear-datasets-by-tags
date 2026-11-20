@@ -11,7 +11,7 @@ inside the tests, or with pytest.importorskip(): the CI does not install them.
 """
 
 from collections.abc import Iterator
-from typing import Any, NamedTuple
+from typing import Any, Callable
 
 import pytest
 
@@ -26,14 +26,8 @@ from screenshots.demo_projects import (
     create_demo_projects,
     delete_demo_projects,
 )
+from screenshots.dss_ui import UiLogin
 from screenshots.images import SCALE
-
-
-class UiLogin(NamedTuple):
-    """The login and the password of the DSS UI, from the config file."""
-
-    login: str
-    password: str
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -100,18 +94,27 @@ def browser() -> Iterator[Any]:
 
 
 @pytest.fixture
-def dss_page(config: dict[str, Any], ui_login: UiLogin, browser: Any) -> Iterator[Any]:
-    """Return a page of Chromium, logged in to the DSS UI: in English, in the light theme, at scale 2."""
-    context = browser.new_context(
-        base_url=config["url"],
-        locale="en-US",
-        color_scheme="light",
-        device_scale_factor=SCALE,
-        viewport=dss_ui.WINDOW_SIZE,
-    )
-    try:
+def open_dss_page(config: dict[str, Any], ui_login: UiLogin, browser: Any) -> Iterator[Callable[[], Any]]:
+    """Return a function that opens a page of Chromium, logged in to the DSS UI, when the test is ready for it.
+
+    The page is in English, in the light theme, at scale 2. The pages are closed at the end of the test. The function
+    raises DssUiError when DSS refuses the login.
+    """
+    contexts = []
+
+    def open_page() -> Any:
+        context = browser.new_context(
+            base_url=config["url"],
+            locale="en-US",
+            color_scheme="light",
+            device_scale_factor=SCALE,
+            viewport=dss_ui.WINDOW_SIZE,
+        )
+        contexts.append(context)
         page = context.new_page()
         dss_ui.log_in(page, ui_login.login, ui_login.password)
-        yield page
-    finally:
+        return page
+
+    yield open_page
+    for context in contexts:
         context.close()

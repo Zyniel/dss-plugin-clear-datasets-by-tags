@@ -10,8 +10,15 @@ from typing import Any
 from support.pages import read_summary
 
 PLUGIN_ID = "clear-datasets-by-tags"
-CLEAR = f"pyrunnable_{PLUGIN_ID}_clear-datasets-by-tags"
-REPORT = f"pyrunnable_{PLUGIN_ID}_report-dataset-tags"
+
+
+def runnable_id(macro_id: str) -> str:
+    """Return the id of a macro for the API and the scenarios, from the name of its folder in python-runnables."""
+    return f"pyrunnable_{PLUGIN_ID}_{macro_id}"
+
+
+CLEAR = runnable_id("clear-datasets-by-tags")
+REPORT = runnable_id("report-dataset-tags")
 
 # Every scratch project starts with this prefix: a test never touches another project.
 PROJECT_PREFIX = "DSSPM_IT_"

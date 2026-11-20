@@ -10,7 +10,7 @@ checks the mark before it deletes one. Each function takes handles of the DSS AP
 helpers of the integration tests do.
 """
 
-from typing import Any, NamedTuple, Union
+from typing import Any, Callable, NamedTuple, Union
 
 from integration.dss import (
     add_built_dataset,
@@ -18,10 +18,12 @@ from integration.dss import (
     add_partitioned_dataset,
     add_uploaded_dataset,
     delete_whole_project,
+    runnable_id,
     set_recipe_tags,
     set_tags,
     share_dataset,
 )
+from support.forms import named_params, read_form
 
 SALES = "SALES"
 FINANCE = "FINANCE"
@@ -96,6 +98,9 @@ class ReportResults(NamedTuple):
     unknown: list[str]
     unused: list[str]
 
+
+# The results of any macro of the README. A new macro adds its own NamedTuple here.
+Results = Union[ClearResults, ReportResults]
 
 # The forms of the runs, as the README describes them.
 CLEAR_FORM = {"included_tags": ["temporary"], "excluded_tags": ["keep"], "simulate": True}
@@ -318,13 +323,40 @@ def read_report_results(recap: dict[str, Any]) -> ReportResults:
     )
 
 
-def describe_differences(
-    macro_label: str, expected: Union[ClearResults, ReportResults], actual: Union[ClearResults, ReportResults]
-) -> list[str]:
+def describe_differences(macro_label: str, expected: Results, actual: Results) -> list[str]:
     """Return a line for each result of a macro that differs from what the README states: expected, then actual."""
     actual_values = actual._asdict()
     return [
         f"The {macro_label} macro, {name.replace('_', ' ')}: expected {value}, got {actual_values.get(name)}."
         for name, value in expected._asdict().items()
         if actual_values.get(name) != value
+    ]
+
+
+class ReadmeMacro(NamedTuple):
+    """A macro of the README: its form, as runnable.json gives it and as the README fills it, and its results."""
+
+    macro_id: str  # The folder of the macro in python-runnables, and of its images in docs/images.
+    runnable_id: str
+    label: str
+    params: dict[str, dict[str, Any]]  # The parameters of runnable.json, by name.
+    form: dict[str, Any]
+    expected: Results
+    read_results: Callable[[dict[str, Any]], Results]
+
+
+def read_readme_macro(
+    macro_id: str, form: dict[str, Any], expected: Results, read_results: Callable[[dict[str, Any]], Results]
+) -> ReadmeMacro:
+    """Return a macro of the README, with the label and the parameters of its runnable.json."""
+    definition = read_form(macro_id)
+    label = definition["meta"]["label"]
+    return ReadmeMacro(macro_id, runnable_id(macro_id), label, named_params(definition), form, expected, read_results)
+
+
+def list_readme_macros() -> list[ReadmeMacro]:
+    """Return the macros the README shows, in the order of the README."""
+    return [
+        read_readme_macro("clear-datasets-by-tags", CLEAR_FORM, EXPECTED_CLEAR, read_clear_results),
+        read_readme_macro("report-dataset-tags", REPORT_FORM, EXPECTED_REPORT, read_report_results),
     ]
