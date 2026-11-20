@@ -3,6 +3,7 @@
 Each function takes handles of the DSS API client (`dataikuapi`). See docs/integration-tests.md.
 """
 
+import contextlib
 import io
 from typing import Any
 
@@ -27,6 +28,18 @@ def dss_error() -> Any:
     return DataikuException
 
 
+def delete_whole_project(client: Any, project_key: str) -> None:
+    """Delete a project, with the data of its managed datasets. The caller first checks that the project is its own.
+
+    :raises RuntimeError: when the project is still there after the delete.
+    """
+    # DSS 13.4.4 answers the delete with an empty body, which the client cannot read.
+    with contextlib.suppress(Exception):
+        client.get_project(project_key).delete(clear_managed_datasets=True, clear_output_managed_folders=True)
+    if project_key in client.list_project_keys():
+        raise RuntimeError(f"The project {project_key} could not be deleted.")
+
+
 def set_tags(dataset: Any, tags: list[str]) -> None:
     """Set the tags of a dataset."""
     settings = dataset.get_settings()
@@ -42,27 +55,64 @@ def add_uploaded_dataset(project: Any, name: str, tags: list[str]) -> None:
     set_tags(dataset, tags)
 
 
-def add_built_dataset(project: Any, name: str, tags: list[str], connection: str) -> None:
-    """Add a managed dataset with 3 rows, built by a recipe from an uploaded dataset with no tag.
+def add_built_dataset(
+    project: Any, name: str, tags: list[str], connection: str, source: str = "", source_project_key: str = ""
+) -> Any:
+    """Add a managed dataset with 3 rows, built by a sync recipe, and return the recipe.
 
     This is the dataset the macro clears by default: DSS manages its data, and a recipe can build it again.
+
+    :param source: the input of the recipe, a dataset with 3 rows. By default, a new uploaded dataset with no tag.
+    :param source_project_key: the project of the input, when another project shares it
     """
-    source = f"{name}_source"
-    add_uploaded_dataset(project, source, [])
+    if not source:
+        source = f"{name}_source"
+        add_uploaded_dataset(project, source, [])
     builder = project.new_recipe("sync")
-    builder.with_input(source)
+    builder.with_input(source, project_key=source_project_key or None)
     builder.with_new_output(name, connection)
-    builder.create()
+    recipe = builder.create()
     dataset = project.get_dataset(name)
     dataset.build(wait=True)
     set_tags(dataset, tags)
+    return recipe
 
 
-def add_empty_dataset(project: Any, name: str, connection: str, columns: tuple[str, ...] = ()) -> None:
-    """Add a managed dataset with no data, such as a summary dataset, with these text columns."""
+def add_empty_dataset(project: Any, name: str, connection: str, columns: tuple[str, ...] = ()) -> Any:
+    """Add a managed dataset with no data and no recipe, such as a summary dataset, with these text columns.
+
+    :returns: the dataset handle
+    """
     dataset = project.new_managed_dataset(name).with_store_into(connection).create()
     if columns:
         dataset.set_schema({"columns": [{"name": column, "type": "string"} for column in columns]})
+    return dataset
+
+
+def add_partitioned_dataset(project: Any, name: str, tags: list[str], connection: str) -> None:
+    """Add a managed dataset with no data and no recipe, partitioned by day (a time dimension) and country."""
+    dataset = add_empty_dataset(project, name, connection)
+    settings = dataset.get_settings()
+    settings.add_time_partitioning_dimension("day", "DAY")
+    settings.add_discrete_partitioning_dimension("country")
+    settings.set_partitioning_file_pattern("%Y/%M/%D/%{country}/.*")
+    settings.save()
+    set_tags(dataset, tags)
+
+
+def set_recipe_tags(recipe: Any, tags: list[str]) -> None:
+    """Set the tags of a recipe. DSS adds them to the project tag list."""
+    metadata = recipe.get_metadata()
+    metadata["tags"] = tags
+    recipe.set_metadata(metadata)
+
+
+def share_dataset(project: Any, name: str, target_project_key: str) -> None:
+    """Share a dataset with another project: the Flow of that project can use it."""
+    settings = project.get_settings()
+    rule = {"targetProject": target_project_key, "appearOnFlow": True}
+    settings.get_raw()["exposedObjects"]["objects"].append({"type": "DATASET", "localName": name, "rules": [rule]})
+    settings.save()
 
 
 def count_rows(project: Any, name: str) -> int:

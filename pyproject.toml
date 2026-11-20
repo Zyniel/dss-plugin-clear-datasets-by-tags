@@ -12,6 +12,11 @@ dependencies = []
 dev = ["mypy>=1.19,<2", "pytest", "ruff"]
 # The DSS API client, only for the integration tests on a real DSS 13: see docs/integration-tests.md.
 integration = ["dataiku-api-client>=13.4,<14"]
+# Playwright, which downloads its own Chromium, and Pillow, only for the screenshot tests: see docs/screenshots.md.
+# The last versions for Python 3.9: Playwright 1.61 and Pillow 12 need Python 3.10, and greenlet 3.2.5, which
+# Playwright needs, has no wheel for Python 3.9 on Windows. The lock file then has one version of each: every refresh
+# has the same Chromium.
+screenshots = ["greenlet<3.2.5", "pillow<12", "playwright<1.61"]
 
 # uv build would make a Python wheel, of no use in DSS: build_plugin_zip.py stops it with a message.
 # Build the plugin zip with: uv run python build_plugin_zip.py
@@ -61,5 +66,5 @@ disallow_subclassing_any = false
 files = ["python-lib", "resource", "tests", "build_plugin_zip.py", "release.py"]
 
 [[tool.mypy.overrides]]
-module = ["dataiku", "dataiku.*", "dataikuapi", "dataikuapi.*"]
+module = ["dataiku", "dataiku.*", "dataikuapi", "dataikuapi.*", "PIL", "PIL.*", "playwright", "playwright.*"]
 ignore_missing_imports = true

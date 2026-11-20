@@ -19,13 +19,15 @@ Tests that run the macros on a real DSS, in `tests/integration`. The other tests
 
 ## The config file
 
-It holds API keys: never commit it. Put it outside the repository, or at its root as `dss-integration.json`, which git ignores.
+It holds API keys and a password: never commit it. Put it outside the repository, or at its root as `dss-integration.json`, which git ignores.
 
 ```json
 {
   "url": "http://127.0.0.1:10000",
   "project_owner": "admin",
   "install_plugin": true,
+  "ui_login": "admin",
+  "ui_password": "<password of admin>",
   "api_keys": {
     "admin": "<API key of a DSS administrator>",
     "editor": "<personal API key of the editor>",
@@ -39,6 +41,7 @@ It holds API keys: never commit it. Put it outside the repository, or at its roo
 | `url` | The DSS. |
 | `project_owner` | The login of the owner of the test projects, such as `admin`. A global API key is not a user, so the tests need it. |
 | `install_plugin` | `true`: the tests build the zip of your folder and install it on the DSS first. It replaces the plugin for every user of this DSS. `false` (default): the tests only check that the DSS has the version of `plugin.json`. |
+| `ui_login`, `ui_password` | Only for the [screenshot tests](screenshots.md): the login and the password of the owner of the test projects, `project_owner`, such as `admin`, to log in to the DSS UI. API keys cannot open a session in the UI. |
 | `api_keys` | `admin` is required. `editor` and `reader` are optional. |
 | `managed_connection` | Optional: the connection of the managed datasets of the tests. Default: `filesystem_managed`. |
 
@@ -76,7 +79,7 @@ The fixtures are in `tests/integration/fixtures.py`. `tests/conftest.py` registe
 | `connection` | The connection of the managed datasets: `managed_connection`, or `filesystem_managed`. |
 | `scratch_project` | A new, empty project, `DSSPM_IT_<random>`, owned by `project_owner`. Deleted at the end of the test, also when it fails. The delete refuses any key without the `DSSPM_IT_` prefix. |
 
-The helpers are in `tests/integration/dss.py`. They fill a scratch project (`add_built_dataset`, `add_uploaded_dataset`, `add_empty_dataset`, `set_tags`, `add_macro_scenario`), run a macro and read its JSON recap (`run_macro`, `row_of`), and check what the run did (`count_rows`, `list_macro_ids`, `dss_error`). `give_access` gives the editor or the reader access to a scratch project. `CLEAR` and `REPORT` are the ids of the macros, `ROW_COUNT` the rows of each test dataset, and `PROJECT_PREFIX` the prefix of the scratch projects.
+The helpers are in `tests/integration/dss.py`. They fill a scratch project (`add_built_dataset`, from a new uploaded dataset or from a dataset you give, `add_uploaded_dataset`, `add_empty_dataset`, `add_partitioned_dataset`, `set_tags`, `set_recipe_tags`, `share_dataset`, `add_macro_scenario`), run a macro and read its JSON recap (`run_macro`, `row_of`), and check what the run did (`count_rows`, `list_macro_ids`, `dss_error`). `give_access` gives the editor or the reader access to a scratch project. `delete_whole_project` deletes a project with its data, with no check: the fixtures check first that the project is a scratch project. `CLEAR` and `REPORT` are the ids of the macros, `ROW_COUNT` the rows of each test dataset, and `PROJECT_PREFIX` the prefix of the scratch projects.
 
 ## Add a test
 
