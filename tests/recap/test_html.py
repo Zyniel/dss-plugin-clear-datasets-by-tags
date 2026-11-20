@@ -136,7 +136,7 @@ def test_banners_are_sorted_by_tone_whoever_adds_them() -> None:
     assert positions == sorted(positions)
 
 
-def test_the_recap_dataset_result_is_shown() -> None:
+def test_the_summary_dataset_result_is_shown() -> None:
     written = {"name": "recap", "rows_written": 1, "error": ""}
     assert (
         '<div class="dtp-banner dtp-banner-muted"><strong>Summary written.</strong> 1 row in dataset recap.</div>'

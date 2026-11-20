@@ -263,7 +263,7 @@ def test_a_dataset_without_the_managed_flag_counts_as_external() -> None:
     assert row_of(recap, "unknown")["detail"] == "Is external"  # No connection to name.
 
 
-def test_the_recap_dataset_is_never_cleared_by_its_own_run() -> None:
+def test_the_summary_dataset_is_never_cleared_by_its_own_run() -> None:
     project = FakeProject([make_dataset("recap", []), make_dataset("data", []), make_dataset("kept", ["k"])])
 
     recap, _ = run(MACRO, project, {"excluded_tags": ["k"], "recap_dataset": "recap", **ALL_DATASETS, **REAL_RUN})

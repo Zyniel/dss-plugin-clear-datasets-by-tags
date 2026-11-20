@@ -82,7 +82,7 @@ def test_the_run_goes_on_when_dss_does_not_say_who_runs_it() -> None:
     assert "Run by unknown user" in html
 
 
-def test_the_recap_is_written_to_the_recap_dataset_with_the_columns_of_the_macro() -> None:
+def test_the_recap_is_written_to_the_summary_dataset_with_the_columns_of_the_macro() -> None:
     recap_dataset = FakeRecapDataset()
 
     html = run_with(
@@ -94,7 +94,7 @@ def test_the_recap_is_written_to_the_recap_dataset_with_the_columns_of_the_macro
     assert "<strong>Summary written.</strong> 2 rows in dataset r." in html
 
 
-def test_the_recap_dataset_keeps_the_earlier_runs() -> None:
+def test_the_summary_dataset_keeps_the_earlier_runs() -> None:
     recap_dataset = FakeRecapDataset()
 
     run_with(FakeProject([make_dataset("ds", [])]), {"recap_dataset": "r"}, recap_dataset)
@@ -193,7 +193,7 @@ def test_on_recap_error_fail_fails_the_run(caplog: pytest.LogCaptureFixture) -> 
     assert any(r.levelname == "ERROR" and r.getMessage() == message for r in caplog.records)
 
 
-def test_on_error_fail_does_not_cover_the_recap_dataset() -> None:
+def test_on_error_fail_does_not_cover_the_summary_dataset() -> None:
     recap_dataset = FakeRecapDataset(write_error=OSError("disk full"))
     config = {"on_error": "FAIL", "recap_dataset": "r"}
 

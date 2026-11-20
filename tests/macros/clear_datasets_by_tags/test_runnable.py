@@ -26,7 +26,7 @@ def run_runnable(
     return html, progress
 
 
-def test_the_runnable_clears_writes_the_recap_dataset_and_returns_the_recap(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_the_runnable_clears_writes_the_summary_dataset_and_returns_the_recap(monkeypatch: pytest.MonkeyPatch) -> None:
     project = FakeProject([make_dataset("tmp", ["tmp"]), make_dataset("kept", ["keep"]), make_dataset("other", [])])
     opened: list[Any] = []
     config = {"included_scope": "ALL_DATASETS", "excluded_tags": ["keep"], "simulate": False, "recap_dataset": "recap"}

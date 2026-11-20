@@ -80,7 +80,7 @@ def test_the_old_checkbox_fail_on_error_is_ignored() -> None:
 # The "Summary" section
 
 
-def test_recap_options_default_to_no_recap_dataset() -> None:
+def test_recap_options_default_to_no_summary_dataset() -> None:
     assert read_recap_options({}, PROJECT_KEY) == {**RECAP_OPTION_DEFAULTS, "recap_dataset": None}
 
 
@@ -100,12 +100,12 @@ def test_only_a_real_false_drops_the_earlier_runs(value: Any) -> None:
 
 
 @pytest.mark.parametrize(("value", "expected"), [("recap", "recap"), ("TEST.recap", "recap"), ("", None), (None, None)])
-def test_recap_dataset_name(value: Any, expected: Any) -> None:
+def test_summary_dataset_name(value: Any, expected: Any) -> None:
     assert read_recap_options({"recap_dataset": value}, PROJECT_KEY)["recap_dataset"] == expected
 
 
 @pytest.mark.parametrize(("value", "expected"), [(True, "recap"), (None, "recap"), ("false", "recap"), (False, None)])
-def test_only_a_real_false_turns_the_recap_dataset_off(value: Any, expected: Any) -> None:
+def test_only_a_real_false_turns_the_summary_dataset_off(value: Any, expected: Any) -> None:
     options = read_recap_options({"recap_to_dataset": value, "recap_dataset": "recap"}, PROJECT_KEY)
     assert (options["recap_to_dataset"], options["recap_dataset"]) == (expected is not None, expected)
 
@@ -115,6 +115,6 @@ def test_writing_the_recap_to_a_dataset_needs_a_dataset() -> None:
         read_recap_options({"recap_to_dataset": True, "recap_dataset": ""}, PROJECT_KEY)
 
 
-def test_recap_dataset_of_another_project_is_refused() -> None:
+def test_summary_dataset_of_another_project_is_refused() -> None:
     with pytest.raises(ValueError, match="must belong to this project"):
         read_recap_options({"recap_dataset": "OTHER.recap"}, PROJECT_KEY)
