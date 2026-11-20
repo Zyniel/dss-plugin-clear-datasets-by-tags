@@ -240,13 +240,16 @@ def test_fail_the_run_returns_the_recap_when_everything_worked() -> None:
     assert "Sample Macro · Project TEST" in html
 
 
-def test_a_blocked_run_writes_no_recap() -> None:
+def test_a_blocked_run_writes_no_recap(caplog: pytest.LogCaptureFixture) -> None:
+    # The docs say so: only the message of the run says why it stopped.
+    caplog.set_level(logging.INFO)
     recap_dataset = FakeRecapDataset()
 
     with pytest.raises(RunBlockedError):
         run_with(FakeProject([make_dataset("ds", [])]), {"stop": True, "recap_dataset": "r"}, recap_dataset)
 
     assert (recap_dataset.schema, recap_dataset.rows) == ([], [])
+    assert not [record for record in caplog.records if record.getMessage().startswith("RECAP_JSON ")]
 
 
 def test_the_plugin_settings_choose_the_ag_grid_of_a_downloaded_recap() -> None:
@@ -255,6 +258,19 @@ def test_the_plugin_settings_choose_the_ag_grid_of_a_downloaded_recap() -> None:
     html = run_with(FakeProject([make_dataset("ds", [])]), {}, plugin_config=settings)
 
     assert '"url": "https://repo.example.com/ag-grid.js"' in html
+
+
+def test_an_ignored_ag_grid_setting_is_logged_before_the_work(caplog: pytest.LogCaptureFixture) -> None:
+    # DSS stops reading the log when the macro returns: a WARNING after the RECAP_JSON line can be lost.
+    caplog.set_level(logging.INFO)
+    settings = {"ag_grid_url": "file:///tmp/ag-grid.js"}
+
+    html = run_with(FakeProject([make_dataset("ds", [])]), {}, plugin_config=settings)
+
+    messages = [record.getMessage() for record in caplog.records]
+    ignored = next(i for i, message in enumerate(messages) if message.startswith("AG Grid URL of the plugin settings"))
+    assert ignored < next(i for i, message in enumerate(messages) if message.startswith("Sample Macro | project"))
+    assert '"url": ""' in html
 
 
 def test_raise_exception_also_fails_the_run(caplog: pytest.LogCaptureFixture) -> None:

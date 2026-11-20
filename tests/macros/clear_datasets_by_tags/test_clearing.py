@@ -345,6 +345,17 @@ def test_editors_who_check_the_option_clear_and_are_told_sharing_was_not_checked
     ]
 
 
+def test_only_the_datasets_to_clear_say_that_the_sharing_was_not_checked() -> None:
+    # A skipped or excluded dataset is never cleared: its sharing does not matter.
+    datasets = [make_dataset("to_clear", ["a"]), make_dataset("external", ["a"], managed=False)]
+    project = FakeProject([*datasets, make_dataset("kept", ["a", "keep"])], is_admin=False)
+
+    recap, _ = run(MACRO, project, {"included_tags": ["a"], "excluded_tags": ["keep"], "purge_shared": True})
+
+    warnings = {row["name"]: row["warnings"] for row in recap["datasets"]}
+    assert warnings == {"external": [], "kept": [], "to_clear": ["Sharing not checked: other projects may use it"]}
+
+
 def test_a_simulation_shows_why_a_real_run_would_stop() -> None:
     project = FakeProject([make_dataset("ds", ["a"])], is_admin=False)
 

@@ -4,15 +4,23 @@ The changes of each version of the plugin, the most recent first. The changes no
 
 ## Unreleased
 
+### Plugin
+
+- The notes of 1.0.0-beta below are corrected, where they said more than the plugin does. No banner shows the outcome of a run itself: the banners show its problems. Only Clear Datasets by Tags has `blockers` in its JSON recap. "Sharing not checked" is on each dataset to clear, not on every dataset. The GitHub release of 1.0.0-beta keeps its first notes.
+
 ### Clear Datasets by Tags
 
 - When datasets fail and the run goes on, the red banner gives all the counts in bold, then how to list the failed datasets: **2 of 4 datasets failed, 2 cleared.** Click "Failed" to list them. The log, the JSON recap and the message of a failed run do not change.
 - The messages put the labels of the form between double quotes, as the banners do. The detail of a skipped dataset reads `Has no recipe; "Clear datasets with no recipe" is unchecked`, in the recap, the JSON recap and the summary dataset. The error of a form with no included tag reads `Give at least one included tag, or choose "All datasets" in "Include".`
 - In the log, the decision for a dataset to clear gives each of its risks after "risk:", no longer after "warning:".
+- The form says "clear", not "purge": the included tags are "Tags of the datasets to clear.", and the excluded tags "Datasets with these tags are never cleared." "Included tags match" and "Excluded tags match" offer "Any" and "All", as the user guide and the recap say. The parameters and their values do not change.
+- The docs say what the macro does in three more cases. With "Append mode" unchecked, the summary dataset holds the last run only, so a run with no selected dataset empties it. A real run that a check blocks writes no row to the summary dataset and no `RECAP_JSON` line: its message is in the "Last runs" of the scenario. "Sharing not checked" is on each dataset to clear: a skipped or excluded dataset is not cleared.
 
 ### Every macro
 
 - The error of a "Summary" section with no dataset picked puts the label between double quotes: `Pick a summary dataset, or uncheck "Write to a dataset".`
+- An "AG Grid URL" or an "AG Grid integrity hash" that the macros ignore gets its WARNING line at the start of the log, no longer after the `RECAP_JSON` line, where DSS could miss it. The admin guide says which values the macros accept: with any other, downloaded recaps show the simple table.
+- The automation guides list the `Problem:` and `Outcome:` lines of the log, and the fields of the JSON recap in their order: `outcome` and `problems` come last. They also say that a run whose form is not valid writes no recap.
 
 ### For developers
 
@@ -48,7 +56,7 @@ First version of the Dataiku plugin **Clear Datasets by Tags**.
 - Advanced options: "Clear shared datasets" (checked), "Clear partitioned datasets" and "Clear datasets with no recipe" (unchecked).
 - External datasets and the summary dataset are never cleared.
 - "If an error occurs", in the "Run" section: "Continue, run ends in error" (default), "Continue, run ends as success", or "Raise exception", which stops at the first dataset that cannot be cleared. A run that ends in error turns a scenario step red. The count of a stopped run gives the datasets not tried: "1 of 250 datasets failed, 249 not tried".
-- Banners: how many datasets to clear carry a risk (shared, partitioned, with no recipe), no dataset selected, tags on no dataset, and sharing not checked when the user cannot read it. The summary dataset and the JSON recap give "Sharing not checked" for each dataset.
+- Banners: how many datasets to clear carry a risk (shared, partitioned, with no recipe), no dataset selected, tags on no dataset, and sharing not checked when the user cannot read it. The summary dataset and the JSON recap give "Sharing not checked" for each dataset to clear.
 - The log gives the tags read, the options, the decision for each dataset with its reason, the result of each clear, then the totals.
 - Project editors can run it (`WRITE_CONF`).
 
@@ -61,11 +69,11 @@ First version of the Dataiku plugin **Clear Datasets by Tags**.
 ### Every macro
 
 - An HTML recap: banners, figures, options, and an interactive table in DSS (sort, filters, search, CSV export, status icons). Downloaded and opened alone, it loads AG Grid Community to show the same table.
-- Each run has an outcome, `SUCCESS`, `WARNING` or `FAILED`, shown in a banner at the top of the recap. DSS cannot show a macro run as a warning.
+- Each run has an outcome, `SUCCESS`, `WARNING` or `FAILED`, in the log and the JSON recap. DSS cannot show a macro run as a warning: when a run goes on after a problem, a banner of the recap shows the problem.
 - Every banner has the same format: a short title in bold, then what it means and what to do. A banner gives counts for what the summary dataset holds, and details only for what it cannot give, such as an error of DSS or a tag of the form. An error of DSS is cut after 200 characters; the log has the whole error.
 - Banners are in the same order, by colour: blue (a simulation), red (data failed, or a real run would stop), yellow (what to check), grey (for information).
 - The message of a failed run says where the details are: the summary dataset if it was written, else the run log.
-- The recap as JSON, in a hidden block of the HTML and on the `RECAP_JSON` line of the log, with the fields `notices`, `blockers` and `problems`.
+- The recap as JSON, in a hidden block of the HTML and on the `RECAP_JSON` line of the log, with the fields `notices` and `problems`, and `blockers` for Clear Datasets by Tags.
 - The "Summary" section: "Write to a dataset", "Summary dataset", "Append mode" (with the append mode of DSS), and "If the summary is not written": "Continue" or "Fail the run".
 
 ### For developers

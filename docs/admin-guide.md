@@ -29,6 +29,8 @@ Set them once, in **Plugins > Installed > Clear Datasets by Tags > Settings**. T
 
 Inside DSS, the recap always uses the AG Grid of DSS, never the two AG Grid settings.
 
+The AG Grid URL must start with `http://` or `https://`, since a downloaded recap is opened from a file. The integrity hash must be made of `sha256-`, `sha384-` or `sha512-` hashes. With any other value, the macros ignore both settings, as with an empty URL: downloaded recaps show the simple table, and the log of each run has a WARNING line near its start, with the value. The macros check these values at each run, not when you save them.
+
 ## Rights
 
 The macros run with the rights of the user who runs them (`"impersonate": true`). They give no extra rights.
@@ -57,7 +59,7 @@ The macros were checked on DSS as a DSS administrator only. See [verification](v
 
 ## Audit
 
-- Each run writes its whole recap on the `RECAP_JSON` line of its log.
+- Each run writes its whole recap on the `RECAP_JSON` line of its log. A run that ends in error before its work, because the form is not valid or a check blocks it, writes no recap: only its message says why. A scenario keeps it in its "Last runs".
 - A user can also write the recap to a dataset of the project, in "Append mode" to keep a history.
 
 The DSS API calls of the macros are listed in [architecture](architecture.md#the-dss-api-calls).

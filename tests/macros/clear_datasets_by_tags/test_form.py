@@ -5,8 +5,8 @@ from core.tags import (
     INCLUDE_CHOICES,
     INCLUDE_LABEL,
     INCLUDE_TAGS,
-    MATCH_ALL,
     MATCH_ANY,
+    MATCH_CHOICES,
 )
 from macros.clear_datasets_by_tags import MACRO
 from macros.clear_datasets_by_tags.clearing import OPTION_DEFAULTS, OPTION_LABELS
@@ -39,9 +39,16 @@ def test_each_tag_list_starts_from_its_own_empty_list() -> None:
         param = params[name]
         assert (param["type"], param["getChoicesFromPython"], param["disableAutoReload"]) == ("MULTISELECT", True, True)
         assert param["defaultValue"] == []
+
+
+def test_each_match_list_has_the_choices_of_the_code() -> None:
+    # "Any" and "All", as the user guide and the recap say them: the label of the list names the tags.
+    params = named_params(read_form(MACRO.id))
+
     for name in ["included_match", "excluded_match"]:
-        assert [choice["value"] for choice in params[name]["selectChoices"]] == [MATCH_ANY, MATCH_ALL]
-        assert params[name]["defaultValue"] == MATCH_ANY
+        expected = [{"value": value, "label": label} for value, label in MATCH_CHOICES.items()]
+        assert params[name]["selectChoices"] == expected, name
+        assert params[name]["defaultValue"] == MATCH_ANY, name
 
 
 def test_option_defaults_and_labels_match_the_code() -> None:

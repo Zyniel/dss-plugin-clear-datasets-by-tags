@@ -22,9 +22,11 @@ from typing import Any, NamedTuple, Optional
 
 from core.project import list_project_datasets
 
-# How a list of tags matches a dataset: when it carries any of them, or all of them.
+# How a list of tags matches a dataset: when it carries any of them, or all of them. The choices of
+# "Included tags match" and "Excluded tags match" in the form. A test checks the form.
 MATCH_ANY = "ANY"
 MATCH_ALL = "ALL"
+MATCH_CHOICES = {MATCH_ANY: "Any", MATCH_ALL: "All"}
 
 # Which datasets "Include" selects, with the label and the choices of the form. A test checks the form.
 INCLUDE_TAGS = "TAGS"
