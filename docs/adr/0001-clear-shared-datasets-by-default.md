@@ -7,4 +7,4 @@ It is the only option that lets the macro clear risky data and is checked by def
 ## Consequences
 
 - An API call or a scenario that sends no `purge_shared` value clears shared datasets. Changing the default would change what they do. And DSS keeps the last values of a form in the browser, so users would not all see a new default ([verification](../verification.md), row 26).
-- That only project administrators can read the sharing is not in the Dataiku documentation. It is row 13 of [verification](../verification.md), still to check with an editor who is not a project administrator. If an editor can read the sharing, an unchecked default would no longer block editors: reopen this decision.
+- That only project administrators can read the sharing is not in the Dataiku documentation. It is row 13 of [verification](../verification.md): on DSS 13.4.4, an editor who is not a project administrator cannot read it (integration test, 2026-11-20). If a later DSS lets an editor read the sharing, an unchecked default would no longer block editors: reopen this decision.
