@@ -105,6 +105,7 @@ An administrator sets them in **Plugins > Installed > Clear Datasets by Tags > S
 | [Add a macro](docs/adding-a-macro.md) | The steps, in order, to add a macro to the plugin. |
 | [Verification](docs/verification.md) | What the tests prove, and the checks to do on a real DSS. |
 | [Integration tests](docs/integration-tests.md) | Run the macros on a real DSS, as an administrator, an editor and a reader. |
+| [Screenshots](docs/screenshots.md) | Take the screenshots of this README again, on a test DSS. |
 | [CHANGELOG](CHANGELOG.md) | What changes in each version. |
 
 ## Contributing

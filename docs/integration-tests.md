@@ -19,13 +19,15 @@ Tests that run the macros on a real DSS, in `tests/integration`. The other tests
 
 ## The config file
 
-It holds API keys: never commit it. Put it outside the repository, or at its root as `dss-integration.json`, which git ignores.
+It holds API keys and a password: never commit it. Put it outside the repository, or at its root as `dss-integration.json`, which git ignores.
 
 ```json
 {
   "url": "http://127.0.0.1:10000",
   "project_owner": "admin",
   "install_plugin": true,
+  "ui_login": "admin",
+  "ui_password": "<password of admin>",
   "api_keys": {
     "admin": "<API key of a DSS administrator>",
     "editor": "<personal API key of the editor>",
@@ -39,6 +41,7 @@ It holds API keys: never commit it. Put it outside the repository, or at its roo
 | `url` | The DSS. |
 | `project_owner` | The login of the owner of the test projects, such as `admin`. A global API key is not a user, so the tests need it. |
 | `install_plugin` | `true`: the tests build the zip of your folder and install it on the DSS first. It replaces the plugin for every user of this DSS. `false` (default): the tests only check that the DSS has the version of `plugin.json`. |
+| `ui_login`, `ui_password` | Only for the [screenshot tests](screenshots.md): the login and the password of the owner of the test projects, `project_owner`, such as `admin`, to log in to the DSS UI. API keys cannot open a session in the UI. |
 | `api_keys` | `admin` is required. `editor` and `reader` are optional. |
 | `managed_connection` | Optional: the connection of the managed datasets of the tests. Default: `filesystem_managed`. |
 
