@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 from typing import Any, Optional
 
 import pytest
@@ -160,7 +161,7 @@ def test_a_failed_run_points_to_the_summary_dataset_when_it_was_written() -> Non
         run_with(project, config, FakeRecapDataset())
 
 
-def test_a_recap_dataset_not_written_gives_a_warning_by_default(caplog: pytest.LogCaptureFixture) -> None:
+def test_a_summary_dataset_not_written_gives_a_warning_by_default(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO)
     recap_dataset = FakeRecapDataset(["customer_id"], [["c1"]])
 
@@ -271,9 +272,12 @@ def test_the_page_and_its_summary_are_built_once(
     html = run_with(FakeProject([make_dataset("ds", [])]), {})
 
     assert len(calls) == 1
-    # The log and the HTML hold the same summary, with the outcome.
-    assert logged_summary(caplog)["run_id"] == calls[0]
-    assert f'"run_id": "{calls[0]}"' in html
+    # The log and the HTML hold the same summary, with the outcome and the problems.
+    summary = logged_summary(caplog)
+    assert summary["run_id"] == calls[0]
+    assert (summary["outcome"], summary["problems"]) == ("SUCCESS", [])
+    hidden = re.search(r'<script type="application/json" id="dtp-recap-data">(.*?)</script>', html, re.DOTALL)
+    assert hidden and json.loads(hidden.group(1)) == summary
 
 
 def test_the_macro_says_what_failed_once_even_with_a_summary_dataset(monkeypatch: pytest.MonkeyPatch) -> None:

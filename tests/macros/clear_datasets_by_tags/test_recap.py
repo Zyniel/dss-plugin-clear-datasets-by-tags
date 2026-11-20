@@ -447,8 +447,8 @@ def test_the_hidden_json_block_holds_the_summary() -> None:
 
     match = re.search(r'<script type="application/json" id="dtp-recap-data">(.*?)</script>', html, re.DOTALL)
     assert match
-    expected = {**build_summary(recap), "outcome": "SUCCESS", "problems": []}
-    assert json.loads(match.group(1)) == json.loads(json.dumps(expected))
+    # The runner adds the outcome and the problems: see the tests of the runner.
+    assert json.loads(match.group(1)) == json.loads(json.dumps(build_summary(recap)))
 
 
 def test_free_text_of_the_project_is_escaped() -> None:

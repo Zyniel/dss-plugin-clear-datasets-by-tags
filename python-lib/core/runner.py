@@ -18,12 +18,13 @@ from core.macro import MaintenanceMacro
 from core.problems import (
     OUTCOME_FAILED,
     add_summary_dataset_problem,
-    add_work_problem,
     build_failure_message,
     log_problems,
+    set_work_problem,
+    with_problems,
 )
 from recap.dataset import write_recap_dataset
-from recap.html import build_recap_html, read_grid_cdn, with_outcome
+from recap.html import build_recap_html, read_grid_cdn
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ def run_recap(
         duration=time.time() - start_time,
         recap_dataset_result=None,
     )
-    add_work_problem(macro, recap)
+    set_work_problem(macro, recap)
     return recap
 
 
@@ -119,9 +120,9 @@ def run_macro(
 
     logger.info("Done in %.2f s: %s", recap["duration"], macro.describe_counts(recap))
     log_problems(recap, logger)
-    page = macro.build_recap_page(recap)
+    page = with_problems(macro.build_recap_page(recap), recap)
     # One line holds the whole recap, so that the run log alone tells what happened.
-    logger.info("RECAP_JSON %s", json.dumps(with_outcome(page.summary, recap), ensure_ascii=False))
+    logger.info("RECAP_JSON %s", json.dumps(page.summary, ensure_ascii=False))
     for handler in logging.getLogger().handlers:
         handler.flush()
     time.sleep(log_wait_seconds)
