@@ -121,6 +121,8 @@ def run_macro(
     :raises RunFailedError: after the run, if a problem asks to end the run in error
     """
     run_by = read_run_by(client)
+    # Read first: a setting that is ignored gets its WARNING early in the log, not after the last line DSS reads.
+    grid_cdn = read_grid_cdn(plugin_config)
     project = client.get_project(project_key)
     recap = run_recap(macro, project, project_key, config, progress_callback, run_by)
 
@@ -139,4 +141,4 @@ def run_macro(
 
     if recap["outcome"] == OUTCOME_FAILED:
         raise RunFailedError(build_failure_message(recap))
-    return render_recap_html(recap, page, read_grid_cdn(plugin_config))
+    return render_recap_html(recap, page, grid_cdn)

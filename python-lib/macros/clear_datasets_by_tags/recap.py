@@ -4,7 +4,7 @@ from typing import Any, Optional
 
 from core.macro import WorkFailure
 from core.project import format_projects
-from core.tags import INCLUDE_ALL_DATASETS, INCLUDE_LABEL
+from core.tags import INCLUDE_ALL_DATASETS, INCLUDE_LABEL, MATCH_CHOICES
 from macros.clear_datasets_by_tags.clearing import (
     OPTION_LABELS,
     RISK_SHARING_NOT_CHECKED,
@@ -276,7 +276,7 @@ def build_tag_section(title: str, match: str, tag_counts: dict[str, int], highli
         Chip(f"{tag} ({count})", TONE_CAUTION if highlight_unmatched and not count else "")
         for tag, count in tag_counts.items()
     ]
-    return Section(title, f"(Matching {match.title()})", chips)
+    return Section(title, f"(Matching {MATCH_CHOICES[match]})", chips)
 
 
 def build_sections(recap: dict[str, Any]) -> list[Section]:

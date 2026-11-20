@@ -193,6 +193,25 @@ def test_the_form_parameters_are_well_formed(folder: str) -> None:
                 assert match.group(2) in choices, condition
 
 
+def texts_of(settings: dict[str, Any]) -> list[str]:
+    """Return what a form or plugin.json shows the user: its name, the labels, the descriptions and the choices."""
+    texts = [settings["meta"]["label"], settings["meta"]["description"]]
+    for param in settings["params"]:
+        texts += [param.get("label", ""), param.get("description", "")]
+        texts += [choice["label"] for choice in param.get("selectChoices", [])]
+    return texts
+
+
+@pytest.mark.parametrize(
+    "path", ["plugin.json", *(f"python-runnables/{folder}/runnable.json" for folder in MACRO_FOLDERS)]
+)
+def test_the_texts_say_clear_not_purge(path: str) -> None:
+    # The word of the glossary. Parameter names such as purge_shared are API names: they stay.
+    texts = texts_of(read_json(ROOT / path))
+
+    assert [text for text in texts if "purge" in text.lower()] == []
+
+
 @pytest.mark.parametrize("folder", MACRO_FOLDERS)
 def test_the_runnable_loads_in_dss(folder: str, monkeypatch: pytest.MonkeyPatch) -> None:
     install_fake_dataiku(monkeypatch, FakeClient(FakeProject([])))

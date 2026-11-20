@@ -120,7 +120,7 @@ Then:
 | Skipped | A protection kept it, or the run stopped before it ("Not tried: the run stopped"). The reason is in the Detail column. |
 | Excluded | It has the excluded tags. |
 
-The Detail column says why: "Has included tags", "Has excluded tags", or "Has all included tags" and "Has all excluded tags" with "All". With "All datasets", a dataset to clear has no reason to show. A skipped dataset says why, for example `Is external` or `Has no recipe; "Clear datasets with no recipe" is unchecked`. It also gives the risks of cleared datasets: shared, partitioned, or with no recipe. When the user cannot read the sharing, a banner says it once: the summary dataset and the JSON recap have "Sharing not checked" on each dataset.
+The Detail column says why: "Has included tags", "Has excluded tags", or "Has all included tags" and "Has all excluded tags" with "All". With "All datasets", a dataset to clear has no reason to show. A skipped dataset says why, for example `Is external` or `Has no recipe; "Clear datasets with no recipe" is unchecked`. It also gives the risks of cleared datasets: shared, partitioned, or with no recipe. When the user cannot read the sharing, a banner says it once: the summary dataset and the JSON recap have "Sharing not checked" on each dataset to clear. A skipped or excluded dataset is not cleared, so its sharing does not matter.
 
 ## Good practice
 

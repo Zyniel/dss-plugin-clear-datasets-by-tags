@@ -53,6 +53,15 @@ def test_a_dataset_holding_other_columns_is_never_written(keep_earlier_runs: boo
     assert dataset.rows == [["c1", "10"]]
 
 
+def test_a_run_without_rows_empties_the_dataset_when_append_mode_is_unchecked() -> None:
+    # The dataset holds the last run only: a run that selected nothing leaves it empty.
+    dataset = FakeRecapDataset(COLUMNS, [EARLIER_ROW])
+
+    assert write_recap_dataset(dataset, COLUMNS, [], keep_earlier_runs=False) == 0
+    assert dataset.spec_item["appendMode"] is False
+    assert dataset.rows == []
+
+
 def test_a_run_without_rows_leaves_the_history_as_it_is() -> None:
     dataset = FakeRecapDataset(COLUMNS, [EARLIER_ROW])
 

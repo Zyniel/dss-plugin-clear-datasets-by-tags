@@ -22,7 +22,7 @@ A run that ends in error shows only its message, not the recap. By hand, choose 
 
 With "Continue", DSS shows the run as a success, even when something went wrong. DSS cannot show a macro run as a warning. So the recap shows a banner at the top: red when datasets failed, yellow when the summary dataset was not written. The log has a WARNING line for each problem, and the JSON recap has `"outcome": "WARNING"`.
 
-A run also ends in error, before it clears anything, when the form is not valid or when a [check](user-guide.md#checks-before-clearing) stops it. This does not depend on these options.
+A run also ends in error, before it clears anything, when the form is not valid or when a [check](user-guide.md#checks-before-clearing) blocks it. This does not depend on these options. Such a run writes nothing: no row in the summary dataset, and no `RECAP_JSON` line in the log. Only its message says why, in the scenario step or in `get_result`. So a summary dataset that keeps a history has no row for this run: DSS keeps the runs of a scenario with their logs, and the failed step is in the "Last runs" of the scenario.
 
 ## Summary dataset
 
@@ -52,13 +52,18 @@ All columns are text:
 | `partition_dimensions` | The partition dimensions, separated by `, `. |
 | `clear_duration_seconds` | Duration of the clear, empty if nothing was cleared. |
 
-**Append mode** is checked by default: earlier runs are kept. The macro writes with the append mode of DSS: each run adds its rows, and never reads nor writes the earlier ones again. Two runs that write at the same time both keep their rows. A run with no selected dataset does not touch the summary dataset.
+**Append mode** is checked by default: earlier runs are kept. The macro writes with the append mode of DSS: each run adds its rows, and never reads nor writes the earlier ones again. Two runs that write at the same time both keep their rows. In Append mode, a run with no selected dataset adds no row, and does not touch the summary dataset.
 
-**Each run replaces the content** when "Append mode" is unchecked.
+**Each run replaces the content** when "Append mode" is unchecked: the summary dataset holds the last run only. So a run with no selected dataset empties it, and its recap says "Summary written. 0 rows in dataset recap."
 
 ## The run log
 
-The last lines of the log give the totals, then a line that starts with `RECAP_JSON`, with the whole recap as JSON (see [The JSON recap](#the-json-recap)). The lines before give the tags read, the options, the decision for each dataset with its reason, then the result of each clear.
+The log gives the tags read, the options, the decision for each dataset with its reason, the result of each clear, and the rows written to the summary dataset, if any. Then its last lines are, in this order:
+
+- the totals;
+- a `Problem:` line for each problem: a WARNING, or an ERROR when the problem ends the run in error;
+- the outcome: `Outcome: SUCCESS`, `Outcome: WARNING` or `Outcome: FAILED`;
+- a line that starts with `RECAP_JSON`, with the whole recap as JSON (see [The JSON recap](#the-json-recap)).
 
 ## The API
 
@@ -134,13 +139,11 @@ Only a real `true` or `false` counts, and only the values above for `on_error` a
 
 ## The JSON recap
 
-The same JSON is in the hidden block of the HTML and on the `RECAP_JSON` line of the log.
+The same JSON is in the hidden block of the HTML and on the `RECAP_JSON` line of the log. Its fields, in their order:
 
 | Field | Content |
 |---|---|
 | `run_id`, `macro`, `project_key`, `run_by`, `started_at`, `simulate` | The run. |
-| `outcome` | `"SUCCESS"`, `"WARNING"` (something went wrong, and the run went on) or `"FAILED"`. |
-| `problems` | What went wrong: how many datasets could not be cleared, then the summary dataset. |
 | `options` | The options used, with the same names as the parameters. |
 | `included_scope` | `"TAGS"` or `"ALL_DATASETS"`. |
 | `included_tags`, `included_match`, `excluded_tags`, `excluded_match` | The tags read in the form, each list merged, and "Any" or "All". With `"ALL_DATASETS"`, `included_tags` is empty. |
@@ -152,5 +155,7 @@ The same JSON is in the hidden block of the HTML and on the `RECAP_JSON` line of
 | `duration_seconds` | Total duration. |
 | `recap_dataset` | `null`, or `{"name", "rows_written", "error"}`. |
 | `datasets` | One object per selected dataset: `name`, `type`, `connection`, `status`, `skip_code`, `detail`, `warnings`, `included_tags`, `excluded_tags`, `is_shared`, `shared_with`, `built_by_recipe`, `partition_dimensions`, `duration_seconds`. |
+| `outcome` | `"SUCCESS"`, `"WARNING"` (something went wrong, and the run went on) or `"FAILED"`. |
+| `problems` | What went wrong: how many datasets could not be cleared, then the summary dataset. |
 
 `is_shared` and `built_by_recipe` are `null` when the check was not possible.

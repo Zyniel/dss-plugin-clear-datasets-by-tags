@@ -11,6 +11,8 @@ The macro changes nothing, so it has no "If an error occurs" option. Only the su
 - "Continue" (the default): the run is a success. The recap shows a yellow banner at the top, and the JSON recap has `"outcome": "WARNING"`. DSS cannot show a macro run as a warning.
 - "Fail the run": the scenario step turns red. Choose it when the summary dataset keeps a history: a run that is not written leaves a hole in it.
 
+A run also ends in error, before its work, when the form is not valid: for example "Write to a dataset" checked with no dataset picked. Such a run writes nothing: no row in the summary dataset, and no `RECAP_JSON` line in the log. Only its message says why, in the scenario step or in `get_result`, and the failed step is in the "Last runs" of the scenario.
+
 ## Summary dataset
 
 Check **Write to a dataset** and pick a dataset of the project in **Summary dataset**. Use a new, empty, managed dataset. The macro never writes into a dataset that has other columns.
@@ -40,7 +42,12 @@ All columns are text:
 
 ## The run log
 
-The log gives a line per tag with its status and its number of datasets, then the datasets with no tag, then the totals, then a line that starts with `RECAP_JSON` with the whole recap as JSON (see [The JSON recap](#the-json-recap)).
+The log gives a line per tag with its status and its number of datasets, then the datasets with no tag, and the rows written to the summary dataset, if any. Then its last lines are, in this order:
+
+- the totals;
+- a `Problem:` line for each problem: a WARNING, or an ERROR when the problem ends the run in error;
+- the outcome: `Outcome: SUCCESS`, `Outcome: WARNING` or `Outcome: FAILED`;
+- a line that starts with `RECAP_JSON`, with the whole recap as JSON (see [The JSON recap](#the-json-recap)).
 
 ## The API
 
@@ -82,13 +89,11 @@ A missing parameter takes its default value. Only a real `true` or `false` count
 
 ## The JSON recap
 
-The same JSON is in the hidden block of the HTML and on the `RECAP_JSON` line of the log.
+The same JSON is in the hidden block of the HTML and on the `RECAP_JSON` line of the log. Its fields, in their order:
 
 | Field | Content |
 |---|---|
 | `run_id`, `macro`, `project_key`, `run_by`, `started_at` | The run. |
-| `outcome` | `"SUCCESS"`, `"WARNING"` (the summary dataset was not written, and the run went on) or `"FAILED"`. |
-| `problems` | What went wrong: here, only the summary dataset. |
 | `options` | The options used, with the same names as the parameters. |
 | `categories_checked` | If the tag categories of DSS could be read. |
 | `notices` | What the reader must know. |
@@ -97,3 +102,5 @@ The same JSON is in the hidden block of the HTML and on the `RECAP_JSON` line of
 | `recap_dataset` | `null`, or `{"name", "rows_written", "error"}`. |
 | `tags` | One object per tag: `tag`, `category`, `status`, `detail`, `dataset_count`, `datasets`. |
 | `untagged_datasets` | The names of the datasets with no tag. |
+| `outcome` | `"SUCCESS"`, `"WARNING"` (the summary dataset was not written, and the run went on) or `"FAILED"`. |
+| `problems` | What went wrong: here, only the summary dataset. |

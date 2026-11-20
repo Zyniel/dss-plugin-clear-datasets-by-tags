@@ -40,7 +40,7 @@
             "name": "included_tags",
             "type": "STRINGS",
             "label": "Included Tags",
-            "description": "Tags to select for purge",
+            "description": "Tags of the datasets to clear.",
             "defaultValue": [],
             "visibilityCondition": "model.included_scope != 'ALL_DATASETS'"
         },
@@ -61,11 +61,11 @@
             "selectChoices": [
                 {
                     "value": "ANY",
-                    "label": "Any included tags"
+                    "label": "Any"
                 },
                 {
                     "value": "ALL",
-                    "label": "All included tags"
+                    "label": "All"
                 }
             ],
             "defaultValue": "ANY",
@@ -76,7 +76,7 @@
             "name": "excluded_tags",
             "type": "STRINGS",
             "label": "Excluded Tags",
-            "description": "Tags to exclude from purge",
+            "description": "Datasets with these tags are never cleared.",
             "defaultValue": []
         },
         {
@@ -95,11 +95,11 @@
             "selectChoices": [
                 {
                     "value": "ANY",
-                    "label": "Any excluded tags"
+                    "label": "Any"
                 },
                 {
                     "value": "ALL",
-                    "label": "All excluded tags"
+                    "label": "All"
                 }
             ],
             "defaultValue": "ANY",
