@@ -39,6 +39,7 @@ The changes of each version of the plugin, the most recent first. The changes no
 - A test checks the order of the banners that the user guide gives, through the runner: by colour, then in each colour the banners of the macro, the notices, then the problems.
 - `docs/verification.md` says what the Dataiku docs say about macros, scenarios and the API, with links, and what they leave out.
 - For Claude Code, a hook of `.claude/settings.json` runs ruff on each Python file Claude edits, and `AGENTS.md` points to `check.py`, to the Dataiku docs of `docs/verification.md`, and to the user guides as part of the spec of a review.
+- The guide to the integration tests says when to run them: before a pull request that changes the code DSS runs. Coding agents run them too, on the test DSS of the config file.
 
 ## 1.0.1-beta - 2026-11-18
 

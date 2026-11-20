@@ -20,7 +20,7 @@ Python conventions that ruff cannot check, for writing or reviewing code: `CODIN
 
 ### Checks
 
-`uv run python check.py` runs the checks of the CI and prints the output of those that fail. Run it before each commit.
+`uv run python check.py` runs the checks of the CI and prints the output of those that fail. Run it before each commit. Before a pull request that changes the code DSS runs, also run the integration tests on the test DSS: see `docs/integration-tests.md`, "When to run them".
 
 ### Dataiku behaviour
 
