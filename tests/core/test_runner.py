@@ -8,8 +8,9 @@ import pytest
 
 from core.macro import RunBlockedError
 from core.runner import RunFailedError, run_macro
+from recap.page import TONE_CAUTION, TONE_MUTED, TONE_PENDING
 from support.fakes import PROJECT_KEY, FakeClient, FakeProject, FakeRecapDataset, make_dataset
-from support.pages import read_summary
+from support.pages import read_banner_titles, read_summary
 from support.runs import run
 from support.sample_macro import MACRO
 
@@ -179,14 +180,27 @@ def test_a_summary_dataset_not_written_gives_a_warning_by_default(caplog: pytest
     assert problems[0][1].startswith("Problem: Summary not written to dataset r. DSS said: ValueError: ")
 
 
-def test_a_summary_dataset_not_written_shows_after_the_yellow_notices() -> None:
+def test_the_banners_show_in_the_order_of_the_user_guide() -> None:
+    config = {
+        "banners": [(TONE_CAUTION, "Yellow banner of the macro."), (TONE_PENDING, "Blue banner of the macro.")],
+        "notices": [(TONE_MUTED, "Grey notice."), (TONE_CAUTION, "Yellow notice.")],
+        "fail": ["d2"],
+        "on_error": "CONTINUE",
+        "recap_dataset": "r",
+    }
     recap_dataset = FakeRecapDataset(write_error=OSError("disk full"))
-    config = {"notice": "Sharing not checked.", "recap_dataset": "r"}
 
-    html = run_with(FakeProject([make_dataset("ds", [])]), config, recap_dataset)
+    html = run_with(FakeProject([make_dataset("d1", []), make_dataset("d2", [])]), config, recap_dataset)
 
-    # The user guide lists the yellow banners in this order: the summary dataset not written comes last.
-    assert html.index("<strong>Sharing not checked.</strong>") < html.index("<strong>Summary not written.</strong>")
+    # By colour: blue, red, yellow, grey. In a colour: the banners of the macro, the notices, then the problems.
+    assert read_banner_titles(html) == [
+        "Blue banner of the macro.",
+        "Failed: d2.",
+        "Yellow banner of the macro.",
+        "Yellow notice.",
+        "Summary not written.",
+        "Grey notice.",
+    ]
 
 
 def test_on_recap_error_fail_fails_the_run(caplog: pytest.LogCaptureFixture) -> None:

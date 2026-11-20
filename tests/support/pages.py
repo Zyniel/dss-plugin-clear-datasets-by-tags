@@ -12,6 +12,11 @@ def metric_value(html: str, label: str) -> str:
     return before_label[value_start:].replace("</span>", "")
 
 
+def read_banner_titles(html: str) -> list[str]:
+    """Return the titles of the banners of the recap, in the order its reader sees them."""
+    return re.findall(r'<div class="dtp-banner[^"]*"><strong>(.*?)</strong>', html)
+
+
 def read_json_block(html: str, attribute: str) -> Any:
     """Return the data of the <script type="application/json"> block with this attribute. Fails the test if none."""
     block = re.search(rf'<script type="application/json" {re.escape(attribute)}>(.*?)</script>', html, re.DOTALL)

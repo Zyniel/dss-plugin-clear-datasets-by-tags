@@ -46,11 +46,7 @@ jobs:
           uv lock
       # The same checks as the CI, before anything is pushed.
       - run: uv sync --locked
-      - run: uv run ruff check .
-      - run: uv run ruff format --check .
-      - run: uv run mypy
-      - run: for f in python-runnables/*/runnable.py; do uv run mypy "$f" || exit 1; done
-      - run: uv run pytest
+      - run: uv run --locked python check.py
       - name: Push the branch
         run: |
           git config user.name "github-actions[bot]"

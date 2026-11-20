@@ -16,6 +16,10 @@ The changes of each version of the plugin, the most recent first. The changes no
 - The form says "clear", not "purge": the included tags are "Tags of the datasets to clear.", and the excluded tags "Datasets with these tags are never cleared." "Included tags match" and "Excluded tags match" offer "Any" and "All", as the user guide and the recap say. The parameters and their values do not change.
 - The docs say what the macro does in three more cases. With "Append mode" unchecked, the summary dataset holds the last run only, so a run with no selected dataset empties it. A real run that a check blocks writes no row to the summary dataset and no `RECAP_JSON` line: its message is in the "Last runs" of the scenario. "Sharing not checked" is on each dataset to clear: a skipped or excluded dataset is not cleared.
 
+### Report Dataset Tags
+
+- The user guide lists the yellow banners in the order the recap shows them: the notices, then a summary dataset that was not written.
+
 ### Every macro
 
 - The error of a "Summary" section with no dataset picked puts the label between double quotes: `Pick a summary dataset, or uncheck "Write to a dataset".`
@@ -31,6 +35,10 @@ The changes of each version of the plugin, the most recent first. The changes no
 - The screenshot tests drive the DSS UI in Chromium. They need the new `screenshots` dependency group (Playwright and Pillow) and a UI login in the config file of the integration tests: see `docs/screenshots.md`.
 - The screenshot tests create the demo projects of the README, `SALES` and `FINANCE`, from code, run both macros on `SALES` through the API, and check the results the README states. They all stop before any change when the tag categories of DSS do not give the recap of the README, or when a project `SALES` or `FINANCE` exists that they did not make. They mark the projects they make, delete only those, and delete them at the end, also when a step fails. The integration tests gain helpers for them: a dataset built from a dataset you give, a partitioned dataset, the tags of a recipe, and sharing a dataset.
 - One refresh takes the four README screenshots again on the demo projects: for each macro, it fills the form as the README describes it, takes a screenshot of the form, runs the macro in the UI as the UI login of the config file, and takes a screenshot of its recap. Its browser steps start only once the API runs give the results the README states, and it writes the four images only once all four are taken and checked. The README images are taken again. The guide to adding a macro and the release guide say when to run it: see `docs/screenshots.md`.
+- `check.py` runs the checks of the CI, one after the other, and prints the output of those that fail: `uv run python check.py`. The CI, Prepare release and Release call it, so the checks are the same everywhere. Prepare release and Release now also run the tests on Python 3.13, and Prepare release builds the zip, as the CI does.
+- A test checks the order of the banners that the user guide gives, through the runner: by colour, then in each colour the banners of the macro, the notices, then the problems.
+- `docs/verification.md` says what the Dataiku docs say about macros, scenarios and the API, with links, and what they leave out.
+- For Claude Code, a hook of `.claude/settings.json` runs ruff on each Python file Claude edits, and `AGENTS.md` points to `check.py`, to the Dataiku docs of `docs/verification.md`, and to the user guides as part of the spec of a review.
 
 ## 1.0.1-beta - 2026-11-18
 

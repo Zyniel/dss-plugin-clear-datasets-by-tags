@@ -50,7 +50,7 @@ There is no "Simulate" option and no "Run" section: the macro changes nothing. O
 
 ## Read the recap
 
-At the top: the macro, the project, who ran it and when (UTC). Yellow banners show a summary dataset that was not written, and the notices, for example when the tag categories could not be read.
+At the top: the macro, the project, who ran it and when (UTC). Yellow banners show the notices, for example when the tag categories could not be read, then a summary dataset that was not written.
 
 Then:
 

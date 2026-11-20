@@ -13,6 +13,22 @@ What the tests prove, and what to check on a real DSS.
 
 The fake objects copy what the code expects from DSS. Only a real DSS shows if it really answers that way.
 
+## What the Dataiku docs say
+
+What the plugin relies on, as the Dataiku docs say it, read on 2026-11-20. The "latest" pages are DSS 15. On these points, the [DSS 13 macro page](https://doc.dataiku.com/dss/13/plugins/reference/macros.html) says the same. Read this before searching the docs, and add what you look up, with its link.
+
+| Fact | Source |
+|---|---|
+| A macro gives an HTML, URL or RESULT_TABLE result. An HTML result shows inline in DSS, and its CSS must be scoped. | [Result of a macro](https://doc.dataiku.com/dss/latest/plugins/reference/macros.html#result-of-a-macro) |
+| `run()` "can return a string or raise an exception". Nothing else is documented: no warning, no partial success, no outcome for a macro run. The WARNING outcome of the plugin and its banners are the plugin's own. | [Macro execution](https://developer.dataiku.com/latest/tutorials/plugins/macros/generality/index.html#macro-execution) |
+| `get_progress_target()` returns `(target, unit)`, with the unit `NONE` for a percentage, then `run()` calls `progress_callback(current)`. `"impersonate": true` is recommended. | [Progress reporting](https://doc.dataiku.com/dss/latest/plugins/reference/macros.html#progress-reporting) |
+| The steps of a scenario run in order, "until one fails". Some steps can treat errors as warnings: the page does not say whether the "Run a macro" step is one of them. A step ends in SUCCESS, WARNING, FAILED or ABORTED. | [Step flow control](https://doc.dataiku.com/dss/latest/scenarios/step_flow_control.html) |
+| `DSSMacro.run()` returns a run id. `get_result()` raises while the macro runs, and the run "ceases to exist" after it. The docs say `as_type="string"` returns a `str`: it returns bytes (row 17). | [DSSMacro](https://developer.dataiku.com/latest/api-reference/python/macros.html) |
+| `run_and_wait()` raises when a scenario run does not end in SUCCESS: a WARNING run raises too. | [DSSStepRunDetails](https://developer.dataiku.com/latest/api-reference/python/scenarios.html#dataikuapi.dss.scenario.DSSStepRunDetails) |
+| A plugin validates its parameters, and keeps its logic in its libraries, without importing `dataiku`. | [Best practices](https://developer.dataiku.com/latest/tutorials/plugins/setup-a-dev-env/index.html#best-practices) |
+
+Not documented, so only the checks below show it: what DSS shows when `run()` raises, and how it turns a "Run a macro" step red (rows 18 and 25); whether the scripts of an HTML result run, and whether DSS filters it (rows 4 and 6); the log of a macro, and when DSS stops reading it (row 7). The [logging page](https://doc.dataiku.com/dss/latest/operations/logging.html) lists no macro log.
+
 ## Check on DSS 13
 
 Use an instance with a license, for example a local DSS 13.4.4 container, and follow these rules:
