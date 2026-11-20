@@ -122,3 +122,6 @@ class RecapPage(NamedTuple):
     sections: list[Section]
     table: Table
     summary: dict[str, Any]  # The recap as JSON data, for the hidden block read by the API.
+    # The banners of the problems of the run. The runner sets them (core/problems.py), not the macro: they show after
+    # the notices of the same colour, as the user guide lists them.
+    problem_banners: Sequence[Banner] = ()

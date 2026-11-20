@@ -179,6 +179,16 @@ def test_a_summary_dataset_not_written_gives_a_warning_by_default(caplog: pytest
     assert problems[0][1].startswith("Problem: Summary not written to dataset r. DSS said: ValueError: ")
 
 
+def test_a_summary_dataset_not_written_shows_after_the_yellow_notices() -> None:
+    recap_dataset = FakeRecapDataset(write_error=OSError("disk full"))
+    config = {"notice": "Sharing not checked.", "recap_dataset": "r"}
+
+    html = run_with(FakeProject([make_dataset("ds", [])]), config, recap_dataset)
+
+    # The user guide lists the yellow banners in this order: the summary dataset not written comes last.
+    assert html.index("<strong>Sharing not checked.</strong>") < html.index("<strong>Summary not written.</strong>")
+
+
 def test_on_recap_error_fail_fails_the_run(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO)
     recap_dataset = FakeRecapDataset(write_error=OSError("disk full"))

@@ -367,7 +367,8 @@ def render_banner(banner: Banner) -> str:
 def build_run_banners(recap: dict[str, Any]) -> list[Banner]:
     """Return the banners every recap has, besides those of the page: the notices, and the summary dataset if written.
 
-    The runner adds the banners of the problems to the page: see core/problems.py.
+    The runner sets the banners of the problems in the page, which shows them after the notices: see
+    core/problems.py.
     """
     banners = list(recap["notices"])
 
@@ -523,7 +524,11 @@ def render_recap_html(recap: dict[str, Any], page: RecapPage, grid_cdn: Optional
         f"{escape_text(recap['macro_label'])} · Project {escape_text(recap['project_key'])} · "
         f"Run by {escape_text(recap['run_by'] or 'unknown user')} · Started {started_at}"
     )
-    banners = sorted(page.banners + build_run_banners(recap), key=lambda banner: BANNER_ORDER.index(banner.tone))
+    # Sorted by colour. In each colour: the banners of the macro, the notices, then the problems.
+    banners = sorted(
+        [*page.banners, *build_run_banners(recap), *page.problem_banners],
+        key=lambda banner: BANNER_ORDER.index(banner.tone),
+    )
     summary = to_html_script_json(page.summary)
     return (
         '<meta charset="utf-8">'

@@ -79,12 +79,13 @@ def set_problems(recap: dict[str, Any], problems: list[Problem]) -> None:
 def with_problems(page: RecapPage, recap: dict[str, Any]) -> RecapPage:
     """Return the page of the macro with the problems of the run.
 
-    It gets the banner of each problem, and its JSON summary gets the outcome and the problems, as
-    every recap has them: the RECAP_JSON line of the log and the hidden block of the HTML hold it.
+    It gets the banner of each problem, which shows after the notices of its colour, and its JSON summary
+    gets the outcome and the problems, as every recap has them: the RECAP_JSON line of the log and the
+    hidden block of the HTML hold it.
     """
     problems = recap["problems"]
     return page._replace(
-        banners=page.banners + [problem.banner for problem in problems],
+        problem_banners=[problem.banner for problem in problems],
         summary={**page.summary, "outcome": recap["outcome"], "problems": [problem.message for problem in problems]},
     )
 
