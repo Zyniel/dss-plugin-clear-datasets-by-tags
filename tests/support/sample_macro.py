@@ -5,9 +5,9 @@ failed when its name is in config["fail"].
 """
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Optional
 
-from core.macro import MaintenanceMacro, RunBlocked
+from core.macro import MaintenanceMacro, RunBlocked, WorkFailure
 from core.options import read_recap_options, read_run_options
 from core.project import list_project_datasets
 from recap.page import (
@@ -17,7 +17,6 @@ from recap.page import (
     ICON_CROSS,
     TONE_DANGER,
     TONE_SUCCESS,
-    Banner,
     Column,
     Metric,
     RecapPage,
@@ -68,13 +67,11 @@ class SampleMacro(MaintenanceMacro):
         table = Table("Datasets", columns, STATUSES, recap["datasets"], "No dataset.", "Search", "sample.csv")
         metrics = [Metric("Datasets", str(len(recap["datasets"])), status=ALL_STATUSES)]
         summary = {"run_id": recap["run_id"], "run_by": recap["run_by"], "datasets": recap["datasets"]}
-        failures = self.describe_failures(recap)
-        banners = [Banner(TONE_DANGER, failures)] if failures else []
-        return RecapPage(banners, metrics, [], table, summary)
+        return RecapPage([], metrics, [], table, summary)
 
-    def describe_failures(self, recap: dict[str, Any]) -> str:
+    def describe_failures(self, recap: dict[str, Any]) -> Optional[WorkFailure]:
         failed = [row["name"] for row in recap["datasets"] if row["status"] == STATUS_FAILED]
-        return f"Failed: {', '.join(failed)}." if failed else ""
+        return WorkFailure(f"Failed: {', '.join(failed)}.", 'Click "Failed".') if failed else None
 
 
 MACRO = SampleMacro()

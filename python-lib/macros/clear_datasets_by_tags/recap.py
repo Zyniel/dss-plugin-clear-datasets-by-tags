@@ -1,7 +1,8 @@
 """What the recap of "Clear Datasets by Tags" holds: the JSON recap, the summary dataset, the HTML page."""
 
-from typing import Any
+from typing import Any, Optional
 
+from core.macro import WorkFailure
 from core.tags import SCOPE_ALL_DATASETS, SCOPE_LABEL
 from macros.clear_datasets_by_tags.clearing import (
     OPTION_LABELS,
@@ -194,12 +195,12 @@ def build_recap_rows(recap: dict[str, Any]) -> list[list[str]]:
     return rows
 
 
-def describe_failures(recap: dict[str, Any]) -> str:
-    """Return how many datasets could not be cleared, or "". The runner decides if the run fails."""
+def describe_failures(recap: dict[str, Any]) -> Optional[WorkFailure]:
+    """Return how many datasets could not be cleared and how to list them, or None. The runner decides the rest."""
     counts = count_by_status(recap["datasets"])
     failed, cleared = counts[STATUS_FAILED], counts[STATUS_CLEARED]
     if not failed:
-        return ""
+        return None
 
     not_tried = sum(1 for row in recap["datasets"] if row["skip_code"] == SKIP_STOPPED)
     message = f"{failed} of {count_of(failed + cleared + not_tried, 'dataset')} failed"
@@ -207,19 +208,8 @@ def describe_failures(recap: dict[str, Any]) -> str:
         message += f", {cleared} cleared"
     if not_tried:
         message += f", {not_tried} not tried"
-    return f"{message}."
-
-
-def build_failure_banners(recap: dict[str, Any]) -> list[Banner]:
-    """Return the banner of a run that goes on after a failure. A run that ends in error has no page."""
-    counts = count_by_status(recap["datasets"])
-    failed, cleared = counts[STATUS_FAILED], counts[STATUS_CLEARED]
-    if not failed:
-        return []
-
-    list_them = f'Click "{STATUS_LABELS[STATUS_FAILED]}" to list {"it" if failed == 1 else "them"}.'
-    text = f"{cleared} cleared. {list_them}" if cleared else list_them
-    return [Banner(TONE_DANGER, f"{failed} of {count_of(failed + cleared, 'dataset')} failed.", text)]
+    hint = f'Click "{STATUS_LABELS[STATUS_FAILED]}" to list {"it" if failed == 1 else "them"}.'
+    return WorkFailure(f"{message}.", hint)
 
 
 def build_risk_banners(recap: dict[str, Any]) -> list[Banner]:
@@ -245,14 +235,14 @@ def build_risk_banners(recap: dict[str, Any]) -> list[Banner]:
 
 
 def build_banners(recap: dict[str, Any]) -> list[Banner]:
-    """Return the banners of this macro. The shared code adds the notices and the summary dataset result."""
+    """Return the banners of this macro. The shared code adds the notices, the problems and the summary dataset."""
     banners = []
     if recap["simulate"]:
         simulate = OPTION_LABELS["simulate"]
         banners.append(Banner(TONE_PENDING, "Simulation, nothing was cleared.", f'Uncheck "{simulate}" to clear.'))
     for blocker in recap["blockers"]:
         banners.append(Banner(TONE_DANGER, f"A real run would stop: {blocker.check} not checked.", blocker.text))
-    return banners + build_failure_banners(recap) + build_risk_banners(recap)
+    return banners + build_risk_banners(recap)
 
 
 def build_metrics(recap: dict[str, Any]) -> list[Metric]:

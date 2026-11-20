@@ -3,12 +3,7 @@
 This module does not import dataiku, so that it can be tested without DSS: runnable.py hands it the
 API client, a way to open a dataset and the plugin settings.
 
-Each run gets an outcome:
-
-- SUCCESS: nothing went wrong;
-- WARNING: something went wrong, and the run went on, as the form asked. DSS shows the run as a
-  success: the recap shows the warning in a banner, and the log in WARNING lines;
-- FAILED: something went wrong, and the form asked to fail the run ("Fail the run").
+Each run gets an outcome, SUCCESS, WARNING or FAILED, from its problems: see core/problems.py.
 """
 
 import json
@@ -20,10 +15,15 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from core.macro import MaintenanceMacro
-from core.options import FAILING_ON_ERROR, ON_ERROR_FAIL
+from core.problems import (
+    OUTCOME_FAILED,
+    add_summary_dataset_problem,
+    add_work_problem,
+    build_failure_message,
+    log_problems,
+)
 from recap.dataset import write_recap_dataset
-from recap.html import build_recap_html, dss_said, read_grid_cdn, with_outcome
-from recap.page import OUTCOME_FAILED, OUTCOME_SUCCESS, OUTCOME_WARNING
+from recap.html import build_recap_html, read_grid_cdn, with_outcome
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ def run_recap(
         duration=time.time() - start_time,
         recap_dataset_result=None,
     )
-    update_outcome(macro, recap)
+    add_work_problem(macro, recap)
     return recap
 
 
@@ -88,54 +88,6 @@ def save_recap(macro: MaintenanceMacro, recap: dict[str, Any], open_dataset: Cal
         result["error"] = f"{type(error).__name__}: {error}"
         logger.error("The summary could not be written to dataset %s: %s", name, result["error"])
     return result
-
-
-def build_problems(macro: MaintenanceMacro, recap: dict[str, Any]) -> list[dict[str, Any]]:
-    """Return what went wrong in the run: the work first, then the summary dataset.
-
-    Each problem says if it fails the run: only when its choice in the form is "Fail the run".
-    """
-    options = recap["options"]
-    problems = []
-
-    failures = macro.describe_failures(recap)
-    if failures:
-        # Only the macros that change data have "If an error occurs", in their "Run" section.
-        problems.append({"message": failures, "fail": options.get("on_error") in FAILING_ON_ERROR})
-
-    result = recap["recap_dataset_result"]
-    if result and result["error"]:
-        problems.append(
-            {
-                "message": f"Summary not written to dataset {result['name']}. {dss_said(result['error'])}",
-                "fail": options.get("on_recap_error") == ON_ERROR_FAIL,
-            }
-        )
-    return problems
-
-
-def update_outcome(macro: MaintenanceMacro, recap: dict[str, Any]) -> None:
-    """Set the problems and the outcome of the run in the recap. Called again after writing the summary dataset."""
-    problems = build_problems(macro, recap)
-    if any(problem["fail"] for problem in problems):
-        outcome = OUTCOME_FAILED
-    elif problems:
-        outcome = OUTCOME_WARNING
-    else:
-        outcome = OUTCOME_SUCCESS
-    recap.update(problems=problems, outcome=outcome)
-
-
-def build_failure_message(recap: dict[str, Any]) -> str:
-    """Return the message of a failed run: every problem, the work first, then where the details are.
-
-    DSS shows only this message, so it also gives the problems that do not fail the run.
-    """
-    messages = [problem["message"] for problem in recap["problems"]]
-    result = recap["recap_dataset_result"]
-    written = result and not result["error"]
-    details = f"Details in the summary dataset {result['name']}." if written else "Details in the run log."
-    return " ".join(messages + [details])
 
 
 def run_macro(
@@ -163,13 +115,10 @@ def run_macro(
 
     if recap["options"]["recap_dataset"]:
         recap["recap_dataset_result"] = save_recap(macro, recap, open_dataset)
-        update_outcome(macro, recap)
+        add_summary_dataset_problem(recap)
 
     logger.info("Done in %.2f s: %s", recap["duration"], macro.describe_counts(recap))
-    for problem in recap["problems"]:
-        log = logger.error if problem["fail"] else logger.warning
-        log("Problem: %s", problem["message"])
-    logger.info("Outcome: %s", recap["outcome"])
+    log_problems(recap, logger)
     page = macro.build_recap_page(recap)
     # One line holds the whole recap, so that the run log alone tells what happened.
     logger.info("RECAP_JSON %s", json.dumps(with_outcome(page.summary, recap), ensure_ascii=False))

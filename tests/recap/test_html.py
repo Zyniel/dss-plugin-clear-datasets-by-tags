@@ -9,6 +9,7 @@ from typing import Any
 
 import pytest
 
+from core.problems import Problem
 from recap import page
 from recap.html import (
     AG_GRID_DEFAULT_INTEGRITY,
@@ -159,13 +160,21 @@ def test_the_recap_dataset_result_is_shown() -> None:
         '<div class="dtp-banner dtp-banner-muted"><strong>Summary written.</strong> 1 row in dataset recap.</div>'
     ) in html_of(make_page(), recap_dataset_result=written)
 
+    # Not written, it is a problem of the run: its banner comes with the problems.
     failed = {"name": "recap", "rows_written": 0, "error": "ValueError: <bad>."}
-    html = html_of(make_page(), recap_dataset_result=failed)
+    assert "Summary written." not in html_of(make_page(), recap_dataset_result=failed)
+
+
+def test_each_problem_shows_its_banner() -> None:
+    banner = Banner(TONE_CAUTION, "Summary not written.", "Dataset recap. DSS said: ValueError: <bad>.")
+    problems = [Problem("Summary not written to dataset recap. DSS said: ValueError: <bad>.", False, banner)]
+
+    html = html_of(make_page(), problems=problems, outcome="WARNING")
+
     assert (
         '<div class="dtp-banner"><strong>Summary not written.</strong> '
         "Dataset recap. DSS said: ValueError: &lt;bad&gt;.</div>"
     ) in html
-    assert "Summary written." not in html
 
 
 def test_no_banner_when_there_is_nothing_to_say() -> None:

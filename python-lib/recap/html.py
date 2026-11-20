@@ -374,7 +374,7 @@ def build_common_option_chips(options: dict[str, Any]) -> list[Chip]:
 
 def with_outcome(summary: dict[str, Any], recap: dict[str, Any]) -> dict[str, Any]:
     """Return the summary of a macro with the outcome of the run and its problems, as every recap has them."""
-    return {**summary, "outcome": recap["outcome"], "problems": [problem["message"] for problem in recap["problems"]]}
+    return {**summary, "outcome": recap["outcome"], "problems": [problem.message for problem in recap["problems"]]}
 
 
 def build_icon(status: Status) -> str:
@@ -395,15 +395,15 @@ def build_banner(banner: Banner) -> str:
 
 
 def build_run_banners(recap: dict[str, Any]) -> list[Banner]:
-    """Return the banners every recap has, besides those of the macro: the notices, and the summary dataset result."""
-    banners = list(recap["notices"])
+    """Return the banners every recap has, besides those of the macro.
+
+    They are the notices, the banner of each problem (core/problems.py builds them), and the summary
+    dataset when it was written.
+    """
+    banners = list(recap["notices"]) + [problem.banner for problem in recap["problems"]]
 
     result = recap["recap_dataset_result"]
-    if result and result["error"]:
-        banners.append(
-            Banner(TONE_CAUTION, "Summary not written.", f"Dataset {result['name']}. {dss_said(result['error'])}")
-        )
-    elif result:
+    if result and not result["error"]:
         rows = count_of(result["rows_written"], "row")
         banners.append(Banner(TONE_MUTED, "Summary written.", f"{rows} in dataset {result['name']}."))
     return banners

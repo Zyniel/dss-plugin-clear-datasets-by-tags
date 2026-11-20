@@ -3,7 +3,8 @@
 Each macro fills a RecapPage. recap/html.py lays it out the same way for every macro:
 
 1. the context: macro, project, who ran it and when;
-2. the banners of the macro, the notices of the run and the result of the summary dataset, sorted by tone;
+2. the banners of the macro, the notices and the problems of the run, and the summary dataset when it was
+   written, sorted by tone;
 3. the figures (metrics);
 4. the sections, such as the options and the tags;
 5. the table, interactive in DSS.
@@ -35,11 +36,6 @@ COLUMN_NUMBER = "number"  # A number, right aligned. None shows nothing.
 
 # The status of the figure that shows every row of the table again.
 ALL_STATUSES = "ALL"
-
-# The outcome of a run, set by the runner. DSS itself only shows a success or a failure.
-OUTCOME_SUCCESS = "SUCCESS"  # Nothing went wrong.
-OUTCOME_WARNING = "WARNING"  # Something went wrong, and the run went on.
-OUTCOME_FAILED = "FAILED"  # Something went wrong, and the form asked to fail the run.
 
 
 class Banner(NamedTuple):

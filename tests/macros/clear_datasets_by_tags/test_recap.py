@@ -4,6 +4,7 @@ import json
 import re
 from typing import Any
 
+from core.macro import WorkFailure
 from macros.clear_datasets_by_tags import MACRO
 from macros.clear_datasets_by_tags.clearing import (
     STATUS_CLEARED,
@@ -27,6 +28,8 @@ from support.fakes import FakeProject, make_dataset
 from support.runs import run
 
 REAL_RUN = {"simulate": False}
+LIST_IT = 'Click "Failed" to list it.'
+LIST_THEM = 'Click "Failed" to list them.'
 
 
 def make_row(name: str, status: str, **values: Any) -> dict[str, Any]:
@@ -183,13 +186,13 @@ def test_one_recap_row_per_selected_dataset_in_the_column_order() -> None:
 
 
 def test_no_failure_when_everything_worked() -> None:
-    assert describe_failures(make_recap([make_row("ok", STATUS_CLEARED)])) == ""
+    assert describe_failures(make_recap([make_row("ok", STATUS_CLEARED)])) is None
 
 
 def test_failures_count_the_datasets_to_clear_not_the_skipped_ones() -> None:
     recap = make_recap([make_row("ok", STATUS_CLEARED), make_row("ko", STATUS_FAILED), make_row("s", STATUS_SKIPPED)])
 
-    assert describe_failures(recap) == "1 of 2 datasets failed, 1 cleared."
+    assert describe_failures(recap) == WorkFailure("1 of 2 datasets failed, 1 cleared.", LIST_IT)
 
 
 def test_failures_count_the_datasets_not_tried_after_a_stop() -> None:
@@ -202,19 +205,32 @@ def test_failures_count_the_datasets_not_tried_after_a_stop() -> None:
         ]
     )
 
-    assert describe_failures(recap) == "1 of 4 datasets failed, 1 cleared, 2 not tried."
+    assert describe_failures(recap) == WorkFailure("1 of 4 datasets failed, 1 cleared, 2 not tried.", LIST_IT)
 
 
 def test_failures_leave_out_a_count_of_zero_and_use_the_singular_for_one() -> None:
-    assert describe_failures(make_recap([make_row("ko", STATUS_FAILED)])) == "1 of 1 dataset failed."
+    recap = make_recap([make_row("ko", STATUS_FAILED)])
+    assert describe_failures(recap) == WorkFailure("1 of 1 dataset failed.", LIST_IT)
     recap = make_recap([make_row("ko", STATUS_FAILED), make_row("later", STATUS_SKIPPED, skip_code="STOPPED")])
-    assert describe_failures(recap) == "1 of 2 datasets failed, 1 not tried."
+    assert describe_failures(recap) == WorkFailure("1 of 2 datasets failed, 1 not tried.", LIST_IT)
 
 
 def test_failures_never_name_the_datasets_however_many_they_are() -> None:
     recap = make_recap([make_row(f"ko{index:03d}", STATUS_FAILED) for index in range(180)])
 
-    assert describe_failures(recap) == "180 of 180 datasets failed."
+    assert describe_failures(recap) == WorkFailure("180 of 180 datasets failed.", LIST_THEM)
+
+
+def test_a_run_that_goes_on_counts_the_failures_and_says_how_to_list_them() -> None:
+    project = FakeProject(
+        [make_dataset(name, ["a"]) for name in ("ok1", "ok2", "ko1", "ko2")],
+        clear_answers={"ko1": RuntimeError("boom"), "ko2": RuntimeError("boom")},
+    )
+
+    recap, _ = run(MACRO, project, {"included_tags": ["a"], "on_error": "CONTINUE", **REAL_RUN})
+
+    # The runner shows it in a red banner: the message in bold, then the hint.
+    assert describe_failures(recap) == WorkFailure("2 of 4 datasets failed, 2 cleared.", LIST_THEM)
 
 
 # HTML page
@@ -242,28 +258,6 @@ def test_recap_gives_the_metrics_of_a_real_run() -> None:
     assert re.match(r"\d+\.\d\d s$", metric(html, "Duration"))
     assert 'dtp-metric-label">Excluded' not in html
     assert "Simulation, nothing was cleared" not in html
-
-
-def test_a_run_that_goes_on_counts_the_failures_in_a_red_banner() -> None:
-    project = FakeProject(
-        [make_dataset(name, ["a"]) for name in ("ok1", "ok2", "ko1", "ko2")],
-        clear_answers={"ko1": RuntimeError("boom"), "ko2": RuntimeError("boom")},
-    )
-
-    html = recap_html(project, {"included_tags": ["a"], "on_error": "CONTINUE", **REAL_RUN})
-
-    assert (
-        '<div class="dtp-banner dtp-banner-danger"><strong>2 of 4 datasets failed.</strong> '
-        '2 cleared. Click "Failed" to list them.</div>'
-    ) in html
-
-
-def test_a_failure_banner_with_nothing_cleared_says_only_how_to_list_it() -> None:
-    project = FakeProject([make_dataset("ko", ["a"])], clear_answers={"ko": RuntimeError("boom")})
-
-    html = recap_html(project, {"included_tags": ["a"], "on_error": "CONTINUE", **REAL_RUN})
-
-    assert '<strong>1 of 1 dataset failed.</strong> Click "Failed" to list it.</div>' in html
 
 
 def test_a_simulation_says_nothing_was_cleared() -> None:

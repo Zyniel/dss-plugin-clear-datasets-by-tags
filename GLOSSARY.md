@@ -169,5 +169,5 @@ What a run gives: an HTML page, with the same content as JSON.
 _Avoid_: report, summary, result
 
 **Banner**:
-A coloured block of a recap that shows a notice, a blocker, a problem or the outcome. It is only how the recap shows them, not a concept of its own.
+A coloured block of a recap that shows a notice, a blocker or a problem. The banners of its problems are how a recap shows a WARNING outcome: no banner shows the outcome itself. It is only how the recap shows them, not a concept of its own.
 _Avoid_: alert, message
