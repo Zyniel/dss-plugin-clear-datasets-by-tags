@@ -76,8 +76,6 @@ def make_recap(**values: Any) -> dict[str, Any]:
         "started_at": "2026-11-02T19:10:00Z",
         "notices": [],
         "recap_dataset_result": None,
-        "problems": [],
-        "outcome": "SUCCESS",
     }
     recap.update(values)
     return recap
@@ -159,13 +157,9 @@ def test_the_recap_dataset_result_is_shown() -> None:
         '<div class="dtp-banner dtp-banner-muted"><strong>Summary written.</strong> 1 row in dataset recap.</div>'
     ) in html_of(make_page(), recap_dataset_result=written)
 
+    # Not written, it is a problem of the run: the runner adds its banner to the page.
     failed = {"name": "recap", "rows_written": 0, "error": "ValueError: <bad>."}
-    html = html_of(make_page(), recap_dataset_result=failed)
-    assert (
-        '<div class="dtp-banner"><strong>Summary not written.</strong> '
-        "Dataset recap. DSS said: ValueError: &lt;bad&gt;.</div>"
-    ) in html
-    assert "Summary written." not in html
+    assert "Summary written." not in html_of(make_page(), recap_dataset_result=failed)
 
 
 def test_no_banner_when_there_is_nothing_to_say() -> None:
@@ -326,7 +320,7 @@ def test_the_hidden_json_blocks_hold_the_summary_and_the_rows() -> None:
     summary = re.search(r'<script type="application/json" id="dtp-recap-data">(.*?)</script>', html, re.DOTALL)
     rows = re.search(r'<script type="application/json" class="dtp-table-data">(.*?)</script>', html, re.DOTALL)
     assert summary and rows
-    assert json.loads(summary.group(1)) == {**page.summary, "outcome": "SUCCESS", "problems": []}
+    assert json.loads(summary.group(1)) == page.summary
     assert json.loads(rows.group(1)) == page.table.rows
 
 

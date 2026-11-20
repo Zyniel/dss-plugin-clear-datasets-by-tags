@@ -94,7 +94,7 @@ def test_recap_rows_hold_one_row_per_tag_and_dataset() -> None:
 
 
 def test_nothing_in_the_work_of_a_report_can_fail() -> None:
-    assert describe_failures(sample_recap()) == ""
+    assert describe_failures(sample_recap()) is None
 
 
 def test_the_table_has_a_row_per_tag_and_one_for_the_datasets_with_no_tag() -> None:

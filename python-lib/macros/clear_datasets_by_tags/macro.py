@@ -1,9 +1,9 @@
 """The MaintenanceMacro of "Clear Datasets by Tags": what the shared runner calls."""
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Optional
 
-from core.macro import MaintenanceMacro
+from core.macro import MaintenanceMacro, WorkFailure
 from macros.clear_datasets_by_tags.clearing import run_clearing
 from macros.clear_datasets_by_tags.recap import (
     SUMMARY_COLUMNS,
@@ -39,7 +39,7 @@ class ClearDatasetsByTagsMacro(MaintenanceMacro):
     def build_recap_page(self, recap: dict[str, Any]) -> RecapPage:
         return build_recap_page(recap)
 
-    def describe_failures(self, recap: dict[str, Any]) -> str:
+    def describe_failures(self, recap: dict[str, Any]) -> Optional[WorkFailure]:
         return describe_failures(recap)
 
 

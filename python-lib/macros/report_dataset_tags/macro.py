@@ -1,9 +1,9 @@
 """The MaintenanceMacro of "Report Dataset Tags": what the shared runner calls."""
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Optional
 
-from core.macro import MaintenanceMacro
+from core.macro import MaintenanceMacro, WorkFailure
 from macros.report_dataset_tags.recap import (
     SUMMARY_COLUMNS,
     build_recap_page,
@@ -39,7 +39,7 @@ class ReportDatasetTagsMacro(MaintenanceMacro):
     def build_recap_page(self, recap: dict[str, Any]) -> RecapPage:
         return build_recap_page(recap)
 
-    def describe_failures(self, recap: dict[str, Any]) -> str:
+    def describe_failures(self, recap: dict[str, Any]) -> Optional[WorkFailure]:
         return describe_failures(recap)
 
 

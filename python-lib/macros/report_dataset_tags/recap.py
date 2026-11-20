@@ -1,7 +1,8 @@
 """What the recap of "Report Dataset Tags" holds: the JSON recap, the summary dataset, the HTML page."""
 
-from typing import Any
+from typing import Any, Optional
 
+from core.macro import WorkFailure
 from macros.report_dataset_tags.report import (
     OPTION_LABELS,
     STATUS_LABELS,
@@ -146,9 +147,9 @@ def build_recap_rows(recap: dict[str, Any]) -> list[list[str]]:
     return rows
 
 
-def describe_failures(recap: dict[str, Any]) -> str:
+def describe_failures(recap: dict[str, Any]) -> Optional[WorkFailure]:
     """A report changes nothing, so nothing in its work can fail. Only the summary dataset can."""
-    return ""
+    return None
 
 
 def build_metrics(recap: dict[str, Any]) -> list[Metric]:

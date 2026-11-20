@@ -2,13 +2,23 @@
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import Any
+from typing import Any, NamedTuple, Optional
 
 from recap.page import RecapPage
 
 
 class RunBlocked(Exception):
     """Raised when a blocker stops a real run, before anything changes."""
+
+
+class WorkFailure(NamedTuple):
+    """What failed in the work of a macro, as describe_failures() returns it."""
+
+    # As counts, such as "1 of 3 datasets failed, 2 cleared.": for the banner, the log, the JSON recap and the
+    # message of a failed run.
+    message: str
+    # What to do in the recap, such as 'Click "Failed" to list them.': only the banner shows it.
+    hint: str = ""
 
 
 class MaintenanceMacro(ABC):
@@ -62,10 +72,11 @@ class MaintenanceMacro(ABC):
         """
 
     @abstractmethod
-    def describe_failures(self, recap: dict[str, Any]) -> str:
-        """Return what failed in the work as counts, such as "1 of 3 datasets failed, 2 cleared.", or "".
+    def describe_failures(self, recap: dict[str, Any]) -> Optional[WorkFailure]:
+        """Return what failed in the work, or None when nothing did. A macro that only reads returns None.
 
-        The runner logs it, and fails the run with it when "If an error occurs" is "Fail the run". When
-        the run goes on, DSS shows a success, so build_recap_page() must show the failure in a banner.
-        The runner handles the summary dataset itself. A macro that only reads returns "".
+        The runner asks it once, right after the work, and turns it into a problem of the run: see
+        core/problems.py. It shows the failure in a red banner, logs it, and fails the run with it
+        when "If an error occurs" asks to end the run in error. The runner handles the summary dataset
+        itself.
         """

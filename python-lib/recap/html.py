@@ -372,11 +372,6 @@ def build_common_option_chips(options: dict[str, Any]) -> list[Chip]:
     return chips
 
 
-def with_outcome(summary: dict[str, Any], recap: dict[str, Any]) -> dict[str, Any]:
-    """Return the summary of a macro with the outcome of the run and its problems, as every recap has them."""
-    return {**summary, "outcome": recap["outcome"], "problems": [problem["message"] for problem in recap["problems"]]}
-
-
 def build_icon(status: Status) -> str:
     """Build the icon of a status, in the colour of its tone."""
     return (
@@ -395,15 +390,14 @@ def build_banner(banner: Banner) -> str:
 
 
 def build_run_banners(recap: dict[str, Any]) -> list[Banner]:
-    """Return the banners every recap has, besides those of the macro: the notices, and the summary dataset result."""
+    """Return the banners every recap has, besides those of the page: the notices, and the summary dataset if written.
+
+    The runner adds the banners of the problems to the page: see core/problems.py.
+    """
     banners = list(recap["notices"])
 
     result = recap["recap_dataset_result"]
-    if result and result["error"]:
-        banners.append(
-            Banner(TONE_CAUTION, "Summary not written.", f"Dataset {result['name']}. {dss_said(result['error'])}")
-        )
-    elif result:
+    if result and not result["error"]:
         rows = count_of(result["rows_written"], "row")
         banners.append(Banner(TONE_MUTED, "Summary written.", f"{rows} in dataset {result['name']}."))
     return banners
@@ -538,9 +532,9 @@ def build_recap_html(recap: dict[str, Any], page: RecapPage, grid_cdn: Optional[
     through AngularJS, which would execute a tag such as {{...}} in the reader's browser. So every
     value from the project sits inside that element, and the grid script after it holds none.
 
-    The hidden JSON block holds the summary of the macro, with the outcome of the run and its
-    problems, for the code that runs the macro through the API. A browser never runs nor displays a
-    script of type application/json.
+    The hidden JSON block holds the summary of the page, for the code that runs the macro through
+    the API. For a run, the runner has added the outcome and the problems to it. A browser never runs
+    nor displays a script of type application/json.
 
     The meta tag keeps accents readable in the report downloaded from DSS.
 
@@ -554,7 +548,7 @@ def build_recap_html(recap: dict[str, Any], page: RecapPage, grid_cdn: Optional[
         f"Run by {text(recap['run_by'] or 'unknown user')} · Started {text(format_started_at(recap['started_at']))}"
     )
     banners = sorted(page.banners + build_run_banners(recap), key=lambda banner: BANNER_ORDER.index(banner.tone))
-    summary = to_html_script_json(with_outcome(page.summary, recap))
+    summary = to_html_script_json(page.summary)
     return (
         '<meta charset="utf-8">'
         f"{STYLE}"

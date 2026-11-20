@@ -11,6 +11,7 @@ python-lib/
   core/                  Shared by all macros
     macro.py               MaintenanceMacro: what each macro must provide
     runner.py              run_macro(): runs a macro, from start to end
+    problems.py            The problems of a run and its outcome: their banners, log lines and failure message
     options.py             Reads the form: the "Summary" section of every form, the "Run" section of macros that change data
     project.py             Reads a project: datasets, sharing, Flow
     tags.py                Selects datasets: all of them or by included tags, then excluded tags
@@ -59,7 +60,7 @@ Each macro defines a subclass of `MaintenanceMacro` (in `core/macro.py`) and one
 | `describe_counts()` | The totals of the run, for the log. |
 | `build_recap_rows()` | The rows of the summary dataset. |
 | `build_recap_page()` | The description of the HTML recap (`RecapPage`), with the recap as JSON in its `summary`: for the API, the hidden block of the HTML and the `RECAP_JSON` log line. |
-| `describe_failures()` | What failed in the work, as counts, such as "1 of 3 datasets failed, 2 cleared.", or `""`. For the log and the message of a failed run. When the run goes on, `build_recap_page()` must show the failure in a banner. A macro that only reads returns `""`. |
+| `describe_failures()` | What failed in the work, as a `WorkFailure`, or `None` when nothing failed. A `WorkFailure` has the message, as counts, such as "1 of 3 datasets failed, 2 cleared.", and a hint that only the banner shows, such as `Click "Failed" to list them.`. The runner asks it once, right after the work: it shows it in a red banner, logs it, and fails the run with it when "If an error occurs" asks for it. A macro that only reads returns `None`. |
 
 The dict that `run()` returns has at least `options`, `notices` (a list of `Banner`) and `blockers`. A macro that changes data also returns `simulate`. Then the runner adds the fields that every recap has: `run_id`, `macro`, `macro_label`, `project_key`, `run_by`, `started_at`, `duration`, `recap_dataset_result`, `problems` and `outcome`.
 
@@ -72,9 +73,9 @@ The smallest possible macro is in `tests/support/sample_macro.py`. The tests of 
 1. **Who runs the macro:** reads the login with `client.get_auth_info()`. If this fails, the login stays empty.
 2. **The work:** calls `macro.run()`, then adds the common fields to the recap.
 3. **The summary dataset:** if the form asks for it, writes it. A failure is written in the recap and does not stop the run: the work is already done.
-4. **The outcome:** lists the problems, the work first (`macro.describe_failures()`), then the summary dataset. Each problem fails the run only if its option asks for it: "Continue, run ends in error" or "Raise exception" in "If an error occurs" for the work, "Fail the run" in "If the summary is not written" for the summary dataset. With "Raise exception", the macro itself stops its work at the first error. The outcome is:
+4. **The outcome:** `core/problems.py` lists the problems, the work first (`macro.describe_failures()`, asked once, right after the work), then the summary dataset. It gives each problem its banner, its log line and its part of the message of a failed run. Each problem fails the run only if its option asks for it: "Continue, run ends in error" or "Raise exception" in "If an error occurs" for the work, "Fail the run" in "If the summary is not written" for the summary dataset. With "Raise exception", the macro itself stops its work at the first error. The outcome is:
    - `SUCCESS`: no problem;
-   - `WARNING`: problems, and the run goes on. DSS shows the run as a success: it cannot show a macro run as a warning. So the recap shows a banner at the top;
+   - `WARNING`: problems, and the run goes on. DSS shows the run as a success: it cannot show a macro run as a warning. So the recap shows each problem in a banner: red for the work, yellow for the summary dataset;
    - `FAILED`: a problem whose option asks to end the run in error.
 5. **The log:** writes the totals, one line per problem (WARNING, or ERROR when it fails the run), the outcome, then the `RECAP_JSON` line with the whole recap, then waits half a second. Without this wait, DSS 13.4.4 once lost this last line.
 6. **The end:** if the outcome is `FAILED`, raises `RunFailed`. Its message gives every problem, then where the details are: the summary dataset if it was written, else the run log. Otherwise, builds the HTML recap from `macro.build_recap_page()` and returns it.

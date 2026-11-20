@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 from typing import Any, Optional
 
 import pytest
@@ -132,7 +133,8 @@ def test_continue_gives_a_warning_after_a_failed_item(caplog: pytest.LogCaptureF
         FakeProject([make_dataset("d1", []), make_dataset("d2", [])]), {"fail": ["d2"], "on_error": "CONTINUE"}
     )
 
-    assert '<div class="dtp-banner dtp-banner-danger"><strong>Failed: d2.</strong></div>' in html
+    # The banner comes from the runner: the message of the macro in bold, then its hint.
+    assert '<div class="dtp-banner dtp-banner-danger"><strong>Failed: d2.</strong> Click "Failed".</div>' in html
     assert logged_summary(caplog)["outcome"] == "WARNING"
     assert [(r.levelname, r.getMessage()) for r in caplog.records if r.getMessage().startswith("Problem")] == [
         ("WARNING", "Problem: Failed: d2.")
@@ -159,7 +161,8 @@ def test_a_failed_run_points_to_the_summary_dataset_when_it_was_written() -> Non
         run_with(project, config, FakeRecapDataset())
 
 
-def test_a_recap_dataset_not_written_gives_a_warning_by_default() -> None:
+def test_a_summary_dataset_not_written_gives_a_warning_by_default(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO)
     recap_dataset = FakeRecapDataset(["customer_id"], [["c1"]])
 
     html = run_with(FakeProject([make_dataset("ds", [])]), {"recap_dataset": "r"}, recap_dataset)
@@ -167,9 +170,15 @@ def test_a_recap_dataset_not_written_gives_a_warning_by_default() -> None:
     assert '<div class="dtp-banner"><strong>Summary not written.</strong> Dataset r. DSS said: ValueError: ' in html
     assert "Summary written." not in html
     assert recap_dataset.rows == [["c1"]]
+    assert logged_summary(caplog)["outcome"] == "WARNING"
+    problems = [(r.levelname, r.getMessage()) for r in caplog.records if r.getMessage().startswith("Problem")]
+    assert len(problems) == 1
+    assert problems[0][0] == "WARNING"
+    assert problems[0][1].startswith("Problem: Summary not written to dataset r. DSS said: ValueError: ")
 
 
-def test_on_recap_error_fail_fails_the_run() -> None:
+def test_on_recap_error_fail_fails_the_run(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO)
     recap_dataset = FakeRecapDataset(write_error=OSError("disk full"))
     config = {"on_recap_error": "FAIL", "recap_dataset": "r"}
 
@@ -177,6 +186,10 @@ def test_on_recap_error_fail_fails_the_run() -> None:
         RunFailed, match=r"^Summary not written to dataset r\. DSS said: OSError: disk full\. Details in the run log\.$"
     ):
         run_with(FakeProject([make_dataset("ds", [])]), config, recap_dataset)
+
+    assert logged_summary(caplog)["outcome"] == "FAILED"
+    message = "Problem: Summary not written to dataset r. DSS said: OSError: disk full."
+    assert any(r.levelname == "ERROR" and r.getMessage() == message for r in caplog.records)
 
 
 def test_on_error_fail_does_not_cover_the_recap_dataset() -> None:
@@ -236,10 +249,11 @@ def test_the_plugin_settings_choose_the_ag_grid_of_a_downloaded_recap() -> None:
 def test_raise_exception_also_fails_the_run(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO)
 
-    with pytest.raises(RunFailed, match=r"^Failed: d1\."):
+    with pytest.raises(RunFailed, match=r"^Failed: d1\. Details in the run log\.$"):
         run_with(FakeProject([make_dataset("d1", [])]), {"fail": ["d1"], "on_error": "STOP"})
 
     assert logged_summary(caplog)["outcome"] == "FAILED"
+    assert any(r.levelname == "ERROR" and r.getMessage() == "Problem: Failed: d1." for r in caplog.records)
 
 
 def test_the_page_and_its_summary_are_built_once(
@@ -258,6 +272,24 @@ def test_the_page_and_its_summary_are_built_once(
     html = run_with(FakeProject([make_dataset("ds", [])]), {})
 
     assert len(calls) == 1
-    # The log and the HTML hold the same summary, with the outcome.
-    assert logged_summary(caplog)["run_id"] == calls[0]
-    assert f'"run_id": "{calls[0]}"' in html
+    # The log and the HTML hold the same summary, with the outcome and the problems.
+    summary = logged_summary(caplog)
+    assert summary["run_id"] == calls[0]
+    assert (summary["outcome"], summary["problems"]) == ("SUCCESS", [])
+    hidden = re.search(r'<script type="application/json" id="dtp-recap-data">(.*?)</script>', html, re.DOTALL)
+    assert hidden and json.loads(hidden.group(1)) == summary
+
+
+def test_the_macro_says_what_failed_once_even_with_a_summary_dataset(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+    describe_failures = MACRO.describe_failures
+
+    def counted(recap: dict[str, Any]) -> Any:
+        calls.append(recap["run_id"])
+        return describe_failures(recap)
+
+    monkeypatch.setattr(MACRO, "describe_failures", counted)
+
+    run_with(FakeProject([make_dataset("ds", [])]), {"recap_dataset": "r"}, FakeRecapDataset())
+
+    assert len(calls) == 1
