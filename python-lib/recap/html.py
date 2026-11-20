@@ -4,7 +4,7 @@ import json
 import logging
 import re
 from html import escape
-from typing import Any, Optional
+from typing import Any, Optional, TypedDict
 
 from core.options import (
     RECAP_ERROR_CHOICES,
@@ -36,6 +36,7 @@ from recap.page import (
     Status,
     Table,
 )
+from recap.text import format_count, format_started_at
 
 logger = logging.getLogger(__name__)
 
@@ -307,11 +308,15 @@ BANNER_CLASSES = {
 }
 BANNER_ORDER = list(BANNER_CLASSES)
 
-# The length of an error of DSS in a message. The log has the whole error.
-DSS_ERROR_SHOWN = 200
+
+class GridCdn(TypedDict):
+    """The AG Grid a recap opened outside DSS loads. The grid script reads it as JSON."""
+
+    url: str  # Empty: the recap loads nothing.
+    integrity: str  # The hashes the browser checks the file with. Empty: no check.
 
 
-def text(value: Any) -> str:
+def escape_text(value: Any) -> str:
     """Return a value as text that cannot add markup: dataset names, tags and DSS messages are free text."""
     return escape(str(value), quote=False)
 
@@ -324,36 +329,6 @@ def to_html_script_json(data: Any) -> str:
     """
     json_text = json.dumps(data, ensure_ascii=False)
     return json_text.replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
-
-
-def count_of(count: int, noun: str) -> str:
-    """Return "1 dataset" or "2 datasets": the count with its noun, in the singular for one."""
-    return f"{count} {noun}" if count == 1 else f"{count} {noun}s"
-
-
-def dss_said(error: Any) -> str:
-    """Return an error of DSS for the end of a message, such as "DSS said: Disk full.", cut when it is long."""
-    message = " ".join(str(error).split()) or type(error).__name__
-    if len(message) > DSS_ERROR_SHOWN:
-        return f"DSS said: {message[:DSS_ERROR_SHOWN]}..."
-    return f"DSS said: {message.rstrip('.')}."
-
-
-def format_duration(seconds: float) -> str:
-    """Format a duration for reading, such as "0.42 s" or "3.5 min"."""
-    if seconds < 60:
-        return f"{seconds:.2f} s"
-    return f"{seconds / 60:.1f} min"
-
-
-def format_started_at(started_at: str) -> str:
-    """Turn "2026-11-02T19:10:00Z" into "2026-11-02 19:10:00 UTC"."""
-    return started_at.replace("T", " ").replace("Z", " UTC")
-
-
-def yes_no(value: bool) -> str:
-    """Return "yes" or "no", for the options shown in a recap."""
-    return "yes" if value else "no"
 
 
 def build_common_option_chips(options: dict[str, Any]) -> list[Chip]:
@@ -372,8 +347,8 @@ def build_common_option_chips(options: dict[str, Any]) -> list[Chip]:
     return chips
 
 
-def build_icon(status: Status) -> str:
-    """Build the icon of a status, in the colour of its tone."""
+def render_icon(status: Status) -> str:
+    """Return the HTML of the icon of a status, in the colour of its tone."""
     return (
         f'<svg class="dtp-{status.tone}" viewBox="0 0 16 16" width="14" height="14" fill="none" '
         'stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" '
@@ -381,11 +356,11 @@ def build_icon(status: Status) -> str:
     )
 
 
-def build_banner(banner: Banner) -> str:
-    """Build a message the reader must see first."""
-    words = [f"<strong>{text(banner.title)}</strong>"]
+def render_banner(banner: Banner) -> str:
+    """Return the HTML of a message the reader must see first."""
+    words = [f"<strong>{escape_text(banner.title)}</strong>"]
     if banner.text:
-        words.append(text(banner.text))
+        words.append(escape_text(banner.text))
     return f'<div class="{BANNER_CLASSES[banner.tone]}">{" ".join(words)}</div>'
 
 
@@ -398,48 +373,48 @@ def build_run_banners(recap: dict[str, Any]) -> list[Banner]:
 
     result = recap["recap_dataset_result"]
     if result and not result["error"]:
-        rows = count_of(result["rows_written"], "row")
+        rows = format_count(result["rows_written"], "row")
         banners.append(Banner(TONE_MUTED, "Summary written.", f"{rows} in dataset {result['name']}."))
     return banners
 
 
-def build_metric(metric: Metric) -> str:
-    """Build one headline figure. With a status, the interactive table can filter on it."""
+def render_metric(metric: Metric) -> str:
+    """Return the HTML of one headline figure. With a status, the interactive table can filter on it."""
     status_attribute = f' data-status="{escape(metric.status)}"' if metric.status else ""
     tone_class = f" dtp-{metric.tone}" if metric.tone else ""
     return (
         f'<div class="dtp-metric"{status_attribute}>'
-        f'<span class="dtp-metric-value{tone_class}">{text(metric.value)}</span>'
-        f'<span class="dtp-metric-label">{text(metric.label)}</span>'
+        f'<span class="dtp-metric-value{tone_class}">{escape_text(metric.value)}</span>'
+        f'<span class="dtp-metric-label">{escape_text(metric.label)}</span>'
         "</div>"
     )
 
 
-def build_chip(chip: Chip) -> str:
-    """Build a short text in a grey box."""
+def render_chip(chip: Chip) -> str:
+    """Return the HTML of a short text in a grey box."""
     css_class = f"dtp-tag dtp-tag-{chip.tone}" if chip.tone else "dtp-tag"
-    return f'<span class="{css_class}">{text(chip.text)}</span>'
+    return f'<span class="{css_class}">{escape_text(chip.text)}</span>'
 
 
-def build_section(section: Section) -> str:
-    """Build a titled block of chips or text, such as the options of the run."""
-    title = text(section.title)
+def render_section(section: Section) -> str:
+    """Return the HTML of a titled block of chips or text, such as the options of the run."""
+    title = escape_text(section.title)
     if section.note:
-        title += f' <span class="dtp-note">{text(section.note)}</span>'
-    chips = "".join(build_chip(chip) for chip in section.chips)
-    return f'<div class="dtp-section"><h3>{title}</h3>{chips}{text(section.text)}</div>'
+        title += f' <span class="dtp-note">{escape_text(section.note)}</span>'
+    chips = "".join(render_chip(chip) for chip in section.chips)
+    return f'<div class="dtp-section"><h3>{title}</h3>{chips}{escape_text(section.text)}</div>'
 
 
-def build_cell(column: Column, value: Any, statuses: dict[str, Status]) -> str:
-    """Build one cell of the static table. A status the table does not list shows its code, with no icon."""
+def render_cell(column: Column, value: Any, statuses: dict[str, Status]) -> str:
+    """Return the HTML of one cell of the static table. A status the table does not list shows its code, no icon."""
     if column.kind == COLUMN_STATUS:
         status = statuses.get(value)
         if status is None:
-            return f'<td><span class="dtp-status">{text(value)}</span></td>'
-        return f'<td><span class="dtp-status">{build_icon(status)}{text(status.label)}</span></td>'
+            return f'<td><span class="dtp-status">{escape_text(value)}</span></td>'
+        return f'<td><span class="dtp-status">{render_icon(status)}{escape_text(status.label)}</span></td>'
     if column.kind == COLUMN_TAGS:
-        return "<td>" + "".join(f'<span class="dtp-tag">{text(tag)}</span>' for tag in value or []) + "</td>"
-    shown = "" if value is None else text(value)
+        return "<td>" + "".join(f'<span class="dtp-tag">{escape_text(tag)}</span>' for tag in value or []) + "</td>"
+    shown = "" if value is None else escape_text(value)
     if column.kind == COLUMN_NUMBER:
         return f'<td class="dtp-nowrap dtp-number">{shown}</td>'
     if column.kind == COLUMN_LONG_TEXT or column.pinned:
@@ -447,10 +422,10 @@ def build_cell(column: Column, value: Any, statuses: dict[str, Status]) -> str:
     return f"<td>{shown}</td>"
 
 
-def build_table(table: Table) -> str:
-    """Build the static table, sorted by status, and the hidden JSON block of its rows for the grid script."""
+def render_table(table: Table) -> str:
+    """Return the HTML of the static table, sorted by status, and the JSON block of its rows for the grid script."""
     if not table.rows:
-        return f"<p>{text(table.empty_message)}</p>"
+        return f"<p>{escape_text(table.empty_message)}</p>"
 
     statuses = {status.code: status for status in table.statuses}
     status_fields = [column.field for column in table.columns if column.kind == COLUMN_STATUS]
@@ -460,24 +435,24 @@ def build_table(table: Table) -> str:
         rows = sorted(rows, key=lambda row: order.get(row[status_fields[0]], len(order)))
 
     headers = "".join(
-        f'<th class="dtp-number">{text(column.header)}</th>'
+        f'<th class="dtp-number">{escape_text(column.header)}</th>'
         if column.kind == COLUMN_NUMBER
-        else f"<th>{text(column.header)}</th>"
+        else f"<th>{escape_text(column.header)}</th>"
         for column in table.columns
     )
     body = "".join(
-        "<tr>" + "".join(build_cell(column, row.get(column.field), statuses) for column in table.columns) + "</tr>"
+        "<tr>" + "".join(render_cell(column, row.get(column.field), statuses) for column in table.columns) + "</tr>"
         for row in rows
     )
     return (
-        f'<h3>{text(table.title)}</h3><div class="dtp-static-table"><table><thead><tr>{headers}</tr></thead>'
+        f'<h3>{escape_text(table.title)}</h3><div class="dtp-static-table"><table><thead><tr>{headers}</tr></thead>'
         f"<tbody>{body}</tbody></table></div>"
         f'<script type="application/json" class="dtp-table-data">{to_html_script_json(table.rows)}</script>'
     )
 
 
-def read_grid_cdn(plugin_config: Optional[dict[str, Any]]) -> dict[str, str]:
-    """Return the AG Grid a recap opened outside DSS loads, from the plugin settings: {"url", "integrity"}.
+def read_grid_cdn(plugin_config: Optional[dict[str, Any]]) -> GridCdn:
+    """Return the AG Grid a recap opened outside DSS loads, from the plugin settings.
 
     A missing setting takes its default. An empty URL turns the loading off. So does a URL that is
     not http(s), since a downloaded recap is opened from a file, or an integrity that is not made of
@@ -486,7 +461,7 @@ def read_grid_cdn(plugin_config: Optional[dict[str, Any]]) -> dict[str, str]:
     config = plugin_config or {}
     url = str(config.get("ag_grid_url", AG_GRID_DEFAULT_URL) or "").strip()
     integrity = str(config.get("ag_grid_integrity", AG_GRID_DEFAULT_INTEGRITY) or "").strip()
-    off = {"url": "", "integrity": ""}
+    off = GridCdn(url="", integrity="")
     if not url:
         return off
     if not re.match(r"https?://", url):
@@ -495,11 +470,11 @@ def read_grid_cdn(plugin_config: Optional[dict[str, Any]]) -> dict[str, str]:
     if integrity and not re.fullmatch(INTEGRITY_PATTERN, integrity):
         logger.warning("AG Grid integrity of the plugin settings ignored, it is not a hash: %s", integrity)
         return off
-    return {"url": url, "integrity": integrity}
+    return GridCdn(url=url, integrity=integrity)
 
 
-def build_grid_script(root_id: str, table: Table, grid_cdn: dict[str, str]) -> str:
-    """Build the script that turns the static table into an AG Grid table, or "" without rows.
+def render_grid_script(root_id: str, table: Table, grid_cdn: GridCdn) -> str:
+    """Return the script that turns the static table into an AG Grid table, or "" without rows.
 
     It holds no data: it reads the rows from the hidden JSON block of the table. Its settings go in as
     JSON that cannot close the script element.
@@ -508,7 +483,7 @@ def build_grid_script(root_id: str, table: Table, grid_cdn: dict[str, str]) -> s
         return ""
     columns = [column._asdict() for column in table.columns]
     statuses = {
-        status.code: {"label": status.label, "order": index, "icon": build_icon(status)}
+        status.code: {"label": status.label, "order": index, "icon": render_icon(status)}
         for index, status in enumerate(table.statuses)
     }
     texts = {"search": table.search_placeholder, "csvFileName": table.csv_file_name}
@@ -522,30 +497,31 @@ def build_grid_script(root_id: str, table: Table, grid_cdn: dict[str, str]) -> s
     return f"<script>{script}</script>"
 
 
-def build_recap_html(recap: dict[str, Any], page: RecapPage, grid_cdn: Optional[dict[str, str]] = None) -> str:
-    """Build the full recap.
+def render_recap_html(recap: dict[str, Any], page: RecapPage, grid_cdn: Optional[GridCdn] = None) -> str:
+    """Return the HTML of the full recap.
 
     It has no title of its own: DSS shows "Result" above the HTML of a macro, and the plugin cannot
     change it (resultLabel only names the links and files a macro returns).
 
-    Free text always goes through text(). ng-non-bindable is also required: DSS runs a macro's HTML
-    through AngularJS, which would execute a tag such as {{...}} in the reader's browser. So every
+    Free text always goes through escape_text(). ng-non-bindable is also required: DSS runs a macro's
+    HTML through AngularJS, which would execute a tag such as {{...}} in the reader's browser. So every
     value from the project sits inside that element, and the grid script after it holds none.
 
     The hidden JSON block holds the summary of the page, for the code that runs the macro through
     the API. For a run, the runner has added the outcome and the problems to it. A browser never runs
     nor displays a script of type application/json.
 
-    The meta tag keeps accents readable in the report downloaded from DSS.
+    The meta tag keeps accents readable in the recap downloaded from DSS.
 
     :param recap: the recap of the run, for the fields every recap has
     :param page: what the macro shows
     :param grid_cdn: the AG Grid to load outside DSS, from read_grid_cdn(); the default one if None
     """
     root_id = f"dtp-recap-{recap['run_id']}"
+    started_at = escape_text(format_started_at(recap["started_at"]))
     context = (
-        f"{text(recap['macro_label'])} · Project {text(recap['project_key'])} · "
-        f"Run by {text(recap['run_by'] or 'unknown user')} · Started {text(format_started_at(recap['started_at']))}"
+        f"{escape_text(recap['macro_label'])} · Project {escape_text(recap['project_key'])} · "
+        f"Run by {escape_text(recap['run_by'] or 'unknown user')} · Started {started_at}"
     )
     banners = sorted(page.banners + build_run_banners(recap), key=lambda banner: BANNER_ORDER.index(banner.tone))
     summary = to_html_script_json(page.summary)
@@ -554,11 +530,11 @@ def build_recap_html(recap: dict[str, Any], page: RecapPage, grid_cdn: Optional[
         f"{STYLE}"
         f'<div class="dtp-recap" id="{root_id}" ng-non-bindable>'
         f'<p class="dtp-context">{context}</p>'
-        f"{''.join(build_banner(banner) for banner in banners)}"
-        f'<div class="dtp-metrics">{"".join(build_metric(metric) for metric in page.metrics)}</div>'
-        f"{''.join(build_section(section) for section in page.sections)}"
-        f"{build_table(page.table)}"
+        f"{''.join(render_banner(banner) for banner in banners)}"
+        f'<div class="dtp-metrics">{"".join(render_metric(metric) for metric in page.metrics)}</div>'
+        f"{''.join(render_section(section) for section in page.sections)}"
+        f"{render_table(page.table)}"
         f'<script type="application/json" id="dtp-recap-data">{summary}</script>'
         "</div>"
-        f"{build_grid_script(root_id, page.table, read_grid_cdn(None) if grid_cdn is None else grid_cdn)}"
+        f"{render_grid_script(root_id, page.table, read_grid_cdn(None) if grid_cdn is None else grid_cdn)}"
     )

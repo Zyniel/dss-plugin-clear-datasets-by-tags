@@ -13,3 +13,7 @@ The five default triage labels are used as-is: `needs-triage`, `needs-info`, `re
 ### Domain docs
 
 Single-context: one `GLOSSARY.md` and one `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+### Coding standards
+
+Python conventions that ruff cannot check, for writing or reviewing code: `CODING_STANDARDS.md`.

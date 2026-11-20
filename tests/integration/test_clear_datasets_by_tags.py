@@ -82,7 +82,7 @@ def test_all_datasets_keeps_the_excluded_datasets(scratch_project: Any, connecti
 def test_only_excluded_tags_are_refused(scratch_project: Any, connection: str) -> None:
     add_built_dataset(scratch_project, "sales", [], connection)
 
-    with pytest.raises(dss_error(), match="Give at least one included tag, or choose 'All datasets' in 'Include'"):
+    with pytest.raises(dss_error(), match='Give at least one included tag, or choose "All datasets" in "Include"'):
         run_macro(scratch_project, CLEAR, {"excluded_tags": ["keep"], "simulate": False})
 
     assert count_rows(scratch_project, "sales") == ROW_COUNT

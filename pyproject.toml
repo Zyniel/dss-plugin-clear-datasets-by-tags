@@ -35,8 +35,20 @@ target-version = "py39"
 line-length = 120
 src = ["python-lib", "tests"]
 
+# The conventions ruff cannot check are in CODING_STANDARDS.md.
 [tool.ruff.lint]
-select = ["B", "E", "F", "I", "UP", "W"]
+select = ["B", "C4", "D", "E", "F", "I", "N", "PERF", "PIE", "PT", "RET", "RUF", "SIM", "UP", "W"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.ruff.lint.per-file-ignores]
+# Each method only calls the function of the same name, and MaintenanceMacro documents it.
+"python-lib/macros/*/macro.py" = ["D102"]
+# Ruff cannot tell a helper from a test. CODING_STANDARDS.md asks for a docstring on each helper, none on a test.
+"tests/**/test_*.py" = ["D101", "D102", "D103", "D105", "D107"]
+# Each fake method stands in for the DSS method of the same name. Its class says how it differs.
+"tests/support/fakes.py" = ["D102", "D105", "D107"]
 
 [tool.mypy]
 python_version = "3.9"

@@ -7,26 +7,27 @@ any reason to stop is found while nothing is cleared yet. Step 2 clears the data
 import logging
 import time
 from collections.abc import Callable
-from typing import Any, NamedTuple, Optional
+from typing import Any, NamedTuple, Optional, TypedDict
 
-from core.macro import RunBlocked
+from core.macro import RunBlockedError
 from core.options import (
     ON_ERROR_STOP,
-    option_unchecked,
+    RUN_OPTION_LABELS,
+    describe_unchecked,
     read_checkbox,
     read_recap_options,
     read_run_options,
 )
 from core.project import (
+    format_projects,
     list_project_datasets,
-    name_projects,
     read_datasets_without_recipe,
     read_shared_datasets,
 )
 from core.tags import (
-    SCOPE_ALL_DATASETS,
-    SCOPE_CHOICES,
-    SCOPE_LABEL,
+    INCLUDE_ALL_DATASETS,
+    INCLUDE_CHOICES,
+    INCLUDE_LABEL,
     TaggedDataset,
     TagRules,
     count_datasets_with_tag,
@@ -36,8 +37,8 @@ from core.tags import (
     select_datasets,
     tags_in_both,
 )
-from recap.html import count_of, dss_said
 from recap.page import TONE_CAUTION, TONE_MUTED, Banner
+from recap.text import describe_dss_error, format_count, format_error
 
 logger = logging.getLogger(__name__)
 
@@ -68,11 +69,13 @@ SKIP_PARTITIONED = "PARTITIONED"
 SKIP_WITHOUT_RECIPE = "WITHOUT_RECIPE"
 SKIP_STOPPED = "STOPPED"  # Not tried: "If an error occurs" is "Raise exception", and a clear failed before.
 
-# On each dataset to clear when the sharing cannot be read. A notice says it once in the recap.
-WARNING_SHARING_NOT_CHECKED = "Sharing not checked: other projects may use it"
+# A risk of each dataset to clear when the sharing cannot be read. A notice says it once in the recap.
+RISK_SHARING_NOT_CHECKED = "Sharing not checked: other projects may use it"
 
 # Default value and label of the options of this macro, as in its form. A test checks that the form
-# agrees. The options of the "Run" and "Summary" sections are in core/options.py.
+# agrees. The options of the "Run" and "Summary" sections are in core/options.py. The parameter names
+# keep the word purge (purge_shared, purge_partitioned, purge_without_recipe): scenarios and API calls
+# use them, and the options of the JSON recap too. Everywhere else, it is clear.
 OPTION_DEFAULTS = {
     "simulate": True,
     "purge_shared": True,
@@ -94,8 +97,31 @@ class Blocker(NamedTuple):
     text: str  # What to do, then the error of DSS.
 
     def __str__(self) -> str:
-        """Return the whole message, for the JSON recap, the log and the message of the stopped run."""
+        """Return the whole message, for the JSON recap, the log and the message of the blocked run."""
         return f"{self.check.capitalize()} not checked. {self.text}"
+
+
+class DatasetRow(TypedDict):
+    """A selected dataset, and what the run does with it: step 1 decides, step 2 clears it or marks it.
+
+    The field warnings holds its risks. It keeps its name, as the column of the summary dataset and the
+    field of the JSON recap do: their readers use them.
+    """
+
+    name: str
+    type: str
+    connection: str
+    included_tags: list[str]
+    excluded_tags: list[str]
+    is_shared: Optional[bool]  # None when the sharing could not be read.
+    shared_with: list[str]
+    built_by_recipe: Optional[bool]  # None when the Flow could not be read.
+    partition_dimensions: list[str]
+    status: str
+    skip_code: str  # A SKIP_* code for a skipped dataset, else "".
+    detail: str
+    warnings: list[str]  # The risks of clearing it.
+    duration: Optional[float]  # The seconds the clear took. None when it was not tried.
 
 
 def read_options(config: dict[str, Any], project_key: str) -> dict[str, Any]:
@@ -104,6 +130,8 @@ def read_options(config: dict[str, Any], project_key: str) -> dict[str, Any]:
     Any value that is not a real true or false gives the default: a simulation, shared datasets
     cleared, partitioned and recipe-less datasets skipped, and the earlier runs kept in the summary
     dataset.
+
+    :raises ValueError: if the summary dataset belongs to another project, or if none is picked while checked
     """
     options = {name: read_checkbox(config, name, default) for name, default in OPTION_DEFAULTS.items()}
     options.update(read_run_options(config))
@@ -117,7 +145,7 @@ def decide(
     options: dict[str, Any],
     shared_datasets: Optional[dict[str, list[str]]],
     datasets_without_recipe: Optional[set[str]],
-) -> dict[str, Any]:
+) -> DatasetRow:
     """Decide what to do with one selected dataset, and why. Nothing is cleared here.
 
     A dataset to clear gets the status TO_CLEAR: step 2 clears it, or marks it WOULD_BE_CLEARED in a simulation.
@@ -134,7 +162,7 @@ def decide(
     shared_with = (shared_datasets or {}).get(name, [])
     built_by_recipe = None if datasets_without_recipe is None else name not in datasets_without_recipe
 
-    row: dict[str, Any] = {
+    row: DatasetRow = {
         "name": name,
         "type": dataset.get("type") or "",
         "connection": connection,
@@ -152,12 +180,12 @@ def decide(
         "duration": None,
     }
 
-    def skip(code: str, reason: str) -> dict[str, Any]:
-        row.update(status=STATUS_SKIPPED, skip_code=code, detail=reason)
+    def skip(code: str, reason: str) -> DatasetRow:
+        row["status"], row["skip_code"], row["detail"] = STATUS_SKIPPED, code, reason
         return row
 
     if tagged.is_excluded:
-        row.update(status=STATUS_EXCLUDED, detail=describe_match("excluded", rules.excluded_match))
+        row["status"], row["detail"] = STATUS_EXCLUDED, describe_match("excluded", rules.excluded_match)
         return row
     if name == options["recap_dataset"]:
         return skip(SKIP_SUMMARY_DATASET, "Is the summary dataset")
@@ -165,19 +193,19 @@ def decide(
         # DSS does not manage the data of an external dataset, so it is never cleared.
         return skip(SKIP_EXTERNAL, f"Is external (connection {connection})" if connection else "Is external")
     if is_shared and not options["purge_shared"]:
-        unchecked = option_unchecked(OPTION_LABELS["purge_shared"])
-        return skip(SKIP_SHARED, f"Is shared with {name_projects(shared_with)}; {unchecked}")
+        unchecked = describe_unchecked(OPTION_LABELS["purge_shared"])
+        return skip(SKIP_SHARED, f"Is shared with {format_projects(shared_with)}; {unchecked}")
     if dimensions and not options["purge_partitioned"]:
-        unchecked = option_unchecked(OPTION_LABELS["purge_partitioned"])
+        unchecked = describe_unchecked(OPTION_LABELS["purge_partitioned"])
         return skip(SKIP_PARTITIONED, f"Is partitioned by {', '.join(dimensions)}; {unchecked}")
     if built_by_recipe is False and not options["purge_without_recipe"]:
-        return skip(SKIP_WITHOUT_RECIPE, f"Has no recipe; {option_unchecked(OPTION_LABELS['purge_without_recipe'])}")
+        return skip(SKIP_WITHOUT_RECIPE, f"Has no recipe; {describe_unchecked(OPTION_LABELS['purge_without_recipe'])}")
 
-    # Cleared: warn about what the reader may not expect.
+    # To clear: the risks the reader may not expect.
     if is_shared:
-        row["warnings"].append(f"Shared with {name_projects(shared_with)}: the projects using it can break")
+        row["warnings"].append(f"Shared with {format_projects(shared_with)}: the projects using it can break")
     if is_shared is None:
-        row["warnings"].append(WARNING_SHARING_NOT_CHECKED)
+        row["warnings"].append(RISK_SHARING_NOT_CHECKED)
     if dimensions:
         row["warnings"].append(f"All partitions are cleared (partitioned by {', '.join(dimensions)})")
     if built_by_recipe is False:
@@ -191,6 +219,8 @@ def read_clear_response(response: Any) -> tuple[str, str]:
     clear() does not raise when DSS cannot clear the data: the HTTP call still succeeds and only the
     response says so. Do not read "success" here: it is also false after a clear that worked, when
     DSS has no message to give.
+
+    :raises TypeError: if the response is not a dict
     """
     if not isinstance(response, dict):
         raise TypeError(f"unexpected answer {str(response)[:200]!r}")
@@ -217,7 +247,7 @@ def clear_dataset(project: Any, dataset_name: str) -> tuple[str, str, float]:
     try:
         response = project.get_dataset(dataset_name).clear()
     except Exception as error:
-        return STATUS_FAILED, f"{type(error).__name__}: {error}", time.time() - start_time
+        return STATUS_FAILED, format_error(error), time.time() - start_time
     duration = time.time() - start_time
 
     logger.info("Clear response for dataset %s: %s", dataset_name, response)
@@ -228,7 +258,7 @@ def clear_dataset(project: Any, dataset_name: str) -> tuple[str, str, float]:
     return status, detail, duration
 
 
-def count_by_status(rows: list[dict[str, Any]]) -> dict[str, int]:
+def count_by_status(rows: list[DatasetRow]) -> dict[str, int]:
     """Return the number of datasets per status, with every status present."""
     counts = dict.fromkeys(STATUS_LABELS, 0)
     for row in rows:
@@ -236,20 +266,20 @@ def count_by_status(rows: list[dict[str, Any]]) -> dict[str, int]:
     return counts
 
 
-def describe_row(row: dict[str, Any]) -> str:
-    """Return the status of a dataset with its detail and warnings, for the log."""
+def describe_row(row: DatasetRow) -> str:
+    """Return the status of a dataset with its detail and risks, for the log."""
     label = TO_CLEAR_LABEL if row["status"] == STATUS_TO_CLEAR else STATUS_LABELS[row["status"]]
     text = f"{row['name']}: {label}"
     if row["detail"]:
         text += f" - {row['detail']}"
-    for warning in row["warnings"]:
-        text += f" - warning: {warning}"
+    for risk in row["warnings"]:
+        text += f" - risk: {risk}"
     return text
 
 
-def tags_are(count: int) -> str:
+def format_tags_are(count: int) -> str:
     """Return "1 tag is" or "2 tags are", to start a sentence."""
-    return f"{count_of(count, 'tag')} {'is' if count == 1 else 'are'}"
+    return f"{format_count(count, 'tag')} {'is' if count == 1 else 'are'}"
 
 
 def build_tag_notices(
@@ -264,12 +294,12 @@ def build_tag_notices(
 
     ignored = ignored_included_tags(config, rules)
     if ignored:
-        all_datasets = SCOPE_CHOICES[SCOPE_ALL_DATASETS]
+        all_datasets = INCLUDE_CHOICES[INCLUDE_ALL_DATASETS]
         notices.append(
             Banner(
                 TONE_MUTED,
-                f"{count_of(len(ignored), 'included tag')} ignored.",
-                f'"{SCOPE_LABEL}" is "{all_datasets}": {", ".join(ignored)}.',
+                f"{format_count(len(ignored), 'included tag')} ignored.",
+                f'"{INCLUDE_LABEL}" is "{all_datasets}": {", ".join(ignored)}.',
             )
         )
 
@@ -279,7 +309,7 @@ def build_tag_notices(
         notices.append(
             Banner(
                 TONE_CAUTION,
-                f"{tags_are(len(in_both))} both included and excluded.",
+                f"{format_tags_are(len(in_both))} both included and excluded.",
                 f"{they_count} as excluded: {', '.join(in_both)}.",
             )
         )
@@ -289,7 +319,7 @@ def build_tag_notices(
     if not selected_count:
         if included_on_no_dataset:
             reason = f"Included tags on no dataset: {', '.join(included_on_no_dataset)}."
-        elif rules.included_scope == SCOPE_ALL_DATASETS:
+        elif rules.include == INCLUDE_ALL_DATASETS:
             reason = "This project has no dataset."
         else:
             reason = "No dataset has all the included tags."
@@ -303,7 +333,7 @@ def build_tag_notices(
         if excluded_on_no_dataset:
             tag_lists.append(f"Excluded: {', '.join(excluded_on_no_dataset)}.")
         count = len(included_on_no_dataset) + len(excluded_on_no_dataset)
-        notices.append(Banner(TONE_CAUTION, f"{tags_are(count)} on no dataset.", " ".join(tag_lists)))
+        notices.append(Banner(TONE_CAUTION, f"{format_tags_are(count)} on no dataset.", " ".join(tag_lists)))
     return notices
 
 
@@ -317,15 +347,15 @@ def run_clearing(
     :param config: values of the macro form
     :param progress_callback: called with the percentage of datasets processed
     :raises ValueError: if the form is not valid, before clearing anything
-    :raises RunBlocked: in a real run, if a check fails, before clearing anything
+    :raises RunBlockedError: in a real run, if a blocker stops it, before clearing anything
     """
     rules = read_tag_rules(config)
     options = read_options(config, project_key)
     simulate = options["simulate"]
 
     logger.info("%s", "Simulation, nothing is cleared" if simulate else "Real run, data is cleared")
-    if rules.included_scope == SCOPE_ALL_DATASETS:
-        included = "All datasets"
+    if rules.include == INCLUDE_ALL_DATASETS:
+        included = INCLUDE_CHOICES[INCLUDE_ALL_DATASETS]
     else:
         included = f"Included tags ({rules.included_match}): {rules.included_tags}"
     logger.info("%s | excluded tags (%s): %s", included, rules.excluded_match, rules.excluded_tags or "none")
@@ -342,12 +372,12 @@ def run_clearing(
     except Exception as error:
         logger.warning("Could not read the datasets shared with other projects: %s", error)
         if options["purge_shared"]:
-            text = f"Shared datasets are cleared too. {dss_said(error)}"
+            text = f"Shared datasets are cleared too. {describe_dss_error(error)}"
             notices.append(Banner(TONE_CAUTION, "Sharing not checked.", text))
         else:
             label = OPTION_LABELS["purge_shared"]
             action = f'Check "{label}", or ask a project administrator to run the macro.'
-            blockers.append(Blocker("sharing", f"{action} {dss_said(error)}"))
+            blockers.append(Blocker("sharing", f"{action} {describe_dss_error(error)}"))
 
     datasets_without_recipe: Optional[set[str]] = None
     try:
@@ -355,12 +385,12 @@ def run_clearing(
     except Exception as error:
         logger.warning("Could not read the Flow: %s", error)
         if options["purge_without_recipe"]:
-            text = f"Datasets with no recipe are cleared too. {dss_said(error)}"
+            text = f"Datasets with no recipe are cleared too. {describe_dss_error(error)}"
             notices.append(Banner(TONE_CAUTION, "Recipes not checked.", text))
         else:
             label = OPTION_LABELS["purge_without_recipe"]
             action = f'Check "{label}", or run the macro again.'
-            blockers.append(Blocker("recipes", f"{action} {dss_said(error)}"))
+            blockers.append(Blocker("recipes", f"{action} {describe_dss_error(error)}"))
 
     included_tag_counts = {tag: count_datasets_with_tag(project_datasets, tag) for tag in rules.included_tags}
     excluded_tag_counts = {tag: count_datasets_with_tag(project_datasets, tag) for tag in rules.excluded_tags}
@@ -380,7 +410,7 @@ def run_clearing(
         logger.warning("A real run stops here: %s", blocker)
 
     if blockers and not simulate:
-        raise RunBlocked("Nothing was cleared. " + " ".join(str(blocker) for blocker in blockers))
+        raise RunBlockedError("Nothing was cleared. " + " ".join(str(blocker) for blocker in blockers))
 
     # Step 2: clear the datasets, one after the other. A simulation only marks them. With "Raise
     # exception", the first failure stops the clearing: the datasets after it are not tried, and the
@@ -391,7 +421,8 @@ def run_clearing(
             if simulate:
                 row["status"] = STATUS_WOULD_BE_CLEARED
             elif stopped:
-                row.update(status=STATUS_SKIPPED, skip_code=SKIP_STOPPED, detail="Not tried: the run stopped")
+                row["status"], row["skip_code"] = STATUS_SKIPPED, SKIP_STOPPED
+                row["detail"] = "Not tried: the run stopped"
             else:
                 row["status"], detail, row["duration"] = clear_dataset(project, row["name"])
                 # A message from DSS or an error says more than why the dataset was selected.
@@ -399,7 +430,7 @@ def run_clearing(
                 logger.info("[%d/%d] %s, in %.2f s", position, len(rows), describe_row(row), row["duration"])
                 if row["status"] == STATUS_FAILED and options["on_error"] == ON_ERROR_STOP:
                     stopped = True
-                    logger.error("The run stops at the first error, as 'If an error occurs' asks")
+                    logger.error('The run stops at the first error, as "%s" asks', RUN_OPTION_LABELS["on_error"])
         progress_callback(position * 100 // len(rows))
 
     if not rows:
@@ -408,7 +439,7 @@ def run_clearing(
     return {
         "simulate": simulate,
         "options": options,
-        "included_scope": rules.included_scope,
+        "included_scope": rules.include,
         "included_tags": rules.included_tags,
         "included_match": rules.included_match,
         "excluded_tags": rules.excluded_tags,

@@ -8,11 +8,7 @@ def list_project_datasets(project: Any, project_key: str) -> list[dict[str, Any]
 
     Datasets shared by other projects are left out here, so that no macro ever handles them.
     """
-    project_datasets = []
-    for dataset in project.list_datasets():
-        if dataset["projectKey"] == project_key:
-            project_datasets.append(dataset)
-    return project_datasets
+    return [dataset for dataset in project.list_datasets() if dataset["projectKey"] == project_key]
 
 
 def read_shared_datasets(project: Any) -> dict[str, list[str]]:
@@ -36,6 +32,6 @@ def read_datasets_without_recipe(project: Any) -> set[str]:
     return {node["ref"] for node in graph.get_source_computables() if node["type"] == "COMPUTABLE_DATASET"}
 
 
-def name_projects(shared_with: list[str]) -> str:
+def format_projects(shared_with: list[str]) -> str:
     """Return "A, B", the projects a dataset is shared with, or "other projects" when DSS names none."""
     return ", ".join(shared_with) or "other projects"

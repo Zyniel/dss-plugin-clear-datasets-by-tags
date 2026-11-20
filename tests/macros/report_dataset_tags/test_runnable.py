@@ -4,14 +4,14 @@ from typing import Any
 
 import pytest
 
-from core.runner import RunFailed, run_macro
+from core.runner import RunFailedError, run_macro
 from macros.report_dataset_tags import MACRO
 from macros.report_dataset_tags.recap import SUMMARY_COLUMNS
 from support.dataiku_stub import install_fake_dataiku, load_runnable_class
 from support.fakes import PROJECT_KEY, FakeClient, FakeProject, FakeRecapDataset, make_dataset
 
 
-def test_the_runnable_reports_writes_the_recap_dataset_and_changes_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_the_runnable_reports_writes_the_summary_dataset_and_changes_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
     project = FakeProject(
         [make_dataset("a", ["tmp", "Stage:Raw"]), make_dataset("b", [])], tag_categories={"Stage": ["Raw"]}
     )
@@ -44,11 +44,11 @@ def test_on_error_sent_through_the_api_is_ignored() -> None:
     assert "If an error occurs" not in html
 
 
-def test_on_recap_error_fail_fails_the_report_when_the_recap_dataset_cannot_be_written() -> None:
+def test_on_recap_error_fail_fails_the_run_when_the_summary_dataset_cannot_be_written() -> None:
     project = FakeProject([make_dataset("a", ["tmp"])])
     config = {"on_recap_error": "FAIL", "recap_dataset": "recap"}
 
-    with pytest.raises(RunFailed, match="^Summary not written to dataset recap"):
+    with pytest.raises(RunFailedError, match=r"^Summary not written to dataset recap"):
         run_macro(
             MACRO, FakeClient(project), PROJECT_KEY, config, lambda _: None, lambda _: FakeRecapDataset(["other"])
         )

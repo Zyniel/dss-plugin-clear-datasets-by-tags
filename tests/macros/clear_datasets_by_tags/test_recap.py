@@ -23,8 +23,9 @@ from macros.clear_datasets_by_tags.recap import (
     describe_counts,
     describe_failures,
 )
-from recap.html import build_recap_html
+from recap.html import render_recap_html
 from support.fakes import FakeProject, make_dataset
+from support.pages import metric_value, read_summary
 from support.runs import run
 
 REAL_RUN = {"simulate": False}
@@ -33,6 +34,7 @@ LIST_THEM = 'Click "Failed" to list them.'
 
 
 def make_row(name: str, status: str, **values: Any) -> dict[str, Any]:
+    """Return the row of a dataset as the clearing gives it: an Oracle dataset, unless values say otherwise."""
     row = {
         "name": name,
         "type": "Oracle",
@@ -54,6 +56,7 @@ def make_row(name: str, status: str, **values: Any) -> dict[str, Any]:
 
 
 def make_recap(rows: list[dict[str, Any]], **values: Any) -> dict[str, Any]:
+    """Return the recap of a real run with these dataset rows, as the runner gives it, unless values say otherwise."""
     recap = {
         "run_id": "r1",
         "macro": MACRO.id,
@@ -84,15 +87,9 @@ def make_recap(rows: list[dict[str, Any]], **values: Any) -> dict[str, Any]:
 
 
 def recap_html(project: FakeProject, config: dict[str, Any]) -> str:
+    """Run the macro on the fake project and return its HTML recap."""
     recap, _ = run(MACRO, project, config)
-    return build_recap_html(recap, build_recap_page(recap))
-
-
-def metric(html: str, label: str) -> str:
-    """Return the value displayed above a metric label."""
-    before_label = html[: html.index(f'<span class="dtp-metric-label">{label}<')]
-    value_start = before_label.rindex('">') + 2
-    return before_label[value_start:].replace("</span>", "")
+    return render_recap_html(recap, build_recap_page(recap))
 
 
 # JSON recap and log
@@ -250,12 +247,12 @@ def test_recap_gives_the_metrics_of_a_real_run() -> None:
 
     html = recap_html(project, {"included_tags": ["a"], **REAL_RUN})
 
-    assert metric(html, "Cleared") == "2"
-    assert metric(html, "Failed") == "1"
-    assert metric(html, "Skipped") == "1"
-    assert metric(html, "Selected") == "4"
-    assert metric(html, "Scanned") == "5"
-    assert re.match(r"\d+\.\d\d s$", metric(html, "Duration"))
+    assert metric_value(html, "Cleared") == "2"
+    assert metric_value(html, "Failed") == "1"
+    assert metric_value(html, "Skipped") == "1"
+    assert metric_value(html, "Selected") == "4"
+    assert metric_value(html, "Scanned") == "5"
+    assert re.match(r"\d+\.\d\d s$", metric_value(html, "Duration"))
     assert 'dtp-metric-label">Excluded' not in html
     assert "Simulation, nothing was cleared" not in html
 
@@ -267,7 +264,7 @@ def test_a_simulation_says_nothing_was_cleared() -> None:
         '<div class="dtp-banner dtp-banner-pending"><strong>Simulation, nothing was cleared.</strong> '
         'Uncheck "Simulate" to clear.</div>'
     ) in html
-    assert metric(html, "Cleared (Simulate)") == "1"
+    assert metric_value(html, "Cleared (Simulate)") == "1"
     assert 'dtp-metric-label">Cleared<' not in html
 
 
@@ -355,14 +352,14 @@ def test_excluded_datasets_are_counted_and_listed() -> None:
 
     html = recap_html(project, {"included_scope": "ALL_DATASETS", "excluded_tags": ["keep"]})
 
-    assert metric(html, "Excluded") == "1"
+    assert metric_value(html, "Excluded") == "1"
     assert '<span class="dtp-status"><svg class="dtp-muted"' in html
     assert "</svg>Excluded</span></td>" in html
     assert "All datasets of the project." in html
     assert "<h3>Included tags" not in html
 
 
-def test_the_table_row_joins_the_detail_and_the_warnings() -> None:
+def test_the_table_row_joins_the_detail_and_the_risks() -> None:
     project = FakeProject(
         [make_dataset("ds", ["a"], partitioned=True)],
         clear_answers={"ds": {"messages": [{"severity": "WARNING", "message": "slow"}]}},
@@ -382,9 +379,9 @@ def test_the_table_does_not_repeat_on_each_row_that_the_sharing_was_not_checked(
 
     assert build_recap_page(recap).table.rows[0]["detail"] == "Has included tags"
     # The summary dataset and the JSON recap keep it: each of their rows stands alone.
-    warning = "Sharing not checked: other projects may use it"
-    assert dict(zip(SUMMARY_COLUMNS, build_recap_rows(recap)[0]))["warnings"] == warning
-    assert build_summary(recap)["datasets"][0]["warnings"] == [warning]
+    risk = "Sharing not checked: other projects may use it"
+    assert dict(zip(SUMMARY_COLUMNS, build_recap_rows(recap)[0]))["warnings"] == risk
+    assert build_summary(recap)["datasets"][0]["warnings"] == [risk]
 
 
 def test_every_status_and_column_of_the_table_is_known() -> None:
@@ -443,12 +440,10 @@ def test_notices_and_options_are_shown() -> None:
 def test_the_hidden_json_block_holds_the_summary() -> None:
     recap, _ = run(MACRO, FakeProject([make_dataset("ds", ["a"])]), {"included_tags": ["a"]})
 
-    html = build_recap_html(recap, build_recap_page(recap))
+    html = render_recap_html(recap, build_recap_page(recap))
 
-    match = re.search(r'<script type="application/json" id="dtp-recap-data">(.*?)</script>', html, re.DOTALL)
-    assert match
     # The runner adds the outcome and the problems: see the tests of the runner.
-    assert json.loads(match.group(1)) == json.loads(json.dumps(build_summary(recap)))
+    assert read_summary(html) == json.loads(json.dumps(build_summary(recap)))
 
 
 def test_free_text_of_the_project_is_escaped() -> None:
@@ -458,7 +453,7 @@ def test_free_text_of_the_project_is_escaped() -> None:
     dataset["params"]["connection"] = attack
     recap, _ = run(MACRO, FakeProject([dataset]), {"included_tags": [attack]})
 
-    html = build_recap_html(recap, build_recap_page(recap))
+    html = render_recap_html(recap, build_recap_page(recap))
 
     assert "<script>alert(1)" not in html
     assert "alert" not in html[html.rindex("<script>") :]

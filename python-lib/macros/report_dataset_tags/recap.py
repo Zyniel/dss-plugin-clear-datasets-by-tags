@@ -11,7 +11,7 @@ from macros.report_dataset_tags.report import (
     STATUS_UNUSED,
     STATUS_USED,
 )
-from recap.html import build_common_option_chips, count_of, format_duration, yes_no
+from recap.html import build_common_option_chips
 from recap.page import (
     ALL_STATUSES,
     COLUMN_LONG_TEXT,
@@ -33,6 +33,7 @@ from recap.page import (
     Status,
     Table,
 )
+from recap.text import format_count, format_duration, format_yes_no
 
 # One row per tag and dataset. An unused tag has a row with no dataset, and a dataset with no tag
 # has a row with no tag. Every column is stored as text: see write_recap_dataset().
@@ -81,8 +82,8 @@ COLUMNS_BY_TAG_AND_DATASET = [
 ]
 
 
-def count(recap: dict[str, Any]) -> dict[str, int]:
-    """Return the figures of the report."""
+def count_totals(recap: dict[str, Any]) -> dict[str, int]:
+    """Return the totals of the run: datasets, tags, and tags per status."""
     statuses = [row["status"] for row in recap["tags"]]
     return {
         "datasets": recap["scanned_count"],
@@ -96,8 +97,8 @@ def count(recap: dict[str, Any]) -> dict[str, int]:
 
 
 def describe_counts(recap: dict[str, Any]) -> str:
-    """Return the figures of the report for the log."""
-    counts = count(recap)
+    """Return the totals of the run for the log."""
+    counts = count_totals(recap)
     return (
         f"{counts['datasets']} datasets, {counts['untagged']} with no tag; {counts['tags']} tags: "
         f"{counts['used']} used, {counts['unknown']} unknown, {counts['unused']} unused"
@@ -115,7 +116,7 @@ def build_summary(recap: dict[str, Any]) -> dict[str, Any]:
         "options": recap["options"],
         "categories_checked": recap["categories_checked"],
         "notices": [str(notice) for notice in recap["notices"]],
-        "counts": count(recap),
+        "counts": count_totals(recap),
         "duration_seconds": round(recap["duration"], 3),
         "recap_dataset": recap["recap_dataset_result"],
         "tags": [
@@ -137,24 +138,23 @@ def build_recap_rows(recap: dict[str, Any]) -> list[list[str]]:
     """Return the rows of the summary dataset, in the order of SUMMARY_COLUMNS."""
     run = [recap["run_id"], recap["started_at"], recap["macro"], recap["project_key"], recap["run_by"]]
     types = recap["dataset_types"]
-    rows = []
-    for row in recap["tags"]:
-        tag = [row["tag"], row["category"], row["status"]]
-        for name in row["datasets"] or [""]:
-            rows.append(run + tag + [name, types.get(name, "")])
-    for name in recap["untagged_datasets"]:
-        rows.append(run + ["", "", STATUS_UNTAGGED, name, types.get(name, "")])
+    rows = [
+        [*run, row["tag"], row["category"], row["status"], name, types.get(name, "")]
+        for row in recap["tags"]
+        for name in row["datasets"] or [""]
+    ]
+    rows.extend([*run, NO_TAG, "", STATUS_UNTAGGED, name, types.get(name, "")] for name in recap["untagged_datasets"])
     return rows
 
 
 def describe_failures(recap: dict[str, Any]) -> Optional[WorkFailure]:
-    """A report changes nothing, so nothing in its work can fail. Only the summary dataset can."""
+    """Return None: this macro only reads, so nothing in its work can fail. Only the summary dataset can."""
     return None
 
 
 def build_metrics(recap: dict[str, Any]) -> list[Metric]:
-    """Return the headline figures of the report."""
-    counts = count(recap)
+    """Return the headline figures of the run."""
+    counts = count_totals(recap)
     metrics = [
         Metric("Datasets", str(counts["datasets"])),
         Metric("Tagged", str(counts["tagged"])),
@@ -170,7 +170,7 @@ def build_metrics(recap: dict[str, Any]) -> list[Metric]:
     return metrics
 
 
-def build_category_chips(recap: dict[str, Any]) -> tuple[Chip, ...]:
+def build_category_chips(recap: dict[str, Any]) -> list[Chip]:
     """Return one chip per category on the datasets, with its tags and datasets. An unknown category stands out."""
     tags_by_category: dict[str, int] = {}
     datasets_by_category: dict[str, set[str]] = {}
@@ -179,23 +179,23 @@ def build_category_chips(recap: dict[str, Any]) -> tuple[Chip, ...]:
             tags_by_category[row["category"]] = tags_by_category.get(row["category"], 0) + 1
             datasets_by_category.setdefault(row["category"], set()).update(row["datasets"])
     known = recap["known_categories"]  # None when the categories could not be read.
-    return tuple(
+    return [
         Chip(
-            f"{category}: {count_of(tags_by_category[category], 'tag')}, "
-            f"{count_of(len(datasets_by_category[category]), 'dataset')}",
+            f"{category}: {format_count(tags_by_category[category], 'tag')}, "
+            f"{format_count(len(datasets_by_category[category]), 'dataset')}",
             TONE_CAUTION if known is not None and category not in known else "",
         )
         for category in sorted(tags_by_category, key=str.lower)
-    )
+    ]
 
 
 def build_sections(recap: dict[str, Any]) -> list[Section]:
     """Return the options of the run, then the tag categories on the datasets."""
     options = recap["options"]
-    option_chips = [Chip(f"{label}: {yes_no(options[option])}") for option, label in OPTION_LABELS.items()]
+    option_chips = [Chip(f"{label}: {format_yes_no(options[option])}") for option, label in OPTION_LABELS.items()]
     category_chips = build_category_chips(recap)
     return [
-        Section("Options", chips=tuple(option_chips + build_common_option_chips(options))),
+        Section("Options", chips=option_chips + build_common_option_chips(options)),
         Section(
             "Tag categories", chips=category_chips, text="" if category_chips else "No category tag on the datasets."
         ),
@@ -233,8 +233,10 @@ def build_rows_by_tag(recap: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def build_rows_by_tag_and_dataset(recap: dict[str, Any]) -> list[dict[str, Any]]:
-    """Return one row per tag and dataset. An unused tag has a row with no dataset, and a dataset with no tag
-    has a row with no tag."""
+    """Return one row per tag and dataset.
+
+    An unused tag has a row with no dataset, and a dataset with no tag has a row with no tag.
+    """
     types = recap["dataset_types"]
     rows = [
         {

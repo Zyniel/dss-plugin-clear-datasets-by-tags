@@ -10,7 +10,7 @@ from macros.report_dataset_tags.report import (
     STATUS_UNKNOWN,
     STATUS_UNUSED,
     STATUS_USED,
-    check_category_tag,
+    describe_unknown_tag,
     read_options,
 )
 from support.fakes import PROJECT_KEY, FakeProject, make_dataset
@@ -20,6 +20,7 @@ CATEGORIES = {"Stage": ["Raw", "Clean"], "Owner": ["Ops"]}
 
 
 def tag_rows(recap: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Return the tag rows of the recap by tag."""
     return {row["tag"]: row for row in recap["tags"]}
 
 
@@ -68,7 +69,7 @@ def test_datasets_shared_by_other_projects_are_left_out() -> None:
     ],
 )
 def test_check_category_tag(tag: str, expected: str) -> None:
-    assert check_category_tag(tag, {"Stage": {"Raw", "Clean"}}) == expected
+    assert describe_unknown_tag(tag, {"Stage": {"Raw", "Clean"}}) == expected
 
 
 def test_a_category_tag_the_categories_do_not_know_is_unknown() -> None:
@@ -88,7 +89,7 @@ def test_a_category_tag_the_categories_do_not_know_is_unknown() -> None:
     assert recap["notices"] == []
 
 
-def test_without_admin_rights_the_categories_are_not_checked_and_the_report_says_so() -> None:
+def test_without_admin_rights_the_categories_are_not_checked_and_the_recap_says_so() -> None:
     project = FakeProject([make_dataset("a", ["Stage:Rwa"])], tag_categories=CATEGORIES, is_instance_admin=False)
 
     recap, _ = run(MACRO, project, {})

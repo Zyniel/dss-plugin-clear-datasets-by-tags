@@ -37,12 +37,20 @@ def build_plugin_zip() -> Path:
 
 # The hooks that uv build calls (PEP 517). They stop it: a wheel of this project would be of no use in DSS.
 def build_sdist(sdist_directory: str, config_settings: Optional[dict[str, Any]] = None) -> NoReturn:
+    """Stop uv build, which asks for a source package.
+
+    :raises SystemExit: always, with how to build the plugin zip
+    """
     raise SystemExit(NOT_A_PACKAGE)
 
 
 def build_wheel(
     wheel_directory: str, config_settings: Optional[dict[str, Any]] = None, metadata_directory: Optional[str] = None
 ) -> NoReturn:
+    """Stop uv build, which asks for a wheel.
+
+    :raises SystemExit: always, with how to build the plugin zip
+    """
     raise SystemExit(NOT_A_PACKAGE)
 
 

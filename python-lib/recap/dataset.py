@@ -1,6 +1,14 @@
 """Write the recap of a run to a dataset of the project: one row per item and per run."""
 
-from typing import Any, Optional
+from typing import Any, Optional, TypedDict
+
+
+class SummaryDatasetResult(TypedDict):
+    """How the run wrote its summary dataset. The JSON recap holds it as recap_dataset."""
+
+    name: str
+    rows_written: int
+    error: str  # Empty when the rows were written.
 
 
 def format_flag(value: Optional[bool]) -> str:

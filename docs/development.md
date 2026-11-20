@@ -53,6 +53,7 @@ Git uses it for your commits in this repository, and for the commits Claude Code
 │   └── macros/                   The user guide and automation page of each macro
 ├── README.md                     For users: what the plugin does, install, settings
 ├── GLOSSARY.md                   The words of the plugin, and the ones to avoid
+├── CODING_STANDARDS.md           The Python conventions that ruff cannot check
 ├── CHANGELOG.md                  The changes of each version, and the unreleased ones
 ├── LICENSE                       MIT License
 ├── build_plugin_zip.py           Builds the zip to install in DSS
@@ -96,6 +97,7 @@ Get-ChildItem python-runnables\*\runnable.py | ForEach-Object { uv run mypy $_.F
 Good to know:
 
 - **`uv run ruff format .`** fixes the format. `uv run ruff check --fix .` fixes what it can.
+- **The conventions.** Ruff checks those it can, with the rules of `pyproject.toml`. [CODING_STANDARDS.md](../CODING_STANDARDS.md) gives the others.
 - **mypy, one runnable at a time.** All runnables are named `runnable.py`, and mypy refuses two files with the same name in one run. This is why there is a loop.
 - **mypy 1.x.** mypy 2 cannot check code for Python 3.9 any more.
 - **Another Python version.** To run the tests on Python 3.13, like the CI: `uv run --isolated --python 3.13 --group dev pytest`.
@@ -119,7 +121,7 @@ The tests have the same layout as `python-lib`:
 
 | Folder | Content |
 |---|---|
-| `tests/support/` | Tools for the tests: fake DSS objects (`fakes.py`), a fake `dataiku` package (`dataiku_stub.py`), a helper to run a macro (`runs.py`), and the smallest possible macro (`sample_macro.py`). |
+| `tests/support/` | Tools for the tests: fake DSS objects (`fakes.py`), a fake `dataiku` package (`dataiku_stub.py`), a helper to run a macro (`runs.py`), helpers to read a form (`forms.py`) and an HTML recap (`pages.py`), and the smallest possible macro (`sample_macro.py`). A helper that two test files need goes here. |
 | `tests/core/` | The shared code of `core`: options, tags, project, runner. The runner is tested with `sample_macro.py`, without a real macro. |
 | `tests/recap/` | The HTML recap, with a page made by hand, and the summary dataset. |
 | `tests/macros/<macro>/` | One macro: its work, its options, its recap, its form, its `runnable.py`. |

@@ -19,7 +19,7 @@ The tag rules of the form say which datasets the macro takes, and which it leave
 
 | Include | Included tags | Excluded tags | Result |
 |---|---|---|---|
-| Datasets with the included tags | None | Any | Refused: "Give at least one included tag, or choose 'All datasets' in 'Include'." |
+| Datasets with the included tags | None | Any | Refused: `Give at least one included tag, or choose "All datasets" in "Include".` |
 | Datasets with the included tags | One or more | None | Clears the datasets with the included tags. |
 | Datasets with the included tags | One or more | One or more | Clears the datasets with the included tags, except the excluded ones. |
 | All datasets | Ignored | None | Clears every dataset of the project. |
@@ -120,7 +120,7 @@ Then:
 | Skipped | A protection kept it, or the run stopped before it ("Not tried: the run stopped"). The reason is in the Detail column. |
 | Excluded | It has the excluded tags. |
 
-The Detail column says why: "Has included tags", "Has excluded tags", or "Has all included tags" and "Has all excluded tags" with "All". With "All datasets", a dataset to clear has no reason to show. A skipped dataset says why, for example "Is external" or "Has no recipe; 'Clear datasets with no recipe' is unchecked". It also gives the risks of cleared datasets: shared, partitioned, or with no recipe. When the user cannot read the sharing, a banner says it once: the summary dataset and the JSON recap have "Sharing not checked" on each dataset.
+The Detail column says why: "Has included tags", "Has excluded tags", or "Has all included tags" and "Has all excluded tags" with "All". With "All datasets", a dataset to clear has no reason to show. A skipped dataset says why, for example `Is external` or `Has no recipe; "Clear datasets with no recipe" is unchecked`. It also gives the risks of cleared datasets: shared, partitioned, or with no recipe. When the user cannot read the sharing, a banner says it once: the summary dataset and the JSON recap have "Sharing not checked" on each dataset.
 
 ## Good practice
 

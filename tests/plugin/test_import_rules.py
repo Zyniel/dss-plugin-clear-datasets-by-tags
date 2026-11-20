@@ -35,10 +35,12 @@ def imported_modules(path: Path) -> list[str]:
 
 
 def is_under(module: str, *packages: str) -> bool:
+    """Tell whether a module is one of the packages, or inside one of them."""
     return any(module == package or module.startswith(package + ".") for package in packages)
 
 
 def library_files() -> list[Path]:
+    """Return the Python files of python-lib."""
     return sorted(LIB.rglob("*.py"))
 
 
