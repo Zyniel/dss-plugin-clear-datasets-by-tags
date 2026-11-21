@@ -1,0 +1,10 @@
+# A release is published when its release pull request is merged
+
+The plugin has one maintainer, at a junior level, so a release must take few steps and leave nothing to type by hand that can be wrong. Prepare release opens the release pull request of a version. The maintainer tests its plugin zip on the test DSS, and merges it. The merge tags the version and publishes its release, in one run of one workflow. We considered three other ways, and rejected them. Pushing the tag by hand lets a typo, or a tag on the wrong commit, publish a release. release-please writes the notes from the commit messages, and the notes of this plugin are written for its users. Tagging in one workflow and publishing in another, as for the releases from 1.0.0-beta to 1.0.2-beta, leaves a tag with no release when the second workflow does not start, and its recovery needed an administrator.
+
+## Consequences
+
+- GitHub holds the CI of a pull request that a workflow opens, until someone with write access approves it ([changelog](https://github.blog/changelog/2026-06-11-bot-created-pull-requests-can-run-workflows-if-approved/)). The maintainer approves it on each release pull request: the required checks come only from this run, so the pull request cannot be merged without it. A GitHub App token would start the CI by itself, but its private key is a secret, and anyone with write access to a public repository can read its secrets ([secure use](https://docs.github.com/en/actions/reference/security/secure-use)).
+- While a release pull request is open, nothing else is merged into `main`, and a branch must be up to date to be merged. So the plugin zip tested on the test DSS is the plugin zip of the release, and its notes cover every change it ships.
+- A release has no dry run. The CI shows the notes of the next release on each run, and the release pull request shows the notes of its version.
+- A pull request needs no approval: its author cannot approve it, and there is no other maintainer. Before a version is prepared, an agent runs the release review instead.
