@@ -8,7 +8,7 @@ Issues are tracked in GitHub Issues for `Zyniel/dss-plugin-clear-datasets-by-tag
 
 ### Triage labels
 
-The five default triage labels are used as-is: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+The five default triage labels are used as-is: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`.
 
 ### Domain docs
 
