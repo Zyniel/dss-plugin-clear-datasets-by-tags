@@ -171,3 +171,45 @@ _Avoid_: report, summary, result
 **Banner**:
 A coloured block of a recap that shows a notice, a blocker or a problem. The banners of its problems are how a recap shows a WARNING outcome: no banner shows the outcome itself. It is only how the recap shows them, not a concept of its own.
 _Avoid_: alert, message
+
+## Releases
+
+**Version**:
+The number of a release of the plugin: `X.Y.Z`, or `X.Y.Z-beta` for a pre-release.
+_Avoid_: release number, build number
+
+**Pre-release**:
+A version with `-beta`. It comes before the same version without it: `1.0.2-beta`, then `1.0.2`. A pre-release is a release too.
+_Avoid_: beta release, preview, release candidate
+
+**Release**:
+A version published on GitHub: its tag, its plugin zip and its notes.
+_Avoid_: deployment, publication
+
+**Plugin zip**:
+The zip of the plugin that DSS installs, named after its version.
+_Avoid_: package, build, artifact
+
+**Notes**:
+What changed for users in a version: its section of the CHANGELOG, which its release shows.
+_Avoid_: changelog (the whole file), release description
+
+**Notes of the next release**:
+The `## Unreleased` section of the CHANGELOG: the notes that the next version will publish.
+_Avoid_: unreleased notes, draft notes
+
+**Release pull request**:
+The pull request of the branch `release/<version>`, which sets the version and dates its notes. Merging it publishes the release.
+_Avoid_: version bump
+
+**Release review**:
+The review of everything the next release will ship since the tag of the last release, with the notes of the next release as its spec.
+_Avoid_: pre-release review (a pre-release is a version)
+
+**Abandoned version**:
+A version whose tag exists but whose release was never published. The next version takes its changes.
+_Avoid_: skipped version (a skipped dataset is another thing), failed release, broken version
+
+**Test DSS**:
+A DSS 13 that only tests the plugin, never a production DSS. The integration tests and the refresh of the screenshots run on it.
+_Avoid_: dev DSS, sandbox
