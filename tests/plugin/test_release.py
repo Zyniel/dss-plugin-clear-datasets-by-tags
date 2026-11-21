@@ -129,12 +129,28 @@ def test_the_notes_of_1_0_0_are_not_those_of_a_pre_release() -> None:
     assert "A fix" in release.release_notes(changelog, "1.0.0-beta", "1.0.0-beta", "Zyniel/repo")
 
 
-def test_a_version_without_notes_is_refused_unless_a_dry_run_falls_back_on_unreleased() -> None:
+def test_a_version_without_notes_is_refused_unless_a_dry_run_shows_the_unreleased_changes() -> None:
     with pytest.raises(release.ReleaseError, match=r"no section for 1\.1\.0"):
         release.release_notes(CHANGELOG, "1.1.0", "main", "Zyniel/repo")
 
-    notes = release.release_notes(CHANGELOG, "1.1.0", "main", "Zyniel/repo", or_unreleased=True)
+    notes = release.release_notes(CHANGELOG, "1.1.0", "main", "Zyniel/repo", unreleased_first=True)
     assert notes.startswith("### Clear Datasets by Tags\n")
+
+
+@pytest.mark.parametrize(
+    ("changelog", "version", "start"),
+    [
+        # On main: plugin.json still gives the last version released.
+        (CHANGELOG, "1.0.0", "### Clear Datasets by Tags\n"),
+        # On release/1.1.0: Prepare release turned "## Unreleased" into the section of the version.
+        (CHANGELOG.replace("## Unreleased", "## 1.1.0 - 2026-12-01"), "1.1.0", "### Clear Datasets by Tags\n"),
+        # Nothing changed since the last release yet.
+        ("# Changelog\n\n## Unreleased\n\n## 1.0.0 - 2026-11-18\n\nText.\n", "1.0.0", "Text.\n"),
+    ],
+    ids=["on main", "on a release branch", "with nothing unreleased"],
+)
+def test_a_dry_run_shows_the_notes_of_the_next_release(changelog: str, version: str, start: str) -> None:
+    assert release.release_notes(changelog, version, "main", "Zyniel/repo", unreleased_first=True).startswith(start)
 
 
 def test_the_command_line_reports_an_error_without_a_traceback() -> None:
@@ -147,4 +163,4 @@ def test_the_changelog_of_the_repository_can_be_released() -> None:
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     version = json.loads((ROOT / "plugin.json").read_text(encoding="utf-8"))["version"]
 
-    assert release.release_notes(changelog, version, "main", "Zyniel/repo", or_unreleased=True).strip()
+    assert release.release_notes(changelog, version, "main", "Zyniel/repo", unreleased_first=True).strip()
