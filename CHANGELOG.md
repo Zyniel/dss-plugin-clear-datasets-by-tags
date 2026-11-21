@@ -7,6 +7,7 @@ The changes of each version of the plugin, the most recent first. The changes no
 ### For developers
 
 - The workflows use the first versions of their GitHub Actions that run on Node.js 24: `actions/checkout@v5`, `actions/upload-artifact@v6` and `astral-sh/setup-uv@v7`. GitHub no longer warns that Node.js 20 is deprecated. The workflows do the same as before.
+- The README has one release badge, which includes pre-releases, instead of "Latest release" and "Pre-release". "Latest release" showed nothing: every release so far is a pre-release, and a badge without pre-releases asks GitHub for its latest release, which excludes them. The badge links to the releases of the repository.
 
 ## 1.0.2-beta - 2026-11-21
 
