@@ -2,7 +2,7 @@
 
 The changes of each version of the plugin, the most recent first. The changes not released yet are under **Unreleased**.
 
-## Unreleased
+## 1.0.2-beta - 2026-11-21
 
 ### Plugin
 
