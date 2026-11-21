@@ -61,8 +61,11 @@ def run_prepare(repo: Path, version: str) -> subprocess.CompletedProcess[str]:
     return run_release(repo, "prepare", version, "--date", DAY)
 
 
-def run_notes(repo: Path, version: str, ref: str, *flags: str) -> subprocess.CompletedProcess[str]:
+def run_notes(
+    repo: Path, version: str, *, ref: str, unreleased_first: bool = False
+) -> subprocess.CompletedProcess[str]:
     """Run `release.py notes`, with the links of the notes pointing to the files of REPOSITORY at `ref`."""
+    flags = ["--unreleased-first"] if unreleased_first else []
     return run_release(repo, "notes", version, "--ref", ref, "--repository", REPOSITORY, *flags)
 
 
@@ -141,7 +144,7 @@ def test_a_pre_release_can_follow_the_version_it_announces(repo: Path) -> None:
 
 
 def test_the_notes_are_the_section_of_the_version_with_absolute_links(repo: Path) -> None:
-    result = run_notes(repo, "1.0.0", "1.0.0")
+    result = run_notes(repo, "1.0.0", ref="1.0.0")
 
     assert (result.returncode, result.stdout) == (
         0,
@@ -153,7 +156,7 @@ def test_the_notes_are_the_section_of_the_version_with_absolute_links(repo: Path
 def test_the_notes_of_a_version_stop_at_the_next_section(repo: Path) -> None:
     write_changelog(repo, CHANGELOG.replace("## Unreleased", "## 1.1.0 - 2026-12-01"))
 
-    notes = run_notes(repo, "1.1.0", "release/1.1.0").stdout
+    notes = run_notes(repo, "1.1.0", ref="release/1.1.0").stdout
 
     assert notes.startswith("### Clear Datasets by Tags\n")
     assert "First version" not in notes
@@ -163,17 +166,17 @@ def test_the_notes_of_a_version_stop_at_the_next_section(repo: Path) -> None:
 def test_the_notes_of_1_0_0_are_not_those_of_a_pre_release(repo: Path) -> None:
     write_changelog(repo, CHANGELOG.replace("## Unreleased", "## 1.0.0-beta - 2026-11-01"))
 
-    assert "First version" in run_notes(repo, "1.0.0", "1.0.0").stdout
-    assert "A fix" in run_notes(repo, "1.0.0-beta", "1.0.0-beta").stdout
+    assert "First version" in run_notes(repo, "1.0.0", ref="1.0.0").stdout
+    assert "A fix" in run_notes(repo, "1.0.0-beta", ref="1.0.0-beta").stdout
 
 
 def test_a_version_without_notes_is_refused_unless_a_dry_run_shows_the_unreleased_changes(repo: Path) -> None:
-    refused = run_notes(repo, "1.1.0", "main")
+    refused = run_notes(repo, "1.1.0", ref="main")
 
     assert (refused.returncode, refused.stdout) == (1, "")
     assert refused.stderr == "error: CHANGELOG.md has no section for 1.1.0.\n"
 
-    dry_run = run_notes(repo, "1.1.0", "main", "--unreleased-first")
+    dry_run = run_notes(repo, "1.1.0", ref="main", unreleased_first=True)
     assert dry_run.stdout.startswith("### Clear Datasets by Tags\n")
 
 
@@ -192,7 +195,7 @@ def test_a_version_without_notes_is_refused_unless_a_dry_run_shows_the_unrelease
 def test_a_dry_run_shows_the_notes_of_the_next_release(repo: Path, changelog: str, version: str, start: str) -> None:
     write_changelog(repo, changelog)
 
-    result = run_notes(repo, version, "main", "--unreleased-first")
+    result = run_notes(repo, version, ref="main", unreleased_first=True)
 
     assert result.stdout.startswith(start)
 
@@ -208,7 +211,7 @@ def test_the_changelog_of_the_repository_can_be_released() -> None:
     # Either the changes to release are under "## Unreleased", or the version of plugin.json is released already.
     version = read_json(ROOT / "plugin.json")["version"]
 
-    result = run_notes(ROOT, version, "main", "--unreleased-first")
+    result = run_notes(ROOT, version, ref="main", unreleased_first=True)
 
     assert result.returncode == 0
     assert result.stdout.strip()

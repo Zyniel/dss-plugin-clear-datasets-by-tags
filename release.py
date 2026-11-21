@@ -124,9 +124,9 @@ def prepare(root: Path, version: str, today: datetime.date) -> None:
 
     :param root: the folder of the repository
     :param today: the date of the section of the version
-    :raises ReleaseError: if the version is not one, is lower than the current one or already has a section, if
-        the "## Unreleased" section is missing or empty, or if a file has no line or several lines that hold the
-        version
+    :raises ReleaseError: if the version, or the one of plugin.json, is not a version; if the version is lower than
+        the current one or already has a section; if the "## Unreleased" section is missing or empty; or if a file
+        has no line or several lines to replace: the "## Unreleased" heading, or the version
     """
     current = json.loads((root / "plugin.json").read_text(encoding="utf-8"))["version"]
     if parse_version(version) < parse_version(current):
