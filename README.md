@@ -1,8 +1,7 @@
 # Dataiku Plugin - Clear Datasets by Tags
 
 [![CI](https://github.com/Zyniel/dss-plugin-clear-datasets-by-tags/actions/workflows/ci.yml/badge.svg)](https://github.com/Zyniel/dss-plugin-clear-datasets-by-tags/actions/workflows/ci.yml)
-[![Latest release](https://img.shields.io/github/v/release/Zyniel/dss-plugin-clear-datasets-by-tags)](https://github.com/Zyniel/dss-plugin-clear-datasets-by-tags/releases/latest)
-[![Pre-release](https://img.shields.io/github/v/release/Zyniel/dss-plugin-clear-datasets-by-tags?include_prereleases&label=pre-release)](https://github.com/Zyniel/dss-plugin-clear-datasets-by-tags/releases)
+[![Release](https://img.shields.io/github/v/release/Zyniel/dss-plugin-clear-datasets-by-tags?include_prereleases&label=release)](https://github.com/Zyniel/dss-plugin-clear-datasets-by-tags/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 ![DSS 13 and later](https://img.shields.io/badge/DSS-13%2B-blue)
 

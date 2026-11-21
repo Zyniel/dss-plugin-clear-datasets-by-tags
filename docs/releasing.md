@@ -69,7 +69,7 @@ Each change that users can notice goes into the CHANGELOG, under `## Unreleased`
    - The zip works: download the artifact `plugin-zip` of its CI run (**Actions > CI**, the run on `release/<version>`), install it on a test DSS, and do the checks of [verification](verification.md) that the release touches.
    - The screenshots of the README show this version: on the branch `release/<version>`, run the refresh of the [screenshots](screenshots.md) on the test DSS, with `"install_plugin": true`. When a result differs from the README, fix the code or the README first. Then look at the four images, and commit them on the branch.
    - The notes read well. To change them, edit `CHANGELOG.md` on the branch: the CI runs again.
-5. **Merge the pull request.** Tag release tags the version, and Release publishes it. The release is under **Releases** a few minutes later, and the "Latest release" badge of the README follows.
+5. **Merge the pull request.** Tag release tags the version, and Release publishes it. The release is under **Releases** a few minutes later, and the release badge of the README follows.
 
 Never publish with the **Draft a new release** form of GitHub: the release would exist already, and the Release workflow would fail.
 
