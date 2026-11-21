@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import NamedTuple, Optional
 
 ROOT = Path(__file__).resolve().parent
-CHANGELOG = "CHANGELOG.md"
+CHANGELOG_FILE = "CHANGELOG.md"
 UNRELEASED = "## Unreleased"
 # A version such as 1.1.0, or 1.1.0-beta for a pre-release.
 VERSION = re.compile(r"^(\d+)\.(\d+)\.(\d+)(-[0-9A-Za-z.-]+)?$")
@@ -42,13 +42,10 @@ VERSION_LINES = {
 
 
 class LinkTarget(NamedTuple):
-    """The files that the relative links of the notes point to: those of a repository on GitHub, at a ref.
+    """The files that the relative links of the notes point to: those of a repository on GitHub, at a ref."""
 
-    `repository` is owner/name, and `ref` is a tag or a branch.
-    """
-
-    repository: str
-    ref: str
+    repository: str  # On GitHub: owner/name.
+    ref: str  # A tag or a branch.
 
     def url(self, path: str) -> str:
         """Return the URL of a file at the ref, from its path relative to the root of the repository."""
@@ -112,7 +109,7 @@ def replace_line(text: str, pattern: str, line: str, file_name: str) -> str:
     return new_text
 
 
-def set_version(text: str, file_name: str, version: str) -> str:
+def replace_version(text: str, file_name: str, version: str) -> str:
     """Return the text of a file, with `version` in the line that holds the version.
 
     :param file_name: a file of VERSION_LINES
@@ -127,21 +124,26 @@ def prepare(root: Path, version: str, today: datetime.date) -> None:
 
     :param root: the folder of the repository
     :param today: the date of the section of the version
-    :raises ReleaseError: if the version is not one, is lower than the current one or already has a section, or
-        if the "## Unreleased" section is missing or empty
+    :raises ReleaseError: if the version is not one, is lower than the current one or already has a section, if
+        the "## Unreleased" section is missing or empty, or if a file has no line or several lines that hold the
+        version
     """
-    texts = {file_name: (root / file_name).read_text(encoding="utf-8") for file_name in (CHANGELOG, *VERSION_LINES)}
-    current = json.loads(texts["plugin.json"])["version"]
+    current = json.loads((root / "plugin.json").read_text(encoding="utf-8"))["version"]
     if parse_version(version) < parse_version(current):
         raise ReleaseError(f"{version} is lower than the version of plugin.json, {current}.")
-    if changelog_section(texts[CHANGELOG], f"## {version}") is not None:
-        raise ReleaseError(f"{CHANGELOG} already has a section for {version}: choose a new version.")
-    if read_notes(texts[CHANGELOG], UNRELEASED) is None:
-        raise ReleaseError(f'{CHANGELOG} has no "{UNRELEASED}" section, or it is empty: describe the changes there.')
 
-    new_texts = {CHANGELOG: replace_line(texts[CHANGELOG], rf"^{UNRELEASED}$", f"## {version} - {today}", CHANGELOG)}
+    changelog = (root / CHANGELOG_FILE).read_text(encoding="utf-8")
+    if changelog_section(changelog, f"## {version}") is not None:
+        raise ReleaseError(f"{CHANGELOG_FILE} already has a section for {version}: choose a new version.")
+    if read_notes(changelog, UNRELEASED) is None:
+        raise ReleaseError(
+            f'{CHANGELOG_FILE} has no "{UNRELEASED}" section, or it is empty: describe the changes there.'
+        )
+
+    new_texts = {CHANGELOG_FILE: replace_line(changelog, rf"^{UNRELEASED}$", f"## {version} - {today}", CHANGELOG_FILE)}
     for file_name in VERSION_LINES:
-        new_texts[file_name] = set_version(texts[file_name], file_name, version)
+        text = (root / file_name).read_text(encoding="utf-8")
+        new_texts[file_name] = replace_version(text, file_name, version)
     for file_name, text in new_texts.items():
         (root / file_name).write_text(text, encoding="utf-8")
 
@@ -158,7 +160,7 @@ def release_notes(changelog: str, version: str, links: LinkTarget, unreleased_fi
     unreleased = read_notes(changelog, UNRELEASED) if unreleased_first else None
     notes = unreleased or read_notes(changelog, f"## {version}")
     if notes is None:
-        raise ReleaseError(f"{CHANGELOG} has no section for {version}.")
+        raise ReleaseError(f"{CHANGELOG_FILE} has no section for {version}.")
     return RELATIVE_LINK.sub(lambda match: f"]({links.url(match[1])})", notes)
 
 
@@ -174,7 +176,7 @@ def main(argv: Optional[list[str]] = None) -> None:
     prepare_command.add_argument("version", help="Such as 1.1.0, or 1.1.0-beta for a pre-release.")
     prepare_command.add_argument("--date", type=datetime.date.fromisoformat, help="Default: today, in UTC.")
     notes_command = commands.add_parser("notes", help="Print the release notes of a version.")
-    notes_command.add_argument("version")
+    notes_command.add_argument("version", help="The version whose notes to print.")
     notes_command.add_argument("--ref", required=True, help="The tag or branch the links point to.")
     notes_command.add_argument("--repository", required=True, help="owner/name on GitHub.")
     notes_command.add_argument(
@@ -187,7 +189,7 @@ def main(argv: Optional[list[str]] = None) -> None:
             prepare(ROOT, args.version, args.date or datetime.datetime.now(datetime.timezone.utc).date())
             print(f"Prepared {args.version}. Run `uv lock`, then commit.")
         else:
-            changelog = (ROOT / CHANGELOG).read_text(encoding="utf-8")
+            changelog = (ROOT / CHANGELOG_FILE).read_text(encoding="utf-8")
             links = LinkTarget(args.repository, args.ref)
             sys.stdout.write(release_notes(changelog, args.version, links, args.unreleased_first))
     except ReleaseError as error:

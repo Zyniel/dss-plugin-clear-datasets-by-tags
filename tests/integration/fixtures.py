@@ -20,6 +20,7 @@ from typing import Any
 import pytest
 
 from integration.dss import PLUGIN_ID, PROJECT_PREFIX, delete_whole_project
+from support.files import read_json
 
 CONFIG_VARIABLE = "DSS_INTEGRATION_CONFIG"
 ROOT = Path(__file__).resolve().parents[2]
@@ -48,7 +49,7 @@ def connect(config: dict[str, Any], role: str) -> Any:
 
 def install_plugin(client: Any, config: dict[str, Any]) -> None:
     """Install the plugin of this folder when the config asks for it, then check the version on the DSS."""
-    version = json.loads((ROOT / "plugin.json").read_text(encoding="utf-8"))["version"]
+    version = read_json(ROOT / "plugin.json")["version"]
     if config.get("install_plugin"):
         subprocess.run([sys.executable, str(ROOT / "build_plugin_zip.py")], check=True, capture_output=True)
         with (ROOT / "dist" / f"dss-plugin-{PLUGIN_ID}-{version}.zip").open("rb") as archive:

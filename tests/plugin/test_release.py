@@ -43,7 +43,7 @@ def repo(tmp_path: Path) -> Path:
     shutil.copy(ROOT / "release.py", tmp_path)
     for name in release.VERSION_LINES:
         text = (ROOT / name).read_text(encoding="utf-8")
-        (tmp_path / name).write_text(release.set_version(text, name, "1.0.0"), encoding="utf-8")
+        (tmp_path / name).write_text(release.replace_version(text, name, "1.0.0"), encoding="utf-8")
     write_changelog(tmp_path, CHANGELOG)
     return tmp_path
 
@@ -54,6 +54,16 @@ def run_release(repo: Path, *arguments: str) -> subprocess.CompletedProcess[str]
     environment = {**os.environ, "PYTHONIOENCODING": "utf-8"}
     command = [sys.executable, str(repo / "release.py"), *arguments]
     return subprocess.run(command, cwd=repo, capture_output=True, encoding="utf-8", env=environment, check=False)
+
+
+def run_prepare(repo: Path, version: str) -> subprocess.CompletedProcess[str]:
+    """Run `release.py prepare` on the copy of the repository, on the day of the tests."""
+    return run_release(repo, "prepare", version, "--date", DAY)
+
+
+def run_notes(repo: Path, version: str, ref: str, *flags: str) -> subprocess.CompletedProcess[str]:
+    """Run `release.py notes`, with the links of the notes pointing to the files of REPOSITORY at `ref`."""
+    return run_release(repo, "notes", version, "--ref", ref, "--repository", REPOSITORY, *flags)
 
 
 def read_copied_file(repo: Path, name: str) -> str:
@@ -72,7 +82,7 @@ def read_copied_files(repo: Path) -> dict[str, str]:
 
 
 def test_prepare_sets_the_version_everywhere_and_dates_the_changelog(repo: Path) -> None:
-    result = run_release(repo, "prepare", "1.1.0", "--date", DAY)
+    result = run_prepare(repo, "1.1.0")
 
     assert (result.returncode, result.stdout) == (0, "Prepared 1.1.0. Run `uv lock`, then commit.\n")
     assert read_json(repo / "plugin.json")["version"] == "1.1.0"
@@ -84,7 +94,7 @@ def test_prepare_sets_the_version_everywhere_and_dates_the_changelog(repo: Path)
 def test_prepare_changes_only_the_version_lines(repo: Path) -> None:
     before = {name: read_copied_file(repo, name).splitlines() for name in release.VERSION_LINES}
 
-    assert run_release(repo, "prepare", "1.1.0", "--date", DAY).returncode == 0
+    assert run_prepare(repo, "1.1.0").returncode == 0
 
     for name, lines in before.items():
         after = read_copied_file(repo, name).splitlines()
@@ -95,7 +105,7 @@ def test_prepare_changes_only_the_version_lines(repo: Path) -> None:
 def test_the_first_release_keeps_the_version_of_plugin_json(repo: Path) -> None:
     write_changelog(repo, CHANGELOG.replace("## 1.0.0 - 2026-11-18", "## 0.9.0 - 2026-01-01"))
 
-    assert run_release(repo, "prepare", "1.0.0", "--date", DAY).returncode == 0
+    assert run_prepare(repo, "1.0.0").returncode == 0
 
     assert read_json(repo / "plugin.json")["version"] == "1.0.0"
     assert "\n## 1.0.0 - 2026-12-01\n" in read_copied_file(repo, "CHANGELOG.md")
@@ -116,7 +126,7 @@ def test_prepare_refuses_and_changes_nothing(repo: Path, version: str, changelog
     write_changelog(repo, changelog)
     before = read_copied_files(repo)
 
-    result = run_release(repo, "prepare", version, "--date", DAY)
+    result = run_prepare(repo, version)
 
     assert result.returncode == 1
     assert re.match(rf"error: .*{message}", result.stderr)
@@ -124,14 +134,14 @@ def test_prepare_refuses_and_changes_nothing(repo: Path, version: str, changelog
 
 
 def test_a_pre_release_can_follow_the_version_it_announces(repo: Path) -> None:
-    assert run_release(repo, "prepare", "1.1.0-beta", "--date", DAY).returncode == 0
+    assert run_prepare(repo, "1.1.0-beta").returncode == 0
 
     assert read_json(repo / "plugin.json")["version"] == "1.1.0-beta"
     assert "\n## 1.1.0-beta - 2026-12-01\n" in read_copied_file(repo, "CHANGELOG.md")
 
 
 def test_the_notes_are_the_section_of_the_version_with_absolute_links(repo: Path) -> None:
-    result = run_release(repo, "notes", "1.0.0", "--ref", "1.0.0", "--repository", REPOSITORY)
+    result = run_notes(repo, "1.0.0", "1.0.0")
 
     assert (result.returncode, result.stdout) == (
         0,
@@ -143,7 +153,7 @@ def test_the_notes_are_the_section_of_the_version_with_absolute_links(repo: Path
 def test_the_notes_of_a_version_stop_at_the_next_section(repo: Path) -> None:
     write_changelog(repo, CHANGELOG.replace("## Unreleased", "## 1.1.0 - 2026-12-01"))
 
-    notes = run_release(repo, "notes", "1.1.0", "--ref", "release/1.1.0", "--repository", REPOSITORY).stdout
+    notes = run_notes(repo, "1.1.0", "release/1.1.0").stdout
 
     assert notes.startswith("### Clear Datasets by Tags\n")
     assert "First version" not in notes
@@ -153,18 +163,17 @@ def test_the_notes_of_a_version_stop_at_the_next_section(repo: Path) -> None:
 def test_the_notes_of_1_0_0_are_not_those_of_a_pre_release(repo: Path) -> None:
     write_changelog(repo, CHANGELOG.replace("## Unreleased", "## 1.0.0-beta - 2026-11-01"))
 
-    assert "First version" in run_release(repo, "notes", "1.0.0", "--ref", "1.0.0", "--repository", REPOSITORY).stdout
-    beta = run_release(repo, "notes", "1.0.0-beta", "--ref", "1.0.0-beta", "--repository", REPOSITORY)
-    assert "A fix" in beta.stdout
+    assert "First version" in run_notes(repo, "1.0.0", "1.0.0").stdout
+    assert "A fix" in run_notes(repo, "1.0.0-beta", "1.0.0-beta").stdout
 
 
 def test_a_version_without_notes_is_refused_unless_a_dry_run_shows_the_unreleased_changes(repo: Path) -> None:
-    refused = run_release(repo, "notes", "1.1.0", "--ref", "main", "--repository", REPOSITORY)
+    refused = run_notes(repo, "1.1.0", "main")
 
     assert (refused.returncode, refused.stdout) == (1, "")
     assert refused.stderr == "error: CHANGELOG.md has no section for 1.1.0.\n"
 
-    dry_run = run_release(repo, "notes", "1.1.0", "--ref", "main", "--repository", REPOSITORY, "--unreleased-first")
+    dry_run = run_notes(repo, "1.1.0", "main", "--unreleased-first")
     assert dry_run.stdout.startswith("### Clear Datasets by Tags\n")
 
 
@@ -183,13 +192,13 @@ def test_a_version_without_notes_is_refused_unless_a_dry_run_shows_the_unrelease
 def test_a_dry_run_shows_the_notes_of_the_next_release(repo: Path, changelog: str, version: str, start: str) -> None:
     write_changelog(repo, changelog)
 
-    result = run_release(repo, "notes", version, "--ref", "main", "--repository", REPOSITORY, "--unreleased-first")
+    result = run_notes(repo, version, "main", "--unreleased-first")
 
     assert result.stdout.startswith(start)
 
 
 def test_the_command_line_reports_an_error_without_a_traceback(repo: Path) -> None:
-    result = run_release(repo, "prepare", "1.1")
+    result = run_prepare(repo, "1.1")
 
     assert result.returncode == 1
     assert result.stderr == "error: '1.1' is not a version such as 1.1.0, or 1.1.0-beta for a pre-release.\n"
@@ -199,7 +208,7 @@ def test_the_changelog_of_the_repository_can_be_released() -> None:
     # Either the changes to release are under "## Unreleased", or the version of plugin.json is released already.
     version = read_json(ROOT / "plugin.json")["version"]
 
-    result = run_release(ROOT, "notes", version, "--ref", "main", "--repository", REPOSITORY, "--unreleased-first")
+    result = run_notes(ROOT, version, "main", "--unreleased-first")
 
     assert result.returncode == 0
     assert result.stdout.strip()
