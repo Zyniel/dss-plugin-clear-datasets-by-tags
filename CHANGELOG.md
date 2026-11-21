@@ -7,6 +7,7 @@ The changes of each version of the plugin, the most recent first. The changes no
 ### For developers
 
 - The workflows use the first versions of their GitHub Actions that run on Node.js 24: `actions/checkout@v5`, `actions/upload-artifact@v6` and `astral-sh/setup-uv@v7`. GitHub no longer warns that Node.js 20 is deprecated. The workflows do the same as before.
+- The release code follows `CODING_STANDARDS.md`. In `release.py`, the line that holds the version in each file is a `VersionLine`, the repository and the ref that make the links of the notes absolute are one `LinkTarget`, and each parameter is documented. The release tests run `release.py` at its command line, on a copy of the repository, and import it with its types: pytest and ruff now see the scripts at the root of the repository. `read_json()` is in `tests/support/files.py`. mypy checks the Claude Code hook, and the repository layout of the development doc lists `AGENTS.md`, `.claude/` and `docs/agents/`. The release script, the zip builder, the check script and the hook do the same as before.
 
 ## 1.0.2-beta - 2026-11-21
 

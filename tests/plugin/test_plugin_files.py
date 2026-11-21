@@ -5,7 +5,6 @@ macro package of the same name. They also check plugin.json, the resource files 
 """
 
 import importlib
-import json
 import re
 import subprocess
 import sys
@@ -27,6 +26,7 @@ from core.options import (
 from recap.html import AG_GRID_DEFAULT_INTEGRITY, AG_GRID_DEFAULT_URL
 from support.dataiku_stub import RESOURCES, ROOT, RUNNABLES, install_fake_dataiku, load_module, load_runnable_class
 from support.fakes import PROJECT_KEY, FakeClient, FakeProject, make_dataset
+from support.files import read_json
 from support.forms import named_params, read_form
 
 PLUGIN_ID = "clear-datasets-by-tags"
@@ -47,11 +47,6 @@ MACRO_FOLDERS = sorted(path.name for path in RUNNABLES.iterdir() if path.is_dir(
 MACRO_PACKAGES = sorted(
     path.name for path in (ROOT / "python-lib" / "macros").iterdir() if (path / "__init__.py").is_file()
 )
-
-
-def read_json(path: Any) -> Any:
-    """Return the content of a JSON file."""
-    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def macro_of(folder: str) -> MaintenanceMacro:

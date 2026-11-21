@@ -1,17 +1,23 @@
-"""Tests of release.py: prepare a version, and write the notes of its release. See docs/releasing.md."""
+"""Tests of release.py at its command line: prepare a version, and write the notes of its release.
 
-import datetime
-import json
+They run a copy of release.py in a copy of the files a release changes, as the workflows run it. See docs/releasing.md.
+"""
+
+import os
+import re
+import shutil
+import subprocess
+import sys
 from pathlib import Path
-from typing import Any
 
 import pytest
 
-from support.dataiku_stub import ROOT, load_module
+import release
+from support.dataiku_stub import ROOT
+from support.files import read_json
 
-release: Any = load_module(ROOT / "release.py")
-
-DAY = datetime.date(2026, 12, 1)
+DAY = "2026-12-01"
+REPOSITORY = "Zyniel/repo"
 CHANGELOG = """# Changelog
 
 Intro.
@@ -30,49 +36,69 @@ First version, under the [MIT License](LICENSE). Details on [GitHub](https://git
 
 @pytest.fixture
 def repo(tmp_path: Path) -> Path:
-    """Return a copy of the files release.py changes, with a CHANGELOG that has unreleased changes.
+    """Return a copy of release.py and of the files it changes, with a CHANGELOG that has unreleased changes.
 
     The copies are at version 1.0.0, whatever the version of the repository: the tests must pass in every release.
     """
-    for name, (pattern, line) in release.VERSION_LINES.items():
+    shutil.copy(ROOT / "release.py", tmp_path)
+    for name in release.VERSION_LINES:
         text = (ROOT / name).read_text(encoding="utf-8")
-        (tmp_path / name).write_text(release.replace_line(text, pattern, line.format("1.0.0"), name), "utf-8")
-    (tmp_path / "CHANGELOG.md").write_text(CHANGELOG, encoding="utf-8")
+        (tmp_path / name).write_text(release.set_version(text, name, "1.0.0"), encoding="utf-8")
+    write_changelog(tmp_path, CHANGELOG)
     return tmp_path
 
 
-def text(repo: Path, name: str) -> str:
-    """Return the text of a file of the copy."""
+def run_release(repo: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
+    """Run the release.py of a repository, or of a copy of it, as the workflows run it."""
+    # The notes are UTF-8, whatever the code page of the console.
+    environment = {**os.environ, "PYTHONIOENCODING": "utf-8"}
+    command = [sys.executable, str(repo / "release.py"), *arguments]
+    return subprocess.run(command, cwd=repo, capture_output=True, encoding="utf-8", env=environment, check=False)
+
+
+def read_copied_file(repo: Path, name: str) -> str:
+    """Return the text of a file of the copy of the repository."""
     return (repo / name).read_text(encoding="utf-8")
 
 
-def test_prepare_sets_the_version_everywhere_and_dates_the_changelog(repo: Path) -> None:
-    release.prepare(repo, "1.1.0", DAY)
+def write_changelog(repo: Path, changelog: str) -> None:
+    """Replace the CHANGELOG of the copy of the repository."""
+    (repo / "CHANGELOG.md").write_text(changelog, encoding="utf-8")
 
-    assert json.loads(text(repo, "plugin.json"))["version"] == "1.1.0"
-    assert '\nversion = "1.1.0"\n' in text(repo, "pyproject.toml")
-    assert "\n## 1.1.0 - 2026-12-01\n\n### Clear Datasets by Tags\n" in text(repo, "CHANGELOG.md")
-    assert "## Unreleased" not in text(repo, "CHANGELOG.md")
+
+def read_copied_files(repo: Path) -> dict[str, str]:
+    """Return the text of each file of the copy of the repository, by name."""
+    return {path.name: path.read_text(encoding="utf-8") for path in repo.iterdir() if path.is_file()}
+
+
+def test_prepare_sets_the_version_everywhere_and_dates_the_changelog(repo: Path) -> None:
+    result = run_release(repo, "prepare", "1.1.0", "--date", DAY)
+
+    assert (result.returncode, result.stdout) == (0, "Prepared 1.1.0. Run `uv lock`, then commit.\n")
+    assert read_json(repo / "plugin.json")["version"] == "1.1.0"
+    assert '\nversion = "1.1.0"\n' in read_copied_file(repo, "pyproject.toml")
+    assert "\n## 1.1.0 - 2026-12-01\n\n### Clear Datasets by Tags\n" in read_copied_file(repo, "CHANGELOG.md")
+    assert "## Unreleased" not in read_copied_file(repo, "CHANGELOG.md")
 
 
 def test_prepare_changes_only_the_version_lines(repo: Path) -> None:
-    before = {name: text(repo, name).splitlines() for name in release.VERSION_LINES}
+    before = {name: read_copied_file(repo, name).splitlines() for name in release.VERSION_LINES}
 
-    release.prepare(repo, "1.1.0", DAY)
+    assert run_release(repo, "prepare", "1.1.0", "--date", DAY).returncode == 0
 
     for name, lines in before.items():
-        after = text(repo, name).splitlines()
+        after = read_copied_file(repo, name).splitlines()
         assert len(after) == len(lines)
         assert sum(old != new for old, new in zip(lines, after)) == 1, name
 
 
 def test_the_first_release_keeps_the_version_of_plugin_json(repo: Path) -> None:
-    (repo / "CHANGELOG.md").write_text(CHANGELOG.replace("## 1.0.0 - 2026-11-18", "## 0.9.0 - 2026-01-01"), "utf-8")
+    write_changelog(repo, CHANGELOG.replace("## 1.0.0 - 2026-11-18", "## 0.9.0 - 2026-01-01"))
 
-    release.prepare(repo, "1.0.0", DAY)
+    assert run_release(repo, "prepare", "1.0.0", "--date", DAY).returncode == 0
 
-    assert json.loads(text(repo, "plugin.json"))["version"] == "1.0.0"
-    assert "\n## 1.0.0 - 2026-12-01\n" in text(repo, "CHANGELOG.md")
+    assert read_json(repo / "plugin.json")["version"] == "1.0.0"
+    assert "\n## 1.0.0 - 2026-12-01\n" in read_copied_file(repo, "CHANGELOG.md")
 
 
 @pytest.mark.parametrize(
@@ -87,54 +113,59 @@ def test_the_first_release_keeps_the_version_of_plugin_json(repo: Path) -> None:
     ],
 )
 def test_prepare_refuses_and_changes_nothing(repo: Path, version: str, changelog: str, message: str) -> None:
-    (repo / "CHANGELOG.md").write_text(changelog, encoding="utf-8")
-    before = {path.name: path.read_text(encoding="utf-8") for path in repo.iterdir()}
+    write_changelog(repo, changelog)
+    before = read_copied_files(repo)
 
-    with pytest.raises(release.ReleaseError, match=message):
-        release.prepare(repo, version, DAY)
+    result = run_release(repo, "prepare", version, "--date", DAY)
 
-    assert {path.name: path.read_text(encoding="utf-8") for path in repo.iterdir()} == before
+    assert result.returncode == 1
+    assert re.match(rf"error: .*{message}", result.stderr)
+    assert read_copied_files(repo) == before
 
 
 def test_a_pre_release_can_follow_the_version_it_announces(repo: Path) -> None:
-    release.prepare(repo, "1.1.0-beta", DAY)
+    assert run_release(repo, "prepare", "1.1.0-beta", "--date", DAY).returncode == 0
 
-    assert json.loads(text(repo, "plugin.json"))["version"] == "1.1.0-beta"
-    assert "\n## 1.1.0-beta - 2026-12-01\n" in text(repo, "CHANGELOG.md")
+    assert read_json(repo / "plugin.json")["version"] == "1.1.0-beta"
+    assert "\n## 1.1.0-beta - 2026-12-01\n" in read_copied_file(repo, "CHANGELOG.md")
 
 
-def test_the_notes_are_the_section_of_the_version_with_absolute_links() -> None:
-    notes = release.release_notes(CHANGELOG, "1.0.0", "1.0.0", "Zyniel/repo")
+def test_the_notes_are_the_section_of_the_version_with_absolute_links(repo: Path) -> None:
+    result = run_release(repo, "notes", "1.0.0", "--ref", "1.0.0", "--repository", REPOSITORY)
 
-    assert notes == (
+    assert (result.returncode, result.stdout) == (
+        0,
         "First version, under the [MIT License](https://github.com/Zyniel/repo/blob/1.0.0/LICENSE). "
-        "Details on [GitHub](https://github.com/x/y), [below](#below).\n"
+        "Details on [GitHub](https://github.com/x/y), [below](#below).\n",
     )
 
 
-def test_the_notes_of_a_version_stop_at_the_next_section() -> None:
-    changelog = CHANGELOG.replace("## Unreleased", "## 1.1.0 - 2026-12-01")
+def test_the_notes_of_a_version_stop_at_the_next_section(repo: Path) -> None:
+    write_changelog(repo, CHANGELOG.replace("## Unreleased", "## 1.1.0 - 2026-12-01"))
 
-    notes = release.release_notes(changelog, "1.1.0", "release/1.1.0", "Zyniel/repo")
+    notes = run_release(repo, "notes", "1.1.0", "--ref", "release/1.1.0", "--repository", REPOSITORY).stdout
 
     assert notes.startswith("### Clear Datasets by Tags\n")
     assert "First version" not in notes
     assert "](https://github.com/Zyniel/repo/blob/release/1.1.0/docs/macros/" in notes
 
 
-def test_the_notes_of_1_0_0_are_not_those_of_a_pre_release() -> None:
-    changelog = CHANGELOG.replace("## Unreleased", "## 1.0.0-beta - 2026-11-01")
+def test_the_notes_of_1_0_0_are_not_those_of_a_pre_release(repo: Path) -> None:
+    write_changelog(repo, CHANGELOG.replace("## Unreleased", "## 1.0.0-beta - 2026-11-01"))
 
-    assert "First version" in release.release_notes(changelog, "1.0.0", "1.0.0", "Zyniel/repo")
-    assert "A fix" in release.release_notes(changelog, "1.0.0-beta", "1.0.0-beta", "Zyniel/repo")
+    assert "First version" in run_release(repo, "notes", "1.0.0", "--ref", "1.0.0", "--repository", REPOSITORY).stdout
+    beta = run_release(repo, "notes", "1.0.0-beta", "--ref", "1.0.0-beta", "--repository", REPOSITORY)
+    assert "A fix" in beta.stdout
 
 
-def test_a_version_without_notes_is_refused_unless_a_dry_run_shows_the_unreleased_changes() -> None:
-    with pytest.raises(release.ReleaseError, match=r"no section for 1\.1\.0"):
-        release.release_notes(CHANGELOG, "1.1.0", "main", "Zyniel/repo")
+def test_a_version_without_notes_is_refused_unless_a_dry_run_shows_the_unreleased_changes(repo: Path) -> None:
+    refused = run_release(repo, "notes", "1.1.0", "--ref", "main", "--repository", REPOSITORY)
 
-    notes = release.release_notes(CHANGELOG, "1.1.0", "main", "Zyniel/repo", unreleased_first=True)
-    assert notes.startswith("### Clear Datasets by Tags\n")
+    assert (refused.returncode, refused.stdout) == (1, "")
+    assert refused.stderr == "error: CHANGELOG.md has no section for 1.1.0.\n"
+
+    dry_run = run_release(repo, "notes", "1.1.0", "--ref", "main", "--repository", REPOSITORY, "--unreleased-first")
+    assert dry_run.stdout.startswith("### Clear Datasets by Tags\n")
 
 
 @pytest.mark.parametrize(
@@ -149,18 +180,26 @@ def test_a_version_without_notes_is_refused_unless_a_dry_run_shows_the_unrelease
     ],
     ids=["on main", "on a release branch", "with nothing unreleased"],
 )
-def test_a_dry_run_shows_the_notes_of_the_next_release(changelog: str, version: str, start: str) -> None:
-    assert release.release_notes(changelog, version, "main", "Zyniel/repo", unreleased_first=True).startswith(start)
+def test_a_dry_run_shows_the_notes_of_the_next_release(repo: Path, changelog: str, version: str, start: str) -> None:
+    write_changelog(repo, changelog)
+
+    result = run_release(repo, "notes", version, "--ref", "main", "--repository", REPOSITORY, "--unreleased-first")
+
+    assert result.stdout.startswith(start)
 
 
-def test_the_command_line_reports_an_error_without_a_traceback() -> None:
-    with pytest.raises(SystemExit, match=r"^error: '1\.1' is not a version"):
-        release.main(["prepare", "1.1"])
+def test_the_command_line_reports_an_error_without_a_traceback(repo: Path) -> None:
+    result = run_release(repo, "prepare", "1.1")
+
+    assert result.returncode == 1
+    assert result.stderr == "error: '1.1' is not a version such as 1.1.0, or 1.1.0-beta for a pre-release.\n"
 
 
 def test_the_changelog_of_the_repository_can_be_released() -> None:
     # Either the changes to release are under "## Unreleased", or the version of plugin.json is released already.
-    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    version = json.loads((ROOT / "plugin.json").read_text(encoding="utf-8"))["version"]
+    version = read_json(ROOT / "plugin.json")["version"]
 
-    assert release.release_notes(changelog, version, "main", "Zyniel/repo", unreleased_first=True).strip()
+    result = run_release(ROOT, "notes", version, "--ref", "main", "--repository", REPOSITORY, "--unreleased-first")
+
+    assert result.returncode == 0
+    assert result.stdout.strip()

@@ -29,7 +29,8 @@ backend-path = ["."]
 package = false
 
 [tool.pytest.ini_options]
-pythonpath = ["python-lib", "tests"]
+# The root, so that the tests import the scripts of the repository, such as release.py, with their types.
+pythonpath = [".", "python-lib", "tests"]
 testpaths = ["tests"]
 # Test files of different folders can have the same name, such as tests/core/test_options.py and
 # tests/macros/clear_datasets_by_tags/test_options.py.
@@ -38,7 +39,7 @@ addopts = ["--import-mode=importlib"]
 [tool.ruff]
 target-version = "py39"
 line-length = 120
-src = ["python-lib", "tests"]
+src = [".", "python-lib", "tests"]
 
 # The conventions ruff cannot check are in CODING_STANDARDS.md.
 [tool.ruff.lint]
@@ -62,7 +63,15 @@ mypy_path = "python-lib:tests"
 explicit_package_bases = true
 disallow_subclassing_any = false
 # The runnables all have the same file name, so check.py runs mypy on them one at a time.
-files = ["python-lib", "resource", "tests", "build_plugin_zip.py", "check.py", "release.py"]
+files = [
+    "python-lib",
+    "resource",
+    "tests",
+    "build_plugin_zip.py",
+    "check.py",
+    "release.py",
+    ".claude/hooks/ruff_after_edit.py",
+]
 
 [[tool.mypy.overrides]]
 module = ["dataiku", "dataiku.*", "dataikuapi", "dataikuapi.*", "PIL", "PIL.*", "playwright", "playwright.*"]

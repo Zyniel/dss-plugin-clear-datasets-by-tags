@@ -50,11 +50,13 @@ Git uses it for your commits in this repository, and for the commits Claude Code
 │   └── support/                  Fake DSS objects and test helpers
 ├── docs/                         Documentation
 │   ├── adr/                      The decisions that are hard to reverse, and why
+│   ├── agents/                   For agents: the issue tracker, and the domain docs
 │   ├── images/                   The screenshots of the README, a folder per macro
 │   └── macros/                   The user guide and automation page of each macro
 ├── README.md                     For users: what the plugin does, install, settings
 ├── GLOSSARY.md                   The words of the plugin, and the ones to avoid
 ├── CODING_STANDARDS.md           The Python conventions that ruff cannot check
+├── AGENTS.md                     For agents: the docs to read, the checks to run
 ├── CHANGELOG.md                  The changes of each version, and the unreleased ones
 ├── LICENSE                       MIT License
 ├── build_plugin_zip.py           Builds the zip to install in DSS
@@ -63,6 +65,10 @@ Git uses it for your commits in this repository, and for the commits Claude Code
 ├── pyproject.toml                Development tools and their settings
 ├── uv.lock                       Exact versions of the tools
 ├── .python-version               Python 3.9, the version DSS 13 runs
+├── .claude/                      Claude Code, for everyone who uses it
+│   ├── settings.json             Runs the hook after each edit
+│   └── hooks/
+│       └── ruff_after_edit.py    Checks with ruff each Python file that Claude Code edits
 └── .github/
     ├── workflows/                See releasing.md for the last three
     │   ├── ci.yml                Checks and tests on each push and pull request
@@ -110,7 +116,7 @@ The tests have the same layout as `python-lib`:
 
 | Folder | Content |
 |---|---|
-| `tests/support/` | Tools for the tests: fake DSS objects (`fakes.py`), a fake `dataiku` package (`dataiku_stub.py`), a helper to run a macro (`runs.py`), helpers to read a form (`forms.py`) and an HTML recap (`pages.py`), and the smallest possible macro (`sample_macro.py`). A helper that two test files need goes here. |
+| `tests/support/` | Tools for the tests: fake DSS objects (`fakes.py`), a fake `dataiku` package (`dataiku_stub.py`), a helper to run a macro (`runs.py`), helpers to read a form (`forms.py`), an HTML recap (`pages.py`) and a JSON file (`files.py`), and the smallest possible macro (`sample_macro.py`). A helper that two test files need goes here. |
 | `tests/core/` | The shared code of `core`: options, tags, project, runner. The runner is tested with `sample_macro.py`, without a real macro. |
 | `tests/recap/` | The HTML recap, with a page made by hand, and the summary dataset. |
 | `tests/macros/<macro>/` | One macro: its work, its options, its recap, its form, its `runnable.py`. |
