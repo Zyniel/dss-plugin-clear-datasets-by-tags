@@ -4,7 +4,8 @@
   "## Unreleased" section of the CHANGELOG into "## 1.1.0 - <today>". Run `uv lock` after it. The README holds no
   version: a release never changes it.
 - `uv run python release.py notes 1.1.0 --ref 1.1.0 --repository owner/name` prints the CHANGELOG section of the
-  version, with its relative links made absolute, so that they work on the release page.
+  version, with its relative links made absolute, so that they work on the release page. With `--unreleased-first`,
+  it prints the "## Unreleased" section when it has changes: the notes of the next release, for a dry run.
 
 The workflows of .github/workflows run them. Nothing here changes a file until every check has passed.
 """
@@ -99,15 +100,16 @@ def prepare(root: Path, version: str, today: datetime.date) -> None:
         (root / file_name).write_text(text, encoding="utf-8")
 
 
-def release_notes(changelog: str, version: str, ref: str, repository: str, or_unreleased: bool = False) -> str:
+def release_notes(changelog: str, version: str, ref: str, repository: str, unreleased_first: bool = False) -> str:
     """Return the CHANGELOG section of a version, with its relative links pointing to the files at `ref` on GitHub.
 
-    :param or_unreleased: if the version has no section, use the "## Unreleased" one: a dry run before the release
+    :param unreleased_first: use the "## Unreleased" section when it has changes, else the section of the version.
+        These are the notes of the next release, for a dry run: until the version is prepared, plugin.json still
+        gives the last version released.
     :raises ReleaseError: if the CHANGELOG has no section for the version
     """
-    section = changelog_section(changelog, f"## {version}")
-    if (section is None or not section.strip()) and or_unreleased:
-        section = changelog_section(changelog, UNRELEASED)
+    unreleased = changelog_section(changelog, UNRELEASED) if unreleased_first else None
+    section = unreleased if unreleased and unreleased.strip() else changelog_section(changelog, f"## {version}")
     if section is None or not section.strip():
         raise ReleaseError(f"CHANGELOG.md has no section for {version}.")
     base = f"https://github.com/{repository}/blob/{ref}/"
@@ -128,7 +130,9 @@ def main(argv: Optional[list[str]] = None) -> None:
     notes_command.add_argument("version")
     notes_command.add_argument("--ref", required=True, help="The tag or branch the links point to.")
     notes_command.add_argument("--repository", required=True, help="owner/name on GitHub.")
-    notes_command.add_argument("--or-unreleased", action="store_true", help='Fall back on "## Unreleased".')
+    notes_command.add_argument(
+        "--unreleased-first", action="store_true", help='Use "## Unreleased" when it has changes: a dry run.'
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -137,7 +141,7 @@ def main(argv: Optional[list[str]] = None) -> None:
             print(f"Prepared {args.version}. Run `uv lock`, then commit.")
         else:
             changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-            sys.stdout.write(release_notes(changelog, args.version, args.ref, args.repository, args.or_unreleased))
+            sys.stdout.write(release_notes(changelog, args.version, args.ref, args.repository, args.unreleased_first))
     except ReleaseError as error:
         raise SystemExit(f"error: {error}") from None
 

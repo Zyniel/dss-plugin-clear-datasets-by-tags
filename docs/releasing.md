@@ -62,7 +62,7 @@ Each change that users can notice goes into the CHANGELOG, under `## Unreleased`
    - `X` for a change that can break a scenario or a script.
 
    A version with a suffix, such as `1.1.0-beta`, is published as a pre-release.
-2. **Dry run, if you want:** in **Actions > Release > Run workflow**, keep "Dry run" checked and run it on `main`. It runs the checks, builds the zip and writes the notes, from the `## Unreleased` section until the version is prepared. They are on the summary page of the run, and in its artifact `release-dry-run`. Nothing is published.
+2. **Dry run, if you want:** in **Actions > Release > Run workflow**, keep "Dry run" checked and run it on `main`. It runs the checks, builds the zip and writes the notes of the next release: on `main`, the `## Unreleased` section. They are on the summary page of the run, and in its artifact `release-dry-run`. Nothing is published. Until the version is prepared, `plugin.json` gives the last version released: the zip has its name, and the run warns that it is released already.
 3. **Prepare:** in **Actions > Prepare release > Run workflow**, give the version and run it. A few minutes later, the pull request "Release `<version>`" is open, and its CI is running.
 4. **Check the pull request:**
    - The CI passes.

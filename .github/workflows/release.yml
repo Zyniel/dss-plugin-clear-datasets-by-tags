@@ -48,16 +48,18 @@ jobs:
       - run: uv sync --locked
       # It also builds the plugin zip, which the release publishes.
       - run: uv run --locked python check.py
-      # The section of the version in the CHANGELOG. A dry run before the release falls back on "## Unreleased".
+      # The section of the version in the CHANGELOG. A dry run writes the notes of the next release: "## Unreleased"
+      # when it has changes, since plugin.json gives the last version released until the version is prepared.
       - name: Write the release notes
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          fallback=""
-          if [ "$DRY_RUN" = true ]; then fallback="--or-unreleased"; fi
+          next=""
+          title="Notes of $VERSION"
+          if [ "$DRY_RUN" = true ]; then next="--unreleased-first"; title="Notes of the next release"; fi
           uv run python release.py notes "$VERSION" --ref "$GITHUB_REF_NAME" --repository "$GITHUB_REPOSITORY" \
-            $fallback > release-notes.md
-          { echo "## Notes of $VERSION"; echo; cat release-notes.md; } >> "$GITHUB_STEP_SUMMARY"
+            $next > release-notes.md
+          { echo "## $title"; echo; cat release-notes.md; } >> "$GITHUB_STEP_SUMMARY"
       - name: Keep the zip and the notes of the dry run
         if: env.DRY_RUN == 'true'
         uses: actions/upload-artifact@v4

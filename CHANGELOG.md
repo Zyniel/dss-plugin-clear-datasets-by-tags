@@ -40,6 +40,7 @@ The changes of each version of the plugin, the most recent first. The changes no
 - `docs/verification.md` says what the Dataiku docs say about macros, scenarios and the API, with links, and what they leave out.
 - For Claude Code, a hook of `.claude/settings.json` runs ruff on each Python file Claude edits, and `AGENTS.md` points to `check.py`, to the Dataiku docs of `docs/verification.md`, and to the user guides as part of the spec of a review.
 - The guide to the integration tests says when to run them: before a pull request that changes the code DSS runs. Coding agents run them too, on the test DSS of the config file. Run with an editor and a reader on DSS 13.4.4, they confirm rows 8, 13, 22 and 24 of the verification: an editor who is not a project administrator cannot read the sharing, as ADR-0001 assumes.
+- A dry run of the Release workflow on `main` writes the notes of the next release, from `## Unreleased`, as the release guide says. It wrote those of the last version released, which `plugin.json` still gives until the version is prepared.
 
 ## 1.0.1-beta - 2026-11-18
 
