@@ -61,6 +61,10 @@ $env:DSS_INTEGRATION_CONFIG = "$HOME\dss-integration.json"; uv run --group integ
 
 Without `DSS_INTEGRATION_CONFIG`, the tests are skipped: `uv run pytest` and the CI never need a DSS.
 
+## When to run them
+
+Before a pull request that changes the code DSS runs: `python-lib`, `python-runnables`, `resource` or `tests/integration`. Coding agents run them too, on the test DSS of the config file, and write the result in the pull request. They pass the config file through `DSS_INTEGRATION_CONFIG` only, and keep its API keys and its password out of messages, logs and commits. With `install_plugin` set to `true`, the run replaces the plugin on that DSS: the pull request says so.
+
 ## What they do on the DSS
 
 - Each test creates its own project, `DSSPM_IT_<random>`, and deletes it at the end, also when the test fails. They never touch another project.
