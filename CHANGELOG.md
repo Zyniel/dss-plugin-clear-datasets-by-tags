@@ -7,6 +7,8 @@ The changes of each version of the plugin, the most recent first. The changes no
 ### For developers
 
 - The workflows use the first versions of their GitHub Actions that run on Node.js 24: `actions/checkout@v5`, `actions/upload-artifact@v6` and `astral-sh/setup-uv@v7`. GitHub no longer warns that Node.js 20 is deprecated. The workflows do the same as before.
+- The jobs of the CI set themselves up with one shared step, the composite action `.github/actions/setup`: it checks out the repository, or the ref it is given, installs uv and syncs the locked environment, on the Python it is given. The workflows call it with `uses: $/.github/actions/setup`, which GitHub takes from the commit of the run, before any checkout. Prepare release and Release take it up when they are rewritten.
+- Dependabot keeps the GitHub Actions current, those of the setup step included: one pull request a month, with every update. See `.github/dependabot.yml`.
 
 ## 1.0.2-beta - 2026-11-21
 
