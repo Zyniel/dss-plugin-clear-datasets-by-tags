@@ -35,10 +35,15 @@ Intro.
 First version, under the [MIT License](LICENSE). Details on [GitHub](https://github.com/x/y), [below](#below).
 """
 # The CHANGELOG of the branch release/1.1.0, once Prepare release dated the notes of the next release.
-PREPARED_CHANGELOG = CHANGELOG.replace("## Unreleased", "## 1.1.0 - 2026-12-01")
-# A CHANGELOG whose notes of the next release are empty.
-EMPTY_CHANGELOG = "# Changelog\n\n## Unreleased\n\n## 1.0.0 - 2026-11-18\n\nText.\n"
-EMPTY_NEXT_NOTES = 'The notes of the next release are empty: CHANGELOG.md has nothing under "## Unreleased".\n'
+PREPARED_CHANGELOG = CHANGELOG.replace("## Unreleased", f"## 1.1.0 - {DAY}")
+# A CHANGELOG whose notes of the next release are empty: an "## Unreleased" section with nothing in it.
+CHANGELOG_WITH_EMPTY_NOTES = "# Changelog\n\n## Unreleased\n\n## 1.0.0 - 2026-11-18\n\nText.\n"
+# The two CHANGELOGs that have no notes of the next release.
+WITHOUT_NEXT_RELEASE_NOTES = [
+    pytest.param(CHANGELOG_WITH_EMPTY_NOTES, id="nothing changed since the last release"),
+    pytest.param(PREPARED_CHANGELOG, id="dated by Prepare release"),
+]
+EMPTY_NEXT_RELEASE_NOTES = 'The notes of the next release are empty: CHANGELOG.md has nothing under "## Unreleased".\n'
 
 
 @pytest.fixture
@@ -98,9 +103,14 @@ def run_notes(repo: Path, version: str, *, ref: str) -> subprocess.CompletedProc
     return run_release(repo, "notes", version, "--ref", ref, "--repository", REPOSITORY)
 
 
-def run_next_notes(repo: Path, *, ref: str) -> subprocess.CompletedProcess[str]:
-    """Run `release.py next-notes`, with the links of the notes pointing to the files of REPOSITORY at `ref`."""
-    return run_release(repo, "next-notes", "--ref", ref, "--repository", REPOSITORY)
+def run_next_release_notes(repo: Path, *, ref: str) -> subprocess.CompletedProcess[str]:
+    """Run `release.py next-release-notes`, with the links pointing to the files of REPOSITORY at `ref`."""
+    return run_release(repo, "next-release-notes", "--ref", ref, "--repository", REPOSITORY)
+
+
+def run_check_branch(repo: Path, branch: str) -> subprocess.CompletedProcess[str]:
+    """Run `release.py check-branch` on the copy of the repository, as the CI runs it on the branch of its run."""
+    return run_release(repo, "check-branch", branch)
 
 
 def read_copied_file(repo: Path, name: str) -> str:
@@ -153,7 +163,7 @@ def test_prepare_changes_only_the_version_lines(repo: Path) -> None:
             r"CHANGELOG\.md already has a section for 1\.1\.0: choose a new version\.",
         ),
         ("1.1.0", CHANGELOG.replace("## Unreleased", "## Later"), r'no "## Unreleased" section'),
-        ("1.1.0", EMPTY_CHANGELOG, r"or it is empty"),
+        ("1.1.0", CHANGELOG_WITH_EMPTY_NOTES, r"or it is empty"),
     ],
     ids=[
         "too short",
@@ -296,9 +306,9 @@ def test_a_version_without_notes_is_refused(repo: Path) -> None:
     assert result.stderr == "error: CHANGELOG.md has no section for 1.1.0.\n"
 
 
-def test_the_notes_of_the_next_release_are_the_unreleased_section_with_absolute_links(repo: Path) -> None:
+def test_the_notes_of_the_next_release_are_printed_with_absolute_links(repo: Path) -> None:
     # The CI points the links to the commit of its run.
-    result = run_next_notes(repo, ref="4b825dc")
+    result = run_next_release_notes(repo, ref="4b825dc")
 
     assert (result.returncode, result.stdout) == (
         0,
@@ -307,34 +317,29 @@ def test_the_notes_of_the_next_release_are_the_unreleased_section_with_absolute_
     )
 
 
-@pytest.mark.parametrize(
-    "changelog",
-    [EMPTY_CHANGELOG, PREPARED_CHANGELOG],
-    ids=["nothing changed since the last release", "dated by Prepare release"],
-)
+@pytest.mark.parametrize("changelog", WITHOUT_NEXT_RELEASE_NOTES)
 def test_empty_notes_of_the_next_release_say_so(repo: Path, changelog: str) -> None:
     write_changelog(repo, changelog)
 
-    result = run_next_notes(repo, ref="main")
+    result = run_next_release_notes(repo, ref="main")
 
-    assert (result.returncode, result.stdout, result.stderr) == (0, EMPTY_NEXT_NOTES, "")
+    assert (result.returncode, result.stdout, result.stderr) == (0, EMPTY_NEXT_RELEASE_NOTES, "")
 
 
-@pytest.mark.parametrize("changelog", [PREPARED_CHANGELOG, EMPTY_CHANGELOG], ids=["dated", "an empty section"])
+@pytest.mark.parametrize("changelog", WITHOUT_NEXT_RELEASE_NOTES)
 def test_a_release_branch_without_notes_of_the_next_release_passes(repo: Path, changelog: str) -> None:
     write_changelog(repo, changelog)
 
-    result = run_release(repo, "check-branch", "release/1.1.0")
+    result = run_check_branch(repo, "release/1.1.0")
 
     assert (result.returncode, result.stdout) == (0, "release/1.1.0 has no notes of the next release.\n")
 
 
 def test_a_release_branch_with_notes_of_the_next_release_fails_and_says_to_prepare_again(repo: Path) -> None:
     # A change that reached the branch after Prepare release, under a new "## Unreleased" section.
-    late_change = "## Unreleased\n\n- A late change.\n\n## 1.1.0 - 2026-12-01"
-    write_changelog(repo, CHANGELOG.replace("## Unreleased", late_change))
+    write_changelog(repo, PREPARED_CHANGELOG.replace("## 1.1.0", "## Unreleased\n\n- A late change.\n\n## 1.1.0"))
 
-    result = run_release(repo, "check-branch", "release/1.1.0")
+    result = run_check_branch(repo, "release/1.1.0")
 
     assert (result.returncode, result.stdout) == (1, "")
     assert result.stderr == (
@@ -345,7 +350,7 @@ def test_a_release_branch_with_notes_of_the_next_release_fails_and_says_to_prepa
 
 @pytest.mark.parametrize("branch", ["main", "fix/release/1.1.0"])
 def test_a_branch_that_is_not_a_release_branch_passes_with_notes_of_the_next_release(repo: Path, branch: str) -> None:
-    result = run_release(repo, "check-branch", branch)
+    result = run_check_branch(repo, branch)
 
     assert (result.returncode, result.stdout) == (
         0,

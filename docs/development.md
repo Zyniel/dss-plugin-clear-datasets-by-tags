@@ -149,7 +149,7 @@ The fake objects copy the shape of the DSS answers. If a real DSS answers in ano
 
 | Job | Steps |
 |---|---|
-| Lint, types and plugin zip | The setup step. Then `release.py next-notes` writes the notes of the next release on the summary page of the run, and `release.py check-branch` fails on a release branch that has notes of the next release: see [releasing](releasing.md). Then `check.py --no-tests`. The zip it builds is kept as the `plugin-zip` artifact. |
+| Lint, types and plugin zip | The setup step. Then `release.py next-release-notes` writes the notes of the next release on the summary page of the run, and `release.py check-branch` fails on a release branch that has notes of the next release: see [releasing](releasing.md). Then `check.py --no-tests`. The zip it builds is kept as the `plugin-zip` artifact. |
 | Tests on Python `<version>` | One job for each Python that `check.py` tests: the setup step, then `check.py --tests-on <version>`. |
 
 The matrix of the CI repeats the Python versions of `check.py`, since each tests job is a required check of `main`. A version that `check.py` does not test fails its job, and the log lists the versions it tests.

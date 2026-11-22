@@ -17,14 +17,11 @@ jobs:
       # The notes of the next release, on the summary page of every run, before the checks: they show even when a
       # check fails. Their links point to the files of the commit of the run.
       - name: Write the notes of the next release
-        env:
-          # On a pull request, the commit of its branch: the merge commit that the run checks out does not last.
-          REF: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           {
             echo "## Notes of the next release"
             echo
-            uv run --locked python release.py next-notes --ref "$REF" --repository "$GITHUB_REPOSITORY"
+            uv run --locked python release.py next-release-notes --ref "$GITHUB_SHA" --repository "$GITHUB_REPOSITORY"
           } >> "$GITHUB_STEP_SUMMARY"
       # Prepare release dated the notes of the next release. On its branch, notes of the next release are changes that
       # came later: this step fails, and says what to do. On any other branch, it passes.

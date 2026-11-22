@@ -6,8 +6,9 @@
   after the version of plugin.json, that origin has neither its tag nor its release branch, and the CHANGELOG.
 - `uv run python release.py notes 1.1.0 --ref 1.1.0 --repository owner/name` prints the notes of the version: its
   section of the CHANGELOG, with its relative links made absolute, so that they work on the release page.
-- `uv run python release.py next-notes --ref main --repository owner/name` prints the notes of the next release, the
-  "## Unreleased" section, the same way, or says that they are empty. The CI writes them to the summary of each run.
+- `uv run python release.py next-release-notes --ref main --repository owner/name` prints the notes of the next
+  release, the "## Unreleased" section, the same way, or says that they are empty. The CI writes them to the summary
+  of each run.
 - `uv run python release.py check-branch release/1.1.0` fails when a release branch has notes of the next release:
   changes that reached it after Prepare release dated the notes. Any other branch passes.
 
@@ -189,7 +190,7 @@ def prepare(root: Path, version: str, today: datetime.date) -> None:
         (root / file_name).write_text(text, encoding="utf-8")
 
 
-def make_links_absolute(notes: str, links: LinkTarget) -> str:
+def with_absolute_links(notes: str, links: LinkTarget) -> str:
     """Return notes whose relative links point to the files of `links`, so that they work outside the repository."""
     return RELATIVE_LINK.sub(lambda match: f"]({links.url(match[1])})", notes)
 
@@ -203,7 +204,7 @@ def release_notes(changelog: str, version: str, links: LinkTarget) -> str:
     notes = read_notes(changelog, f"## {version}")
     if notes is None:
         raise ReleaseError(f"{CHANGELOG_FILE} has no section for {version}.")
-    return make_links_absolute(notes, links)
+    return with_absolute_links(notes, links)
 
 
 def next_release_notes(changelog: str, links: LinkTarget) -> str:
@@ -217,14 +218,14 @@ def next_release_notes(changelog: str, links: LinkTarget) -> str:
     notes = read_notes(changelog, UNRELEASED)
     if notes is None:
         return f'The notes of the next release are empty: {CHANGELOG_FILE} has nothing under "{UNRELEASED}".\n'
-    return make_links_absolute(notes, links)
+    return with_absolute_links(notes, links)
 
 
 def check_branch(changelog: str, branch: str) -> str:
     """Check that a release branch has no notes of the next release, and return what the check found.
 
-    Prepare release dated them: notes of the next release on its branch are changes that reached it later, such as a
-    pull request merged into main during the release. Any other branch passes.
+    Prepare release dated them: notes of the next release on its branch are changes that reached it later, and that
+    the notes of its version miss. Any other branch passes.
 
     :param changelog: the text of the CHANGELOG of the branch
     :param branch: such as release/1.1.0, or main
@@ -233,7 +234,7 @@ def check_branch(changelog: str, branch: str) -> str:
     if not branch.startswith(RELEASE_BRANCH_PREFIX):
         return f"{branch} is not a release branch: its notes of the next release are not checked."
     if read_notes(changelog, UNRELEASED) is not None:
-        version = branch[len(RELEASE_BRANCH_PREFIX) :]
+        version = branch.removeprefix(RELEASE_BRANCH_PREFIX)
         raise ReleaseError(
             f"The branch {branch} has notes of the next release: changes that {version} would ship untested, and "
             f"missing from its notes. Close its release pull request, delete the branch, and prepare {version} again."
@@ -242,7 +243,7 @@ def check_branch(changelog: str, branch: str) -> str:
 
 
 def main(argv: Optional[list[str]] = None) -> None:
-    """Run the command of the command line: prepare, notes, next-notes or check-branch.
+    """Run the command of the command line: prepare, notes, next-release-notes or check-branch.
 
     :param argv: the arguments, without the name of the script. Default: those of `sys.argv`.
     :raises SystemExit: with the reason, if the release cannot go on
@@ -259,7 +260,7 @@ def main(argv: Optional[list[str]] = None) -> None:
     notes_command = commands.add_parser("notes", help="Print the notes of a version, with absolute links.")
     notes_command.add_argument("version", help="The version whose notes to print.")
     next_notes_command = commands.add_parser(
-        "next-notes", help='Print the notes of the next release, "## Unreleased", with absolute links.'
+        "next-release-notes", help='Print the notes of the next release, "## Unreleased", with absolute links.'
     )
     for command in (notes_command, next_notes_command):
         command.add_argument("--ref", required=True, help="The tag, branch or commit the links point to.")
@@ -276,12 +277,14 @@ def main(argv: Optional[list[str]] = None) -> None:
             print(f"Prepared {args.version}. Run `uv lock`, then commit.")
             return
         changelog = (ROOT / CHANGELOG_FILE).read_text(encoding="utf-8")
-        if args.command == "notes":
-            sys.stdout.write(release_notes(changelog, args.version, LinkTarget(args.repository, args.ref)))
-        elif args.command == "next-notes":
-            sys.stdout.write(next_release_notes(changelog, LinkTarget(args.repository, args.ref)))
-        else:
+        if args.command == "check-branch":
             print(check_branch(changelog, args.branch))
+            return
+        links = LinkTarget(args.repository, args.ref)
+        if args.command == "notes":
+            sys.stdout.write(release_notes(changelog, args.version, links))
+        else:  # next-release-notes
+            sys.stdout.write(next_release_notes(changelog, links))
     except ReleaseError as error:
         raise SystemExit(f"error: {error}") from None
 
