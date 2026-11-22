@@ -13,7 +13,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v7
       with:
         ref: ${{ inputs.ref }}
     # The environment is on the Python of .python-version. check.py runs the tests on a newer Python itself.

@@ -16,7 +16,7 @@ jobs:
       - uses: $/.github/actions/setup
       # Every check but the tests, which the tests jobs run. The plugin zip it builds is kept as an artifact.
       - run: uv run --locked python check.py --no-tests
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: plugin-zip
           path: dist/*.zip

@@ -2,7 +2,8 @@
 
 - `uv run python release.py prepare 1.1.0` sets the version in plugin.json and pyproject.toml, and turns the
   "## Unreleased" section of the CHANGELOG into "## 1.1.0 - <today>". Run `uv lock` after it. The README holds no
-  version: a release never changes it.
+  version: a release never changes it. It first checks that it can prepare the version: its form, that it comes
+  after the version of plugin.json, that origin has neither its tag nor its release branch, and the CHANGELOG.
 - `uv run python release.py notes 1.1.0 --ref 1.1.0 --repository owner/name` prints the CHANGELOG section of the
   version, with its relative links made absolute, so that they work on the release page. With `--unreleased-first`,
   it prints the "## Unreleased" section when it has changes: the notes of the next release, for a dry run.
@@ -14,6 +15,7 @@ import argparse
 import datetime
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import NamedTuple, Optional
@@ -21,8 +23,9 @@ from typing import NamedTuple, Optional
 ROOT = Path(__file__).resolve().parent
 CHANGELOG_FILE = "CHANGELOG.md"
 UNRELEASED = "## Unreleased"
-# A version such as 1.1.0, or 1.1.0-beta for a pre-release.
-VERSION = re.compile(r"^(\d+)\.(\d+)\.(\d+)(-[0-9A-Za-z.-]+)?$")
+# A version is X.Y.Z, or X.Y.Z-beta for a pre-release, and nothing else. As in semantic versioning, which Dataiku
+# recommends for a plugin, a number has no leading zero.
+VERSION = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-beta)?")
 # A relative Markdown link: not a URL, and not an anchor of the same page.
 RELATIVE_LINK = re.compile(r"\]\((?!https?://|mailto:|#)([^)\s]+)\)")
 
@@ -56,15 +59,31 @@ class ReleaseError(Exception):
     """The release cannot go on. The message says why, and what to do."""
 
 
-def parse_version(version: str) -> tuple[int, int, int]:
-    """Return the three numbers of a version.
+def parse_version(version: str) -> tuple[int, int, int, int]:
+    """Return the key that orders versions: the three numbers, then 0 for a pre-release and 1 for a release.
+
+    So 1.0.2-beta comes before 1.0.2, which comes before 1.0.3-beta.
 
     :raises ReleaseError: if it is not a version
     """
-    match = VERSION.match(version)
+    match = VERSION.fullmatch(version)
     if not match:
         raise ReleaseError(f"{version!r} is not a version such as 1.1.0, or 1.1.0-beta for a pre-release.")
-    return int(match[1]), int(match[2]), int(match[3])
+    return int(match[1]), int(match[2]), int(match[3]), 0 if match[4] else 1
+
+
+def read_remote_refs(root: Path, refs: list[str]) -> set[str]:
+    """Return those of `refs`, such as refs/tags/1.1.0, that the remote origin of the repository has.
+
+    :param root: the folder of the repository
+    :raises ReleaseError: if git cannot read the refs of origin
+    """
+    command = ["git", "ls-remote", "origin", *refs]
+    result = subprocess.run(command, cwd=root, capture_output=True, encoding="utf-8", check=False)
+    if result.returncode != 0:
+        raise ReleaseError(f"Cannot read the tags and branches of origin: {result.stderr.strip()}")
+    # Each line is "<commit>\t<ref>". git matches the end of a ref, so keep only the refs asked for.
+    return {line.partition("\t")[2] for line in result.stdout.splitlines()} & set(refs)
 
 
 def changelog_section(changelog: str, heading: str) -> Optional[str]:
@@ -122,15 +141,31 @@ def replace_version(text: str, file_name: str, version: str) -> str:
 def prepare(root: Path, version: str, today: datetime.date) -> None:
     """Set the version in every file, and date the "## Unreleased" section of the CHANGELOG with it.
 
-    :param root: the folder of the repository
+    :param root: the folder of the repository, whose remote origin has the tags and the branches of the versions
     :param today: the date of the section of the version
-    :raises ReleaseError: if the version, or the one of plugin.json, is not a version; if the version is lower than
-        the current one or already has a section; if the "## Unreleased" section is missing or empty; or if a file
-        has no line or several lines to replace: the "## Unreleased" heading, or the version
+    :raises ReleaseError: if the version, or the one of plugin.json, is not a version; if the version does not come
+        after the current one; if origin has its tag or its release branch, or git cannot read them; if the version
+        already has a section; if the "## Unreleased" section is missing or empty; or if a file has no line or several
+        lines to replace: the "## Unreleased" heading, or the version
     """
+    order = parse_version(version)
     current = json.loads((root / "plugin.json").read_text(encoding="utf-8"))["version"]
-    if parse_version(version) < parse_version(current):
-        raise ReleaseError(f"{version} is lower than the version of plugin.json, {current}.")
+    if order <= parse_version(current):
+        raise ReleaseError(
+            f"{version} is not after {current}, the version of plugin.json. Choose a later version: "
+            "a pre-release such as 1.1.0-beta comes before 1.1.0."
+        )
+
+    branch = f"release/{version}"
+    tag_ref, branch_ref = f"refs/tags/{version}", f"refs/heads/{branch}"
+    remote_refs = read_remote_refs(root, [tag_ref, branch_ref])
+    if tag_ref in remote_refs:
+        raise ReleaseError(f"The tag {version} exists: {version} is released, or abandoned. Choose a new version.")
+    if branch_ref in remote_refs:
+        raise ReleaseError(
+            f"The branch {branch} exists: close its release pull request and delete the branch, "
+            f"then prepare {version} again."
+        )
 
     changelog = (root / CHANGELOG_FILE).read_text(encoding="utf-8")
     if changelog_section(changelog, f"## {version}") is not None:
@@ -172,7 +207,9 @@ def main(argv: Optional[list[str]] = None) -> None:
     """
     parser = argparse.ArgumentParser(description="Prepare a release, or write its notes. See docs/releasing.md.")
     commands = parser.add_subparsers(dest="command", required=True)
-    prepare_command = commands.add_parser("prepare", help="Set the version, and date the CHANGELOG.")
+    prepare_command = commands.add_parser(
+        "prepare", help="Check that the version can be prepared, set it, and date the CHANGELOG."
+    )
     prepare_command.add_argument("version", help="Such as 1.1.0, or 1.1.0-beta for a pre-release.")
     prepare_command.add_argument("--date", type=datetime.date.fromisoformat, help="Default: today, in UTC.")
     notes_command = commands.add_parser("notes", help="Print the release notes of a version.")

@@ -25,7 +25,7 @@ jobs:
       # A pushed tag has no inputs: it publishes.
       DRY_RUN: ${{ inputs.dry_run == true }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
       # On a tag, the tag must be the version of plugin.json: the zip is named after it. Only a tag is published.
       - name: Find the version
@@ -62,7 +62,7 @@ jobs:
           { echo "## $title"; echo; cat release-notes.md; } >> "$GITHUB_STEP_SUMMARY"
       - name: Keep the zip and the notes of the dry run
         if: env.DRY_RUN == 'true'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: release-dry-run
           path: |
