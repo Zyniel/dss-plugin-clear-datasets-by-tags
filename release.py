@@ -259,10 +259,10 @@ def main(argv: Optional[list[str]] = None) -> None:
     prepare_command.add_argument("--date", type=datetime.date.fromisoformat, help="Default: today, in UTC.")
     notes_command = commands.add_parser("notes", help="Print the notes of a version, with absolute links.")
     notes_command.add_argument("version", help="The version whose notes to print.")
-    next_notes_command = commands.add_parser(
+    next_release_notes_command = commands.add_parser(
         "next-release-notes", help='Print the notes of the next release, "## Unreleased", with absolute links.'
     )
-    for command in (notes_command, next_notes_command):
+    for command in (notes_command, next_release_notes_command):
         command.add_argument("--ref", required=True, help="The tag, branch or commit the links point to.")
         command.add_argument("--repository", required=True, help="owner/name on GitHub.")
     check_branch_command = commands.add_parser(
