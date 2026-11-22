@@ -17,7 +17,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v7
       with:
         ref: ${{ inputs.ref }}
     # With a Python, it sets UV_PYTHON for the rest of the job: the next uv commands use that Python.
