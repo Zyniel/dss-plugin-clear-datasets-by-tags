@@ -14,6 +14,25 @@ jobs:
       # Checks out, installs uv and syncs the environment. Python 3.9 comes from .python-version: the version DSS 13
       # runs the plugin with.
       - uses: $/.github/actions/setup
+      # The notes of the next release, on the summary page of every run, before the checks: they show even when a
+      # check fails. Their links point to the files of the commit of the run.
+      - name: Write the notes of the next release
+        env:
+          # On a pull request, the commit of its branch: the merge commit that the run checks out does not last.
+          REF: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          {
+            echo "## Notes of the next release"
+            echo
+            uv run --locked python release.py next-notes --ref "$REF" --repository "$GITHUB_REPOSITORY"
+          } >> "$GITHUB_STEP_SUMMARY"
+      # Prepare release dated the notes of the next release. On its branch, notes of the next release are changes that
+      # came later: this step fails, and says what to do. On any other branch, it passes.
+      - name: Check that a release branch has no notes of the next release
+        env:
+          # On a pull request, its branch. On a push, or a run that Prepare release starts, the branch of the run.
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: uv run --locked python release.py check-branch "$BRANCH"
       # Every check but the tests, which the tests jobs run. The plugin zip it builds is kept as an artifact.
       - run: uv run --locked python check.py --no-tests
       - uses: actions/upload-artifact@v7

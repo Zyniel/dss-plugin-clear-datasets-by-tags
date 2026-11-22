@@ -1,12 +1,15 @@
-"""Release tools: prepare a version, and write the notes of its GitHub release. See docs/releasing.md.
+"""Release tools: prepare a version, print notes, and check a release branch. See docs/releasing.md.
 
 - `uv run python release.py prepare 1.1.0` sets the version in plugin.json and pyproject.toml, and turns the
   "## Unreleased" section of the CHANGELOG into "## 1.1.0 - <today>". Run `uv lock` after it. The README holds no
   version: a release never changes it. It first checks that it can prepare the version: its form, that it comes
   after the version of plugin.json, that origin has neither its tag nor its release branch, and the CHANGELOG.
-- `uv run python release.py notes 1.1.0 --ref 1.1.0 --repository owner/name` prints the CHANGELOG section of the
-  version, with its relative links made absolute, so that they work on the release page. With `--unreleased-first`,
-  it prints the "## Unreleased" section when it has changes: the notes of the next release, for a dry run.
+- `uv run python release.py notes 1.1.0 --ref 1.1.0 --repository owner/name` prints the notes of the version: its
+  section of the CHANGELOG, with its relative links made absolute, so that they work on the release page.
+- `uv run python release.py next-notes --ref main --repository owner/name` prints the notes of the next release, the
+  "## Unreleased" section, the same way, or says that they are empty. The CI writes them to the summary of each run.
+- `uv run python release.py check-branch release/1.1.0` fails when a release branch has notes of the next release:
+  changes that reached it after Prepare release dated the notes. Any other branch passes.
 
 The workflows of .github/workflows run them. Nothing here changes a file until every check has passed.
 """
@@ -22,7 +25,10 @@ from typing import NamedTuple, Optional
 
 ROOT = Path(__file__).resolve().parent
 CHANGELOG_FILE = "CHANGELOG.md"
+# The heading of the notes of the next release.
 UNRELEASED = "## Unreleased"
+# The branch of a release pull request is this prefix and the version, such as release/1.1.0.
+RELEASE_BRANCH_PREFIX = "release/"
 # A version is X.Y.Z, or X.Y.Z-beta for a pre-release, and nothing else. As in semantic versioning, which Dataiku
 # recommends for a plugin, a number has no leading zero.
 VERSION = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-beta)?")
@@ -48,7 +54,7 @@ class LinkTarget(NamedTuple):
     """The files that the relative links of the notes point to: those of a repository on GitHub, at a ref."""
 
     repository: str  # On GitHub: owner/name.
-    ref: str  # A tag or a branch.
+    ref: str  # A tag, a branch or a commit.
 
     def url(self, path: str) -> str:
         """Return the URL of a file at the ref, from its path relative to the root of the repository."""
@@ -156,7 +162,7 @@ def prepare(root: Path, version: str, today: datetime.date) -> None:
             "a pre-release such as 1.1.0-beta comes before 1.1.0."
         )
 
-    branch = f"release/{version}"
+    branch = f"{RELEASE_BRANCH_PREFIX}{version}"
     tag_ref, branch_ref = f"refs/tags/{version}", f"refs/heads/{branch}"
     remote_refs = read_remote_refs(root, [tag_ref, branch_ref])
     if tag_ref in remote_refs:
@@ -183,52 +189,99 @@ def prepare(root: Path, version: str, today: datetime.date) -> None:
         (root / file_name).write_text(text, encoding="utf-8")
 
 
-def release_notes(changelog: str, version: str, links: LinkTarget, unreleased_first: bool = False) -> str:
-    """Return the CHANGELOG section of a version, with its relative links pointing to the files of `links`.
-
-    :param changelog: the text of the CHANGELOG
-    :param unreleased_first: use the "## Unreleased" section when it has changes, else the section of the version.
-        These are the notes of the next release, for a dry run: until the version is prepared, plugin.json still
-        gives the last version released.
-    :raises ReleaseError: if the CHANGELOG has no section for the version
-    """
-    unreleased = read_notes(changelog, UNRELEASED) if unreleased_first else None
-    notes = unreleased or read_notes(changelog, f"## {version}")
-    if notes is None:
-        raise ReleaseError(f"{CHANGELOG_FILE} has no section for {version}.")
+def make_links_absolute(notes: str, links: LinkTarget) -> str:
+    """Return notes whose relative links point to the files of `links`, so that they work outside the repository."""
     return RELATIVE_LINK.sub(lambda match: f"]({links.url(match[1])})", notes)
 
 
+def release_notes(changelog: str, version: str, links: LinkTarget) -> str:
+    """Return the notes of a version, its section of the CHANGELOG, with its relative links made absolute.
+
+    :param changelog: the text of the CHANGELOG
+    :raises ReleaseError: if the CHANGELOG has no section for the version
+    """
+    notes = read_notes(changelog, f"## {version}")
+    if notes is None:
+        raise ReleaseError(f"{CHANGELOG_FILE} has no section for {version}.")
+    return make_links_absolute(notes, links)
+
+
+def next_release_notes(changelog: str, links: LinkTarget) -> str:
+    """Return the notes of the next release with their relative links made absolute, or a sentence if they are empty.
+
+    They are empty when nothing changed since the last release, and on a release branch, whose notes Prepare release
+    dated.
+
+    :param changelog: the text of the CHANGELOG
+    """
+    notes = read_notes(changelog, UNRELEASED)
+    if notes is None:
+        return f'The notes of the next release are empty: {CHANGELOG_FILE} has nothing under "{UNRELEASED}".\n'
+    return make_links_absolute(notes, links)
+
+
+def check_branch(changelog: str, branch: str) -> str:
+    """Check that a release branch has no notes of the next release, and return what the check found.
+
+    Prepare release dated them: notes of the next release on its branch are changes that reached it later, such as a
+    pull request merged into main during the release. Any other branch passes.
+
+    :param changelog: the text of the CHANGELOG of the branch
+    :param branch: such as release/1.1.0, or main
+    :raises ReleaseError: if it is a release branch, and its notes of the next release are not empty
+    """
+    if not branch.startswith(RELEASE_BRANCH_PREFIX):
+        return f"{branch} is not a release branch: its notes of the next release are not checked."
+    if read_notes(changelog, UNRELEASED) is not None:
+        version = branch[len(RELEASE_BRANCH_PREFIX) :]
+        raise ReleaseError(
+            f"The branch {branch} has notes of the next release: changes that {version} would ship untested, and "
+            f"missing from its notes. Close its release pull request, delete the branch, and prepare {version} again."
+        )
+    return f"{branch} has no notes of the next release."
+
+
 def main(argv: Optional[list[str]] = None) -> None:
-    """Run the command of the command line: prepare, or notes.
+    """Run the command of the command line: prepare, notes, next-notes or check-branch.
 
     :param argv: the arguments, without the name of the script. Default: those of `sys.argv`.
     :raises SystemExit: with the reason, if the release cannot go on
     """
-    parser = argparse.ArgumentParser(description="Prepare a release, or write its notes. See docs/releasing.md.")
+    parser = argparse.ArgumentParser(
+        description="Prepare a release, print notes, or check a release branch. See docs/releasing.md."
+    )
     commands = parser.add_subparsers(dest="command", required=True)
     prepare_command = commands.add_parser(
         "prepare", help="Check that the version can be prepared, set it, and date the CHANGELOG."
     )
     prepare_command.add_argument("version", help="Such as 1.1.0, or 1.1.0-beta for a pre-release.")
     prepare_command.add_argument("--date", type=datetime.date.fromisoformat, help="Default: today, in UTC.")
-    notes_command = commands.add_parser("notes", help="Print the release notes of a version.")
+    notes_command = commands.add_parser("notes", help="Print the notes of a version, with absolute links.")
     notes_command.add_argument("version", help="The version whose notes to print.")
-    notes_command.add_argument("--ref", required=True, help="The tag or branch the links point to.")
-    notes_command.add_argument("--repository", required=True, help="owner/name on GitHub.")
-    notes_command.add_argument(
-        "--unreleased-first", action="store_true", help='Use "## Unreleased" when it has changes: a dry run.'
+    next_notes_command = commands.add_parser(
+        "next-notes", help='Print the notes of the next release, "## Unreleased", with absolute links.'
     )
+    for command in (notes_command, next_notes_command):
+        command.add_argument("--ref", required=True, help="The tag, branch or commit the links point to.")
+        command.add_argument("--repository", required=True, help="owner/name on GitHub.")
+    check_branch_command = commands.add_parser(
+        "check-branch", help="Fail if a release branch has notes of the next release. Any other branch passes."
+    )
+    check_branch_command.add_argument("branch", help="Such as release/1.1.0, or main.")
     args = parser.parse_args(argv)
 
     try:
         if args.command == "prepare":
             prepare(ROOT, args.version, args.date or datetime.datetime.now(datetime.timezone.utc).date())
             print(f"Prepared {args.version}. Run `uv lock`, then commit.")
+            return
+        changelog = (ROOT / CHANGELOG_FILE).read_text(encoding="utf-8")
+        if args.command == "notes":
+            sys.stdout.write(release_notes(changelog, args.version, LinkTarget(args.repository, args.ref)))
+        elif args.command == "next-notes":
+            sys.stdout.write(next_release_notes(changelog, LinkTarget(args.repository, args.ref)))
         else:
-            changelog = (ROOT / CHANGELOG_FILE).read_text(encoding="utf-8")
-            links = LinkTarget(args.repository, args.ref)
-            sys.stdout.write(release_notes(changelog, args.version, links, args.unreleased_first))
+            print(check_branch(changelog, args.branch))
     except ReleaseError as error:
         raise SystemExit(f"error: {error}") from None
 

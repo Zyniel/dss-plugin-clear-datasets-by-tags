@@ -1,18 +1,14 @@
 name: Release
 
 # Publishes the GitHub release of a version: the plugin zip, and the notes from the CHANGELOG. GitHub adds the source
-# code of the tag. It runs on a version tag: when "Tag release" tags a merged release pull request, or when a tag is
-# pushed by hand. Run it from the Actions tab for a dry run: it builds the zip and the notes, and publishes nothing.
-# See docs/releasing.md.
+# code of the tag. It runs on a version tag: when "Tag release" tags a merged release pull request and starts it, or
+# when a tag is pushed by hand. It has no dry run: every CI run shows the notes of the next release on its summary
+# page. See docs/releasing.md.
 on:
   push:
     tags: ["[0-9]+.[0-9]+.[0-9]+*"]
+  # Tag release starts it on the tag: a tag that a workflow pushes starts no workflow by itself.
   workflow_dispatch:
-    inputs:
-      dry_run:
-        description: "Dry run: build the zip and the notes, publish nothing"
-        type: boolean
-        default: true
 
 permissions:
   contents: write
@@ -21,56 +17,37 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
-    env:
-      # A pushed tag has no inputs: it publishes.
-      DRY_RUN: ${{ inputs.dry_run == true }}
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
-      # On a tag, the tag must be the version of plugin.json: the zip is named after it. Only a tag is published.
+      # Only a tag is published, and it must be the version of plugin.json: the zip is named after it.
       - name: Find the version
         id: version
         run: |
           version=$(python3 -c "import json; print(json.load(open('plugin.json'))['version'])")
-          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "$version" ]; then
+          if [ "$GITHUB_REF_TYPE" != tag ]; then
+            echo "::error::Release publishes a version tag, not the branch $GITHUB_REF_NAME: see docs/releasing.md."
+            exit 1
+          fi
+          if [ "$GITHUB_REF_NAME" != "$version" ]; then
             echo "::error::The tag is $GITHUB_REF_NAME, but plugin.json says $version."
             exit 1
-          fi
-          if [ "$GITHUB_REF_TYPE" != tag ] && [ "$DRY_RUN" != true ]; then
-            echo "::error::Only a tag is published. Run a dry run, or release $version: see docs/releasing.md."
-            exit 1
-          fi
-          if [ "$DRY_RUN" = true ] && git ls-remote --exit-code --tags origin "refs/tags/$version" > /dev/null; then
-            echo "::warning::$version is released already: a new release of this branch needs a new version."
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
       # The same checks as the CI: a release is never built from code that fails them.
       - run: uv sync --locked
       # It also builds the plugin zip, which the release publishes.
       - run: uv run --locked python check.py
-      # The section of the version in the CHANGELOG. A dry run writes the notes of the next release: "## Unreleased"
-      # when it has changes, since plugin.json gives the last version released until the version is prepared.
+      # The section of the version in the CHANGELOG, with links to the files of the tag.
       - name: Write the release notes
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          next=""
-          title="Notes of $VERSION"
-          if [ "$DRY_RUN" = true ]; then next="--unreleased-first"; title="Notes of the next release"; fi
           uv run python release.py notes "$VERSION" --ref "$GITHUB_REF_NAME" --repository "$GITHUB_REPOSITORY" \
-            $next > release-notes.md
-          { echo "## $title"; echo; cat release-notes.md; } >> "$GITHUB_STEP_SUMMARY"
-      - name: Keep the zip and the notes of the dry run
-        if: env.DRY_RUN == 'true'
-        uses: actions/upload-artifact@v7
-        with:
-          name: release-dry-run
-          path: |
-            dist/*.zip
-            release-notes.md
+            > release-notes.md
+          { echo "## Notes of $VERSION"; echo; cat release-notes.md; } >> "$GITHUB_STEP_SUMMARY"
       # A version with a hyphen, such as 1.1.0-beta, is a pre-release.
       - name: Publish the release
-        if: env.DRY_RUN != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
