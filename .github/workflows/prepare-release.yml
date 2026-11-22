@@ -61,8 +61,8 @@ jobs:
             echo "## Before merging"
             echo
             echo "- [ ] **The CI:** approve its run, and it passes. GitHub holds the CI of a pull request that a"
-            echo "  workflow opened until you approve it: click **Awaiting approval**, then **Approve workflows to"
-            echo "  run**."
+            echo "  workflow opened until you approve it: click **Awaiting approval**, then"
+            echo "  **Approve workflows to run**."
             echo "- [ ] **The release review** of everything since the tag of the last release has nothing open."
             echo "- [ ] **The integration tests** pass on this branch, on the test DSS, with \`install_plugin: true\`:"
             echo "  see [integration tests]($docs/integration-tests.md)."

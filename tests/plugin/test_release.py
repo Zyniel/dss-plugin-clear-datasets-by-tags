@@ -1,7 +1,7 @@
 """Tests of release.py at its command line: prepare a version, read one, print notes, check a branch and a pull request.
 
-The versions read are the version of the plugin, and whether a version is a pre-release: the Release workflow
-publishes the version of the plugin, as a pre-release when it is one. The notes are those of a version, or the notes
+The Release workflow reads the version of the plugin, and whether a version is a pre-release: it publishes the
+version of the plugin, as a pre-release when it is one. The notes are those of a version, or the notes
 of the next release, which a release branch must not have, and which a pull request that changes the plugin adds to.
 The tests run a copy of release.py, and of the script it imports, in a copy of the files a release changes, as the
 workflows run it: a git repository whose remote origin holds the tags and branches of the versions. See
@@ -583,10 +583,10 @@ def test_the_command_line_reports_an_error_without_a_traceback(repo: Path) -> No
 def test_the_changelog_of_the_repository_can_be_released() -> None:
     # The version of the plugin is a version, and has its notes: on main, those of the last release; on a release
     # branch, those that Prepare release dated. So the Release workflow can publish it.
-    version = run_version(ROOT)
+    version_run = run_version(ROOT)
 
-    result = run_notes(ROOT, version.stdout.strip(), ref="main")
+    result = run_notes(ROOT, version_run.stdout.strip(), ref="main")
 
-    assert version.returncode == 0
+    assert version_run.returncode == 0
     assert result.returncode == 0
     assert result.stdout.strip()

@@ -36,8 +36,8 @@ ROOT = Path(__file__).resolve().parent
 CHANGELOG_FILE = "CHANGELOG.md"
 # The heading of the notes of the next release.
 UNRELEASED = "## Unreleased"
-# The branch of a release pull request is this prefix and the version, such as release/1.1.0. ci.yml and release.yml
-# check the same prefix.
+# The branch of a release pull request is this prefix and the version, such as release/1.1.0. prepare-release.yml
+# names the branch with the same prefix, and ci.yml and release.yml check it.
 RELEASE_BRANCH_PREFIX = "release/"
 # The files and folders of the plugin: what the plugin zip holds, but its README and its license. A pull request that
 # changes them adds to the notes of the next release. A folder ends with "/", for git and for the reader.
