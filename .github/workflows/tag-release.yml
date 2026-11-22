@@ -39,4 +39,4 @@ jobs:
           git push origin "refs/tags/$version"
           echo "VERSION=$version" >> "$GITHUB_ENV"
       - name: Start the Release workflow on the tag
-        run: gh workflow run release.yml --ref "$VERSION" -f dry_run=false
+        run: gh workflow run release.yml --ref "$VERSION"

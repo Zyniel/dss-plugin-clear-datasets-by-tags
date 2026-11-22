@@ -33,10 +33,10 @@ Merge the pull request ─────────────▶ Tag release: t
 
 | Workflow | Starts | Does |
 |---|---|---|
-| `ci.yml` | On each push and pull request, and when Prepare release starts it | ruff, mypy, the tests on Python 3.9 and 3.13, and the zip, kept as the artifact `plugin-zip`. |
+| `ci.yml` | On each push and pull request, and when Prepare release starts it | Writes the notes of the next release on the summary page of the run. On a release branch, fails when they are not empty. Runs the checks of `check.py`, and keeps the zip as the artifact `plugin-zip`. |
 | `prepare-release.yml` | By hand, in the Actions tab | Runs `release.py prepare`, which checks that it can prepare the version, and `uv lock`, runs the checks, pushes `release/<version>`, opens its pull request and starts the CI on it. |
 | `tag-release.yml` | When a pull request from a `release/` branch is merged | Checks that the branch is named after the version of `plugin.json`, tags the merge commit, and starts Release on the tag. |
-| `release.yml` | On a version tag, and by hand for a dry run | Checks that the tag is the version of `plugin.json`, runs the checks, builds the zip, writes the notes, and publishes the release. A dry run publishes nothing. |
+| `release.yml` | On a version tag, and when Tag release starts it on the tag | Checks that the tag is the version of `plugin.json`, runs the checks, builds the zip, writes the notes, and publishes the release. |
 
 A pull request or a tag that a workflow makes starts no workflow by itself: this is a rule of GitHub. This is why Prepare release starts the CI, and Tag release starts Release.
 
@@ -52,7 +52,9 @@ These settings are in GitHub, not in the repository. Only an administrator of th
 
 ## While you develop
 
-Each change that users can notice goes into the CHANGELOG, under `## Unreleased` at the top. Create this section with the first change after a release. Write for users: what changes for them, and what they must do. Prepare release refuses to run when the section is missing or empty.
+Each change that users can notice goes into the CHANGELOG, under `## Unreleased` at the top: the notes of the next release. Create this section with the first change after a release. Write for users: what changes for them, and what they must do. Prepare release refuses to run when the section is missing or empty.
+
+Every run of the CI shows the notes of the next release, with links that work: open the run in **Actions > CI**, and read "Notes of the next release" on its **Summary** page. When they are empty, it says so.
 
 ## Release a version
 
@@ -62,7 +64,7 @@ Each change that users can notice goes into the CHANGELOG, under `## Unreleased`
    - `X` for a change that can break a scenario or a script.
 
    `X.Y.Z-beta`, such as `1.1.0-beta`, is published as a pre-release. It comes before `X.Y.Z`: `1.1.0` can follow `1.1.0-beta`, and `1.1.0-beta` cannot follow `1.1.0`. No other form is a version.
-2. **Dry run, if you want:** in **Actions > Release > Run workflow**, keep "Dry run" checked and run it on `main`. It runs the checks, builds the zip and writes the notes of the next release: on `main`, the `## Unreleased` section. They are on the summary page of the run, and in its artifact `release-dry-run`. Nothing is published. Until the version is prepared, `plugin.json` gives the last version released: the zip has its name, and the run warns that it is released already.
+2. **Read the notes of the next release:** on the **Summary** page of the last CI run on `main`, in **Actions > CI**. They are the notes that the version will publish. To change them, change `## Unreleased` on `main`, as for any change.
 3. **Prepare:** in **Actions > Prepare release > Run workflow**, give the version and run it. A few minutes later, the pull request "Release `<version>`" is open, and its CI is running.
 
    Prepare release refuses a version it cannot prepare, at its step "Set the version and date the CHANGELOG", and the message of its log says what to do. It refuses a version that is not `X.Y.Z` or `X.Y.Z-beta`, such as `v1.1.0` or `1.1.0beta`; that does not come after the version of `plugin.json`; whose tag exists, since a released or abandoned version is never prepared again; whose branch `release/<version>` exists; or that has a section in the CHANGELOG already. It also refuses to run when the notes of the next release are empty. A refusal changes no file, and pushes nothing.
@@ -80,9 +82,9 @@ Never publish with the **Draft a new release** form of GitHub: the release would
 | Failed | What to do |
 |---|---|
 | Prepare release | Read the log of its run. If it refused the version, its message says why and what to do. If the checks failed, nothing was pushed: fix `main`, and run it again. If the branch `release/<version>` exists from an earlier run, close its pull request and delete the branch first. |
-| The CI of the release pull request | Fix it on the branch, as on any pull request. |
+| The CI of the release pull request | Fix it on the branch, as on any pull request. If the fix needs an entry in the CHANGELOG, write it in the section of the version: a release branch has no `## Unreleased`. When its step "Check that a release branch has no notes of the next release" fails, changes reached the branch after Prepare release dated the notes: they would ship untested, and missing from the notes of the version. Close the release pull request, delete its branch, and prepare the version again. |
 | Tag release | Tag the merge commit by hand, as in [Without the workflows](#without-the-workflows). A tag you push starts Release. |
-| Release, because of a cause outside the repository (GitHub down, for example) | Run it again on the tag: **Actions > Release > Run workflow**, choose the tag, uncheck "Dry run". |
+| Release, because of a cause outside the repository (GitHub down, for example) | Run it again on the tag: **Actions > Release > Run workflow**, choose the tag in "Use workflow from", and run it. |
 | Release, because of the code or the workflow | Fix it on `main`. Then delete the tag, and the release if it exists, and tag the fixed commit. A released version must never change once people may have downloaded it: if they may have, release a new version instead. |
 
 ## Without the workflows
