@@ -1,14 +1,14 @@
 """Read the form of a macro, its runnable.json, as DSS does."""
 
-import json
 from typing import Any
 
 from support.dataiku_stub import RUNNABLES
+from support.files import read_json
 
 
 def read_form(macro_id: str) -> dict[str, Any]:
     """Return the runnable.json of a macro, from the id of the macro: its form, with its parameters."""
-    form: dict[str, Any] = json.loads((RUNNABLES / macro_id / "runnable.json").read_text(encoding="utf-8"))
+    form: dict[str, Any] = read_json(RUNNABLES / macro_id / "runnable.json")
     return form
 
 
