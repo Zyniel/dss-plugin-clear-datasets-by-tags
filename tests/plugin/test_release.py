@@ -49,10 +49,12 @@ EMPTY_NEXT_RELEASE_NOTES = 'The notes of the next release are empty: CHANGELOG.m
 CHANGELOG_WITH_A_NEW_NOTE = CHANGELOG.replace("- A fix.", "- A new option.\n- A fix.")
 # The branch of the pull request of the tests, which left main at its first commit.
 PULL_REQUEST_BRANCH = "pull-request"
+# The file of the plugin that change_plugin() changes.
+CHANGED_PLUGIN_FILE = "python-lib/core/runner.py"
 # The files of that first commit, besides those of the copy of the repository: one in each folder of the plugin zip,
 # its README and its license, and a doc that the plugin zip does not hold.
 BASE_FILES = {
-    "python-lib/core/runner.py": "RUNNER = 1\n",
+    CHANGED_PLUGIN_FILE: "RUNNER = 1\n",
     "python-runnables/clear-datasets-by-tags/runnable.py": "RUNNABLE = 1\n",
     "resource/tag_choices.py": "CHOICES = 1\n",
     "README.md": "# Clear Datasets by Tags\n",
@@ -63,8 +65,6 @@ NOTHING_TO_CHECK = (
     "The pull request changes nothing in plugin.json, python-lib/, python-runnables/ or resource/: "
     "its notes of the next release are not checked.\n"
 )
-# The file of the plugin that change_plugin() changes.
-CHANGED_PLUGIN_FILE = "python-lib/core/runner.py"
 # The CI has no git identity: the commits of the tests get one of their own.
 GIT_IDENTITY = ["-c", "user.name=Tests", "-c", "user.email=tests@example.com"]
 

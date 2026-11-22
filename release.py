@@ -33,13 +33,14 @@ ROOT = Path(__file__).resolve().parent
 CHANGELOG_FILE = "CHANGELOG.md"
 # The heading of the notes of the next release.
 UNRELEASED = "## Unreleased"
-# The branch of a release pull request is this prefix and the version, such as release/1.1.0.
+# The branch of a release pull request is this prefix and the version, such as release/1.1.0. ci.yml checks the same
+# prefix.
 RELEASE_BRANCH_PREFIX = "release/"
 # The files and folders of the plugin: what the plugin zip holds, but its README and its license. A pull request that
 # changes them adds to the notes of the next release. A folder ends with "/", for git and for the reader.
 PLUGIN_PATHS = ["plugin.json", *(f"{folder}/" for folder in PLUGIN_FOLDERS)]
-# The label of a pull request whose change users cannot notice: the CI does not check its notes. ci.yml tests the same
-# name. It is the name of the label on GitHub, so it stays: "changelog" means the file CHANGELOG.md, not the notes.
+# The label of a pull request whose change users cannot notice: the CI does not check its notes. ci.yml checks the
+# same name. It is the name of the label on GitHub, so it stays: "changelog" means the file CHANGELOG.md, not the notes.
 NO_CHANGELOG_LABEL = "no-changelog"
 # A version is X.Y.Z, or X.Y.Z-beta for a pre-release, and nothing else. As in semantic versioning, which Dataiku
 # recommends for a plugin, a number has no leading zero.
