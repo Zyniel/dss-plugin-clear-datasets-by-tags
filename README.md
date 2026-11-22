@@ -58,7 +58,7 @@ Its default values.
 
 ## Install
 
-1. Download `dss-plugin-clear-datasets-by-tags-<version>.zip` from the [latest release](https://github.com/Zyniel/dss-plugin-clear-datasets-by-tags/releases/latest).
+1. Download `dss-plugin-clear-datasets-by-tags-<version>.zip` from the latest release, at the top of the [releases](https://github.com/Zyniel/dss-plugin-clear-datasets-by-tags/releases).
 2. In DSS, as an administrator: **Plugins > Add plugin > Upload**, then select the zip. DSS lists the plugin as **Clear Datasets by Tags**, with the id `clear-datasets-by-tags`. To update, read the [CHANGELOG](CHANGELOG.md), then upload the new zip in **Plugins > Installed > Clear Datasets by Tags**.
 3. Set the [plugin settings](#plugin-settings) if needed.
 
