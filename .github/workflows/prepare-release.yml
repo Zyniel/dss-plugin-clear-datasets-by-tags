@@ -2,8 +2,10 @@ name: Prepare release
 
 # Run it from the Actions tab, with the version to release. release.py checks that it can prepare the version, sets
 # it in every file and turns the "## Unreleased" section of the CHANGELOG into the section of the version. Then the
-# workflow runs the checks, opens the pull request release/<version> and starts the CI on it. Merging that pull
-# request releases the version: see tag-release.yml and docs/releasing.md.
+# workflow runs the checks, and opens the release pull request release/<version>, with its checklist and its notes.
+# GitHub holds the CI run of that pull request until the maintainer approves it: a pull request that the token of a
+# workflow opens starts no run by itself. Merging it releases the version: see release.yml and docs/releasing.md.
+# https://docs.github.com/en/actions/concepts/security/github_token
 on:
   workflow_dispatch:
     inputs:
@@ -15,7 +17,6 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  actions: write
 
 jobs:
   prepare:
@@ -46,26 +47,31 @@ jobs:
           git switch -c "$BRANCH"
           git commit -a -m "Release $VERSION"
           git push origin "$BRANCH"
+      # The checklist of the runbook, and the notes of the version, with links to the files of the branch.
       - name: Open the pull request
         run: |
-          uv run python release.py notes "$VERSION" --ref "$BRANCH" --repository "$GITHUB_REPOSITORY" > release-notes.md
-          verification="https://github.com/$GITHUB_REPOSITORY/blob/$BRANCH/docs/verification.md"
+          uv run --locked python release.py notes "$VERSION" --ref "$BRANCH" --repository "$GITHUB_REPOSITORY" \
+            > "$RUNNER_TEMP/release-notes.md"
+          docs="https://github.com/$GITHUB_REPOSITORY/blob/$BRANCH/docs"
           {
-            echo "Prepared by the Prepare release workflow. Merging it tags \`$VERSION\` and publishes its release."
+            echo "Prepared by the Prepare release workflow. Merging it tags \`$VERSION\` and publishes its release,"
+            echo "as the [runbook]($docs/releasing.md#release-a-version) says. While it is open, merge nothing else"
+            echo "into \`main\`."
             echo
             echo "## Before merging"
             echo
-            echo "- [ ] The CI of this branch passes."
-            echo "- [ ] The \`plugin-zip\` artifact of that CI run installs on a test DSS, and the checks of"
-            echo "  [verification]($verification) that this release touches pass."
-            echo "- [ ] The notes below read well. To change them, edit \`CHANGELOG.md\` on this branch."
+            echo "- [ ] **The CI:** approve its run, and it passes. GitHub holds the CI of a pull request that a"
+            echo "  workflow opened until you approve it: click **Awaiting approval**, then"
+            echo "  **Approve workflows to run**."
+            echo "- [ ] **The release review** of everything since the tag of the last release has nothing open."
+            echo "- [ ] **The integration tests** pass on this branch, on the test DSS, with \`install_plugin: true\`:"
+            echo "  see [integration tests]($docs/integration-tests.md)."
+            echo "- [ ] **The notes** below read well. To change them, edit the section of \`$VERSION\` in"
+            echo "  \`CHANGELOG.md\` on this branch."
             echo
-            echo "## Notes of the release"
+            echo "## Notes of $VERSION"
             echo
-            cat release-notes.md
-          } > pull-request.md
-          gh pr create --base main --head "$BRANCH" --title "Release $VERSION" --body-file pull-request.md
-      # A pull request opened with the token of a workflow starts no workflow by itself: start the CI on its branch.
-      # Its checks count for the pull request like any other run.
-      - name: Start the CI on the branch
-        run: gh workflow run ci.yml --ref "$BRANCH"
+            cat "$RUNNER_TEMP/release-notes.md"
+          } > "$RUNNER_TEMP/pull-request.md"
+          gh pr create --base main --head "$BRANCH" --title "Release $VERSION" \
+            --body-file "$RUNNER_TEMP/pull-request.md"

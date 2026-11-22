@@ -1,0 +1,17 @@
+{
+  "name": "Create release tags",
+  "target": "tag",
+  "enforcement": "active",
+  "bypass_actors": [
+    {"actor_id": 15368, "actor_type": "Integration", "bypass_mode": "always"}
+  ],
+  "conditions": {
+    "ref_name": {
+      "include": ["~ALL"],
+      "exclude": []
+    }
+  },
+  "rules": [
+    {"type": "creation"}
+  ]
+}

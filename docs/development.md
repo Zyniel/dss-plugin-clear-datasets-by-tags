@@ -61,7 +61,7 @@ Git uses it for your commits in this repository, and for the commits Claude Code
 ├── LICENSE                       MIT License
 ├── build_plugin_zip.py           Builds the zip to install in DSS
 ├── check.py                      Runs the checks of the CI
-├── release.py                    Prepares a release, prints notes, checks a release branch and a pull request
+├── release.py                    Prepares a release, reads a version, prints notes, checks a branch and a pull request
 ├── pyproject.toml                Development tools and their settings
 ├── uv.lock                       Exact versions of the tools
 ├── .python-version               Python 3.9, the version DSS 13 runs
@@ -71,11 +71,11 @@ Git uses it for your commits in this repository, and for the commits Claude Code
 │       └── ruff_after_edit.py    Checks with ruff each Python file that Claude Code edits
 └── .github/
     ├── actions/setup/            The setup step of the workflows: checkout, uv, environment
-    ├── workflows/                See releasing.md for the last three
+    ├── workflows/                See releasing.md for the last two
     │   ├── ci.yml                Checks and tests on each push and pull request
-    │   ├── prepare-release.yml   Opens the pull request of a release
-    │   ├── tag-release.yml       Tags a merged release pull request
-    │   └── release.yml           Publishes the release of a version tag
+    │   ├── prepare-release.yml   Opens the release pull request of a version
+    │   └── release.yml           Tags and publishes a version when its release pull request is merged
+    ├── rulesets/                 The rulesets of main and of the tags, as releasing.md applies them
     ├── dependabot.yml            Updates the GitHub Actions, once a month
     ├── ISSUE_TEMPLATE/           The bug report form
     ├── pull_request_template.md  The checklist of a pull request
@@ -146,7 +146,7 @@ The fake objects copy the shape of the DSS answers. If a real DSS answers in ano
 
 ## The CI
 
-`.github/workflows/ci.yml` runs on each push and pull request, and when the Prepare release workflow starts it.
+`.github/workflows/ci.yml` runs on each push and pull request. On a release pull request, which a workflow opens, it waits until the maintainer approves its run: see [releasing](releasing.md#release-a-version).
 
 | Job | Steps |
 |---|---|
@@ -162,7 +162,7 @@ The setup step is the composite action `.github/actions/setup`. It checks out th
 
 Dependabot keeps the actions of the workflows and of the setup step current: once a month, it opens one pull request with every update. Its settings are in `.github/dependabot.yml`.
 
-Three more workflows release a version: `prepare-release.yml`, `tag-release.yml` and `release.yml`. See [releasing](releasing.md).
+Two more workflows release a version: `prepare-release.yml` and `release.yml`. See [releasing](releasing.md).
 
 ## Change an option
 
@@ -182,4 +182,4 @@ The options of the "Summary" section are the same for all macros, and the "Run" 
 
 ## Release a version
 
-See [releasing](releasing.md). In short: write the changes under `## Unreleased` in the [CHANGELOG](../CHANGELOG.md), run the Prepare release workflow, test the zip of the release pull request on a DSS, and merge it. The workflows set the version, tag it and publish the release with the zip.
+See [releasing](releasing.md). In short: write the changes under `## Unreleased` in the [CHANGELOG](../CHANGELOG.md), have an agent run the release review, run the Prepare release workflow, approve the CI of the release pull request, run the integration tests on its branch, and merge it. The merge tags the version and publishes the release with the plugin zip.

@@ -1,9 +1,11 @@
-"""Tests of release.py at its command line: prepare a version, print notes, check a release branch and a pull request.
+"""Tests of release.py at its command line: prepare a version, read one, print notes, check a branch and a pull request.
 
-The notes are those of a version, or the notes of the next release, which a release branch must not have, and which a
-pull request that changes the plugin adds to. The tests run a copy of release.py, and of the script it imports, in a
-copy of the files a release changes, as the workflows run it: a git repository whose remote origin holds the tags and
-branches of the versions. See docs/releasing.md.
+The Release workflow reads the version of the plugin, and whether a version is a pre-release: it publishes the
+version of the plugin, as a pre-release when it is one. The notes are those of a version, or the notes
+of the next release, which a release branch must not have, and which a pull request that changes the plugin adds to.
+The tests run a copy of release.py, and of the script it imports, in a copy of the files a release changes, as the
+workflows run it: a git repository whose remote origin holds the tags and branches of the versions. See
+docs/releasing.md.
 """
 
 import os
@@ -138,6 +140,16 @@ def run_release(repo: Path, *arguments: str) -> subprocess.CompletedProcess[str]
 def run_prepare(repo: Path, version: str) -> subprocess.CompletedProcess[str]:
     """Run `release.py prepare` on the copy of the repository, on the day of the tests."""
     return run_release(repo, "prepare", version, "--date", DAY)
+
+
+def run_version(repo: Path) -> subprocess.CompletedProcess[str]:
+    """Run `release.py version`, as the Release workflow runs it to read the version of the plugin."""
+    return run_release(repo, "version")
+
+
+def run_is_pre_release(repo: Path, version: str) -> subprocess.CompletedProcess[str]:
+    """Run `release.py is-pre-release`, as the Release workflow runs it before it publishes the version."""
+    return run_release(repo, "is-pre-release", version)
 
 
 def run_notes(repo: Path, version: str, *, ref: str) -> subprocess.CompletedProcess[str]:
@@ -324,6 +336,46 @@ def test_prepare_refuses_when_it_cannot_read_the_tags_and_branches_of_origin(rep
     assert result.returncode == 1
     assert result.stderr.startswith("error: Cannot read the tags and branches of origin: fatal: ")
     assert read_copied_files(repo) == before
+
+
+@pytest.mark.parametrize("version", ["1.0.0", "1.0.3-beta"])
+def test_the_version_of_the_plugin_is_the_version_of_plugin_json(repo: Path, version: str) -> None:
+    set_version(repo, version)
+
+    result = run_version(repo)
+
+    assert (result.returncode, result.stdout, result.stderr) == (0, f"{version}\n", "")
+
+
+def test_a_version_of_the_plugin_that_is_not_a_version_is_refused(repo: Path) -> None:
+    set_version(repo, "1.0")
+
+    result = run_version(repo)
+
+    assert (result.returncode, result.stdout) == (1, "")
+    assert result.stderr == (
+        "error: plugin.json: '1.0' is not a version such as 1.1.0, or 1.1.0-beta for a pre-release.\n"
+    )
+
+
+@pytest.mark.parametrize(
+    ("version", "answer"),
+    [("1.1.0-beta", "true"), ("0.1.0-beta", "true"), ("1.1.0", "false"), ("1.0.0", "false")],
+)
+def test_a_version_with_beta_is_a_pre_release_and_a_version_without_is_not(
+    repo: Path, version: str, answer: str
+) -> None:
+    result = run_is_pre_release(repo, version)
+
+    assert (result.returncode, result.stdout, result.stderr) == (0, f"{answer}\n", "")
+
+
+@pytest.mark.parametrize("version", ["1.1.0-rc.1", "1.1.0beta", "v1.1.0-beta"])
+def test_only_a_version_is_a_pre_release_or_not(repo: Path, version: str) -> None:
+    result = run_is_pre_release(repo, version)
+
+    assert (result.returncode, result.stdout) == (1, "")
+    assert result.stderr == f"error: {version!r} is not a version such as 1.1.0, or 1.1.0-beta for a pre-release.\n"
 
 
 def test_the_notes_are_the_section_of_the_version_with_absolute_links(repo: Path) -> None:
@@ -529,11 +581,12 @@ def test_the_command_line_reports_an_error_without_a_traceback(repo: Path) -> No
 
 
 def test_the_changelog_of_the_repository_can_be_released() -> None:
-    # The version of plugin.json has its notes: on main, those of the last release; on a release branch, those that
-    # Prepare release dated.
-    version = read_json(ROOT / "plugin.json")["version"]
+    # The version of the plugin is a version, and has its notes: on main, those of the last release; on a release
+    # branch, those that Prepare release dated. So the Release workflow can publish it.
+    version_run = run_version(ROOT)
 
-    result = run_notes(ROOT, version, ref="main")
+    result = run_notes(ROOT, version_run.stdout.strip(), ref="main")
 
+    assert version_run.returncode == 0
     assert result.returncode == 0
     assert result.stdout.strip()
