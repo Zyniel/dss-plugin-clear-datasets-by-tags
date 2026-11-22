@@ -1,6 +1,7 @@
 """Tests of release.py at its command line: prepare a version, and write the notes of its release.
 
-They run a copy of release.py in a copy of the files a release changes, as the workflows run it. See docs/releasing.md.
+They run a copy of release.py in a copy of the files a release changes, as the workflows run it: a git repository
+whose remote origin holds the tags and branches of the versions. See docs/releasing.md.
 """
 
 import os
@@ -39,13 +40,38 @@ def repo(tmp_path: Path) -> Path:
     """Return a copy of release.py and of the files it changes, with a CHANGELOG that has unreleased changes.
 
     The copies are at version 1.0.0, whatever the version of the repository: the tests must pass in every release.
+    They are in a git repository, whose remote origin has no tag and no branch yet.
     """
-    shutil.copy(ROOT / "release.py", tmp_path)
+    copy = tmp_path / "repo"
+    copy.mkdir()
+    for name in ["release.py", *release.VERSION_LINES]:
+        shutil.copy(ROOT / name, copy)
+    set_version(copy, "1.0.0")
+    write_changelog(copy, CHANGELOG)
+    run_git(tmp_path, "init", "--bare", "origin.git")
+    run_git(copy, "init")
+    run_git(copy, "remote", "add", "origin", str(tmp_path / "origin.git"))
+    return copy
+
+
+def run_git(folder: Path, *arguments: str) -> None:
+    """Run a git command in a folder, and fail the test if it fails."""
+    subprocess.run(["git", *arguments], cwd=folder, capture_output=True, check=True)
+
+
+def push_to_origin(repo: Path, ref: str) -> None:
+    """Push a new commit of the copy of the repository to a ref of origin, such as refs/tags/1.1.0."""
+    # The CI has no git identity: the commit gets one of its own.
+    identity = ["-c", "user.name=Tests", "-c", "user.email=tests@example.com"]
+    run_git(repo, *identity, "commit", "--allow-empty", "--message", f"Commit of {ref}")
+    run_git(repo, "push", "origin", f"HEAD:{ref}")
+
+
+def set_version(repo: Path, version: str) -> None:
+    """Set the version in every file of the copy of the repository that holds it, as `release.py prepare` does."""
     for name in release.VERSION_LINES:
-        text = (ROOT / name).read_text(encoding="utf-8")
-        (tmp_path / name).write_text(release.replace_version(text, name, "1.0.0"), encoding="utf-8")
-    write_changelog(tmp_path, CHANGELOG)
-    return tmp_path
+        text = read_copied_file(repo, name)
+        (repo / name).write_text(release.replace_version(text, name, version), encoding="utf-8")
 
 
 def run_release(repo: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
@@ -105,24 +131,31 @@ def test_prepare_changes_only_the_version_lines(repo: Path) -> None:
         assert sum(old != new for old, new in zip(lines, after)) == 1, name
 
 
-def test_the_first_release_keeps_the_version_of_plugin_json(repo: Path) -> None:
-    write_changelog(repo, CHANGELOG.replace("## 1.0.0 - 2026-11-18", "## 0.9.0 - 2026-01-01"))
-
-    assert run_prepare(repo, "1.0.0").returncode == 0
-
-    assert read_json(repo / "plugin.json")["version"] == "1.0.0"
-    assert "\n## 1.0.0 - 2026-12-01\n" in read_copied_file(repo, "CHANGELOG.md")
-
-
 @pytest.mark.parametrize(
     ("version", "changelog", "message"),
     [
-        ("1.1", CHANGELOG, r"'1\.1' is not a version"),
+        ("1.1", CHANGELOG, r"'1\.1' is not a version such as 1\.1\.0, or 1\.1\.0-beta for a pre-release\."),
         ("v1.1.0", CHANGELOG, r"'v1\.1\.0' is not a version"),
-        ("0.9.0", CHANGELOG, r"0\.9\.0 is lower than the version of plugin\.json"),
-        ("1.0.0", CHANGELOG, r"already has a section for 1\.0\.0"),
+        ("1.1.0beta", CHANGELOG, r"'1\.1\.0beta' is not a version"),
+        ("1.1.0-rc.1", CHANGELOG, r"'1\.1\.0-rc\.1' is not a version"),
+        ("1.01.0", CHANGELOG, r"'1\.01\.0' is not a version"),
+        (
+            "1.1.0",
+            CHANGELOG.replace("## 1.0.0 - 2026-11-18", "## 1.1.0 - 2026-11-18"),
+            r"CHANGELOG\.md already has a section for 1\.1\.0: choose a new version\.",
+        ),
         ("1.1.0", CHANGELOG.replace("## Unreleased", "## Later"), r'no "## Unreleased" section'),
         ("1.1.0", "# Changelog\n\n## Unreleased\n\n## 1.0.0 - 2026-11-18\n\nText.\n", r"or it is empty"),
+    ],
+    ids=[
+        "too short",
+        "with a v",
+        "beta without a dash",
+        "another pre-release",
+        "a leading zero",
+        "a section already",
+        "no unreleased section",
+        "empty notes of the next release",
     ],
 )
 def test_prepare_refuses_and_changes_nothing(repo: Path, version: str, changelog: str, message: str) -> None:
@@ -136,11 +169,89 @@ def test_prepare_refuses_and_changes_nothing(repo: Path, version: str, changelog
     assert read_copied_files(repo) == before
 
 
-def test_a_pre_release_can_follow_the_version_it_announces(repo: Path) -> None:
-    assert run_prepare(repo, "1.1.0-beta").returncode == 0
+@pytest.mark.parametrize(
+    ("current", "version"),
+    [
+        ("1.0.0", "1.0.1"),
+        ("1.0.0", "1.1.0-beta"),
+        ("1.0.2-beta", "1.0.3-beta"),
+        ("1.0.2-beta", "1.0.2"),
+        ("1.9.0", "1.10.0"),
+    ],
+)
+def test_a_version_after_the_version_of_the_plugin_is_prepared(repo: Path, current: str, version: str) -> None:
+    set_version(repo, current)
 
-    assert read_json(repo / "plugin.json")["version"] == "1.1.0-beta"
-    assert "\n## 1.1.0-beta - 2026-12-01\n" in read_copied_file(repo, "CHANGELOG.md")
+    assert run_prepare(repo, version).returncode == 0
+
+    assert read_json(repo / "plugin.json")["version"] == version
+    assert f"\n## {version} - 2026-12-01\n" in read_copied_file(repo, "CHANGELOG.md")
+
+
+@pytest.mark.parametrize(
+    ("current", "version"),
+    [
+        ("1.0.0", "1.0.0"),
+        ("1.0.2-beta", "1.0.2-beta"),
+        ("1.1.0", "1.1.0-beta"),
+        ("1.0.2", "1.0.1"),
+        ("1.10.0", "1.9.0"),
+    ],
+)
+def test_a_version_that_is_not_after_the_version_of_the_plugin_is_refused(
+    repo: Path, current: str, version: str
+) -> None:
+    set_version(repo, current)
+    before = read_copied_files(repo)
+
+    result = run_prepare(repo, version)
+
+    assert result.returncode == 1
+    assert result.stderr == (
+        f"error: {version} is not after {current}, the version of plugin.json. Choose a later version: "
+        "a pre-release such as 1.1.0-beta comes before 1.1.0.\n"
+    )
+    assert read_copied_files(repo) == before
+
+
+@pytest.mark.parametrize(
+    ("ref", "message"),
+    [
+        ("refs/tags/1.1.0", "The tag 1.1.0 exists: 1.1.0 is released, or abandoned. Choose a new version."),
+        (
+            "refs/heads/release/1.1.0",
+            "The branch release/1.1.0 exists: close its release pull request and delete the branch, "
+            "then prepare 1.1.0 again.",
+        ),
+    ],
+    ids=["its tag", "its release branch"],
+)
+def test_a_version_whose_tag_or_release_branch_exists_is_refused(repo: Path, ref: str, message: str) -> None:
+    push_to_origin(repo, ref)
+    before = read_copied_files(repo)
+
+    result = run_prepare(repo, "1.1.0")
+
+    assert (result.returncode, result.stderr) == (1, f"error: {message}\n")
+    assert read_copied_files(repo) == before
+
+
+def test_the_tag_and_the_release_branch_of_a_pre_release_do_not_block_its_version(repo: Path) -> None:
+    push_to_origin(repo, "refs/tags/1.1.0-beta")
+    push_to_origin(repo, "refs/heads/release/1.1.0-beta")
+
+    assert run_prepare(repo, "1.1.0").returncode == 0
+
+
+def test_prepare_refuses_when_it_cannot_read_the_tags_and_branches_of_origin(repo: Path) -> None:
+    run_git(repo, "remote", "remove", "origin")
+    before = read_copied_files(repo)
+
+    result = run_prepare(repo, "1.1.0")
+
+    assert result.returncode == 1
+    assert result.stderr.startswith("error: Cannot read the tags and branches of origin: fatal: ")
+    assert read_copied_files(repo) == before
 
 
 def test_the_notes_are_the_section_of_the_version_with_absolute_links(repo: Path) -> None:

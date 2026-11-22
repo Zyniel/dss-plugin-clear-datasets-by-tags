@@ -34,7 +34,7 @@ Merge the pull request ─────────────▶ Tag release: t
 | Workflow | Starts | Does |
 |---|---|---|
 | `ci.yml` | On each push and pull request, and when Prepare release starts it | ruff, mypy, the tests on Python 3.9 and 3.13, and the zip, kept as the artifact `plugin-zip`. |
-| `prepare-release.yml` | By hand, in the Actions tab | Checks that the version is new, runs `release.py prepare` and `uv lock`, runs the checks, pushes `release/<version>`, opens its pull request and starts the CI on it. |
+| `prepare-release.yml` | By hand, in the Actions tab | Runs `release.py prepare`, which checks that it can prepare the version, and `uv lock`, runs the checks, pushes `release/<version>`, opens its pull request and starts the CI on it. |
 | `tag-release.yml` | When a pull request from a `release/` branch is merged | Checks that the branch is named after the version of `plugin.json`, tags the merge commit, and starts Release on the tag. |
 | `release.yml` | On a version tag, and by hand for a dry run | Checks that the tag is the version of `plugin.json`, runs the checks, builds the zip, writes the notes, and publishes the release. A dry run publishes nothing. |
 
@@ -61,9 +61,11 @@ Each change that users can notice goes into the CHANGELOG, under `## Unreleased`
    - `Y` for new features;
    - `X` for a change that can break a scenario or a script.
 
-   A version with a suffix, such as `1.1.0-beta`, is published as a pre-release.
+   `X.Y.Z-beta`, such as `1.1.0-beta`, is published as a pre-release. It comes before `X.Y.Z`: `1.1.0` can follow `1.1.0-beta`, and `1.1.0-beta` cannot follow `1.1.0`. No other form is a version.
 2. **Dry run, if you want:** in **Actions > Release > Run workflow**, keep "Dry run" checked and run it on `main`. It runs the checks, builds the zip and writes the notes of the next release: on `main`, the `## Unreleased` section. They are on the summary page of the run, and in its artifact `release-dry-run`. Nothing is published. Until the version is prepared, `plugin.json` gives the last version released: the zip has its name, and the run warns that it is released already.
 3. **Prepare:** in **Actions > Prepare release > Run workflow**, give the version and run it. A few minutes later, the pull request "Release `<version>`" is open, and its CI is running.
+
+   Prepare release refuses a version it cannot prepare, at its step "Set the version and date the CHANGELOG", and the message of its log says what to do. It refuses a version that is not `X.Y.Z` or `X.Y.Z-beta`, such as `v1.1.0` or `1.1.0beta`; that does not come after the version of `plugin.json`; whose tag exists, since a released or abandoned version is never prepared again; whose branch `release/<version>` exists; or that has a section in the CHANGELOG already. It also refuses to run when the notes of the next release are empty. A refusal changes no file, and pushes nothing.
 4. **Check the pull request:**
    - The CI passes.
    - The zip works: download the artifact `plugin-zip` of its CI run (**Actions > CI**, the run on `release/<version>`), install it on a test DSS, and do the checks of [verification](verification.md) that the release touches.
@@ -77,7 +79,7 @@ Never publish with the **Draft a new release** form of GitHub: the release would
 
 | Failed | What to do |
 |---|---|
-| Prepare release | Read the log of its run. If the checks failed, nothing was pushed: fix `main`, and run it again. If the branch `release/<version>` exists from an earlier run, close its pull request and delete the branch first. |
+| Prepare release | Read the log of its run. If it refused the version, its message says why and what to do. If the checks failed, nothing was pushed: fix `main`, and run it again. If the branch `release/<version>` exists from an earlier run, close its pull request and delete the branch first. |
 | The CI of the release pull request | Fix it on the branch, as on any pull request. |
 | Tag release | Tag the merge commit by hand, as in [Without the workflows](#without-the-workflows). A tag you push starts Release. |
 | Release, because of a cause outside the repository (GitHub down, for example) | Run it again on the tag: **Actions > Release > Run workflow**, choose the tag, uncheck "Dry run". |
@@ -88,7 +90,7 @@ Never publish with the **Draft a new release** form of GitHub: the release would
 Every step can also be done by hand:
 
 ```bash
-uv run python release.py prepare 1.1.0   # The version in every file, and the CHANGELOG dated
+uv run python release.py prepare 1.1.0   # The version in every file, and the CHANGELOG dated. Reads origin.
 uv lock
 # Commit, open a pull request, check it as above, and merge it. From a branch release/1.1.0,
 # Tag release does the rest. From any other branch, tag the merge commit:
