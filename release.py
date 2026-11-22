@@ -1,9 +1,12 @@
-"""Release tools: prepare a version, print notes, check a release branch and a pull request. See docs/releasing.md.
+"""Release tools: prepare a version, read one, print notes, check a branch and a pull request. See docs/releasing.md.
 
 - `uv run python release.py prepare 1.1.0` sets the version in plugin.json and pyproject.toml, and turns the
   "## Unreleased" section of the CHANGELOG into "## 1.1.0 - <today>". Run `uv lock` after it. The README holds no
   version: a release never changes it. It first checks that it can prepare the version: its form, that it comes
   after the version of plugin.json, that origin has neither its tag nor its release branch, and the CHANGELOG.
+- `uv run python release.py version` prints the version of the plugin, from plugin.json, and
+  `uv run python release.py is-pre-release 1.1.0-beta` prints true for a pre-release, false for a version without
+  -beta. The Release workflow publishes the version of the plugin, as a pre-release when it is one.
 - `uv run python release.py notes 1.1.0 --ref 1.1.0 --repository owner/name` prints the notes of the version: its
   section of the CHANGELOG, with its relative links made absolute, so that they work on the release page.
 - `uv run python release.py next-release-notes --ref main --repository owner/name` prints the notes of the next
@@ -89,6 +92,28 @@ def parse_version(version: str) -> tuple[int, int, int, int]:
     if not match:
         raise ReleaseError(f"{version!r} is not a version such as 1.1.0, or 1.1.0-beta for a pre-release.")
     return int(match[1]), int(match[2]), int(match[3]), 0 if match[4] else 1
+
+
+def read_plugin_version(root: Path) -> str:
+    """Return the version of the plugin, from its plugin.json.
+
+    :param root: the folder of the repository
+    :raises ReleaseError: if it is not a version
+    """
+    version: str = json.loads((root / "plugin.json").read_text(encoding="utf-8"))["version"]
+    try:
+        parse_version(version)
+    except ReleaseError as error:
+        raise ReleaseError(f"plugin.json: {error}") from None
+    return version
+
+
+def is_pre_release(version: str) -> bool:
+    """Return whether a version is a pre-release: X.Y.Z-beta.
+
+    :raises ReleaseError: if it is not a version
+    """
+    return parse_version(version)[3] == 0
 
 
 def read_git(root: Path, arguments: list[str], failure: str) -> str:
@@ -178,7 +203,7 @@ def prepare(root: Path, version: str, today: datetime.date) -> None:
         lines to replace: the "## Unreleased" heading, or the version
     """
     order = parse_version(version)
-    current = json.loads((root / "plugin.json").read_text(encoding="utf-8"))["version"]
+    current = read_plugin_version(root)
     if order <= parse_version(current):
         raise ReleaseError(
             f"{version} is not after {current}, the version of plugin.json. Choose a later version: "
@@ -307,13 +332,14 @@ def check_pull_request(root: Path, base: str, head: str) -> str:
 
 
 def main(argv: Optional[list[str]] = None) -> None:
-    """Run the command of the command line: prepare, notes, next-release-notes, check-branch or check-pull-request.
+    """Run the command of the command line, such as prepare, version or notes: `--help` lists them.
 
     :param argv: the arguments, without the name of the script. Default: those of `sys.argv`.
     :raises SystemExit: with the reason, if the release cannot go on
     """
     parser = argparse.ArgumentParser(
-        description="Prepare a release, print notes, check a release branch or a pull request. See docs/releasing.md."
+        description="Prepare a release, read a version, print notes, check a branch or a pull request. "
+        "See docs/releasing.md."
     )
     commands = parser.add_subparsers(dest="command", required=True)
     prepare_command = commands.add_parser(
@@ -321,6 +347,11 @@ def main(argv: Optional[list[str]] = None) -> None:
     )
     prepare_command.add_argument("version", help="Such as 1.1.0, or 1.1.0-beta for a pre-release.")
     prepare_command.add_argument("--date", type=datetime.date.fromisoformat, help="Default: today, in UTC.")
+    commands.add_parser("version", help="Print the version of the plugin, from plugin.json.")
+    is_pre_release_command = commands.add_parser(
+        "is-pre-release", help="Print true if the version is a pre-release, such as 1.1.0-beta, else false."
+    )
+    is_pre_release_command.add_argument("version", help="Such as 1.1.0, or 1.1.0-beta.")
     notes_command = commands.add_parser("notes", help="Print the notes of a version, with absolute links.")
     notes_command.add_argument("version", help="The version whose notes to print.")
     next_release_notes_command = commands.add_parser(
@@ -344,6 +375,13 @@ def main(argv: Optional[list[str]] = None) -> None:
         if args.command == "prepare":
             prepare(ROOT, args.version, args.date or datetime.datetime.now(datetime.timezone.utc).date())
             print(f"Prepared {args.version}. Run `uv lock`, then commit.")
+            return
+        if args.command == "version":
+            print(read_plugin_version(ROOT))
+            return
+        if args.command == "is-pre-release":
+            # As the Release workflow passes it on: gh release create --prerelease=true.
+            print("true" if is_pre_release(args.version) else "false")
             return
         if args.command == "check-pull-request":
             print(check_pull_request(ROOT, args.base, args.head))

@@ -6,10 +6,10 @@ on:
     # The types of a pull_request run by default, and a label added or removed: the label no-changelog decides whether
     # the notes of the next release are checked. Every job runs again. A required check counts the last pull_request
     # run of the pull request: when it fails, the merge is blocked, even if the push run of the same check passes, and
-    # the run that a label starts replaces it. Seen on pull request #54, 2026-11-22.
+    # the run that a label starts replaces it. Seen on pull request #54, 2026-11-22. On a release pull request, which
+    # Prepare release opens, the run waits until the maintainer approves it, and gives the required checks: no
+    # workflow starts the CI. https://docs.github.com/en/actions/concepts/security/github_token
     types: [opened, synchronize, reopened, labeled, unlabeled]
-  # Prepare release starts it on the branch of a release pull request, which starts no workflow by itself.
-  workflow_dispatch:
 
 jobs:
   checks:
@@ -32,10 +32,12 @@ jobs:
             uv run --locked python release.py next-release-notes --ref "$GITHUB_SHA" --repository "$GITHUB_REPOSITORY"
           } >> "$GITHUB_STEP_SUMMARY"
       # Prepare release dated the notes of the next release. On its branch, notes of the next release are changes that
-      # came later: this step fails, and says what to do. On any other branch, it passes.
+      # came later: this step fails, and says what to do. On any other branch, it passes. Not on a pull request from a
+      # fork, whose release/ branch is not a release branch of this repository: the next step checks its notes.
       - name: Check that a release branch has no notes of the next release
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         env:
-          # On a pull request, its branch. On a push, or a run that Prepare release starts, the branch of the run.
+          # On a pull request, its branch. On a push, the branch of the run.
           BRANCH: ${{ github.head_ref || github.ref_name }}
         run: uv run --locked python release.py check-branch "$BRANCH"
       # A pull request that changes the plugin adds to the notes of the next release: this step fails when it does not,
