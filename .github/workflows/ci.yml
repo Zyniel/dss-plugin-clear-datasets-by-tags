@@ -16,7 +16,7 @@ jobs:
       - uses: $/.github/actions/setup
       # Ruff, ruff format, mypy, mypy for each runnable and the plugin zip. The tests job runs pytest.
       - run: uv run --locked python check.py --no-tests
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: plugin-zip
           path: dist/*.zip
