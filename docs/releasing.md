@@ -50,7 +50,7 @@ No workflow starts another. The CI of a release pull request starts when you app
 
 ## Set up once
 
-The release process relies on the first four of these settings of GitHub, and the security policy on the last one. Only an administrator of the repository can change them. Each comes with the command that applies it and the command that checks it, from the root of the repository, the same in bash and PowerShell. The rulesets are in `.github/rulesets/`, as the API reads them. Items 2, 3 and 4 are not applied yet: issue #44 applies them, after your OK on each. `gh api repos/Zyniel/dss-plugin-clear-datasets-by-tags/rulesets --jq '.[] | {id, name}'` lists the rulesets of the repository, with their ids.
+The release process relies on the first three of these settings of GitHub, item 4 says why creating a tag stays open, and the security policy relies on the last one. Only an administrator of the repository can change them. Each comes with the command that applies it and the command that checks it, from the root of the repository, the same in bash and PowerShell. The rulesets are in `.github/rulesets/`, as the API reads them. All are applied, and their checks gave the results below on 2026-11-22 (issue #44). `gh api repos/Zyniel/dss-plugin-clear-datasets-by-tags/rulesets --jq '.[] | {id, name}'` lists the rulesets of the repository, with their ids.
 
 1. **GitHub Actions can create pull requests,** so that Prepare release opens the release pull request: **Settings > Actions > General > Workflow permissions**, "Allow GitHub Actions to create and approve pull requests". The token of a workflow can only read, unless the workflow asks for more.
 
@@ -85,13 +85,9 @@ The release process relies on the first four of these settings of GitHub, and th
    ```
 
    The check prints `{"bypass_actors":[],"rules":[{"type":"deletion"},{"type":"non_fast_forward"},{"type":"update"}]}`.
-4. **The ruleset "Create release tags"**: only GitHub Actions creates a tag, if GitHub accepts it as a bypass actor of a ruleset. A bypass covers every rule of its ruleset, so this rule has a ruleset of its own. Issue #44 tries it. If GitHub refuses it, creating a tag stays open, and this item says why.
+4. **Creating a tag stays open:** GitHub does not accept GitHub Actions as a bypass actor of a ruleset of this repository. Issue #44 tried it on 2026-11-22: a ruleset "Create release tags", with the rule `{"type":"creation"}` on every tag and the bypass actor `{"actor_id":15368,"actor_type":"Integration","bypass_mode":"always"}` (GitHub Actions), sent with `gh api --method POST repos/Zyniel/dss-plugin-clear-datasets-by-tags/rulesets --input <the ruleset>`. GitHub answered `422 Validation Failed`, "Actor GitHub Actions integration must be part of the ruleset source or owner organization", and created nothing. A rule `creation` with any other bypass, such as the administrator, would stop Release too: the token of its workflow pushes the tag, and the rule would refuse it.
 
-   ```powershell
-   gh api --method POST repos/Zyniel/dss-plugin-clear-datasets-by-tags/rulesets --input .github/rulesets/create-release-tags.json
-   ```
-
-   The command prints the ruleset it created, with its id. To check it, run the check of item 3 with this id in place of 27543928: it prints the bypass actor of GitHub Actions, `{"actor_id":15368,"actor_type":"Integration","bypass_mode":"always"}`, and the rule `{"type":"creation"}`.
+   So whoever can write to the repository, only you today, can create a tag. Never push one: Release creates the tag of each version. A tag pushed by hand cannot be deleted either (item 3): if it names a version, Prepare release refuses that version, and Release would refuse its tag, which is not on the merge commit of a release pull request. The version is abandoned.
 5. **Private vulnerability reporting:** the [security policy](../.github/SECURITY.md) relies on it.
 
    ```powershell
