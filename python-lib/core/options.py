@@ -13,7 +13,7 @@ on_recap_error): scenarios and API calls use them. Everywhere else, it is the su
 from typing import Any, Optional
 
 # The values of "If an error occurs" and "If the summary is not written". DSS shows a macro run as a
-# success or a failure, never as a warning.
+# success or a failure, never as a warning (scratch).
 ON_ERROR_CONTINUE = "CONTINUE"  # Go on. The run ends as a success.
 ON_ERROR_FAIL = "FAIL"  # Go on. The run ends in error.
 ON_ERROR_STOP = "STOP"  # Stop at the first error. The run ends in error. Only for the work.
