@@ -9,6 +9,10 @@ inputs:
     description: "The branch, tag or commit to check out, such as main. By default, the commit of the run."
     required: false
     default: ""
+  fetch-depth:
+    description: "How many commits of the history to fetch: by default 1, the commit alone. 2 also fetches its parents."
+    required: false
+    default: "1"
 
 runs:
   using: composite
@@ -16,6 +20,7 @@ runs:
     - uses: actions/checkout@v7
       with:
         ref: ${{ inputs.ref }}
+        fetch-depth: ${{ inputs.fetch-depth }}
     # The environment is on the Python of .python-version. check.py runs the tests on a newer Python itself.
     - uses: astral-sh/setup-uv@v7
     - run: uv sync --locked

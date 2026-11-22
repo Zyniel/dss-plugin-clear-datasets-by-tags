@@ -61,7 +61,7 @@ Git uses it for your commits in this repository, and for the commits Claude Code
 ├── LICENSE                       MIT License
 ├── build_plugin_zip.py           Builds the zip to install in DSS
 ├── check.py                      Runs the checks of the CI
-├── release.py                    Prepares a release, prints notes, checks a release branch
+├── release.py                    Prepares a release, prints notes, checks a release branch and a pull request
 ├── pyproject.toml                Development tools and their settings
 ├── uv.lock                       Exact versions of the tools
 ├── .python-version               Python 3.9, the version DSS 13 runs
@@ -78,6 +78,7 @@ Git uses it for your commits in this repository, and for the commits Claude Code
     │   └── release.yml           Publishes the release of a version tag
     ├── dependabot.yml            Updates the GitHub Actions, once a month
     ├── ISSUE_TEMPLATE/           The bug report form
+    ├── pull_request_template.md  The checklist of a pull request
     ├── CONTRIBUTING.md           How to contribute
     └── SECURITY.md               How to report a vulnerability
 ```
@@ -111,7 +112,7 @@ Good to know:
 uv run python build_plugin_zip.py
 ```
 
-The zip is in `dist/dss-plugin-clear-datasets-by-tags-<version>.zip`. It holds `plugin.json`, `README.md`, `LICENSE`, `python-lib/`, `python-runnables/` and `resource/`: the rest of the repository is for development. The command is the same in bash and PowerShell, and uv installs Python 3.9 and the tools the first time.
+The zip is in `dist/dss-plugin-clear-datasets-by-tags-<version>.zip`. It holds `plugin.json`, `README.md`, `LICENSE`, `python-lib/`, `python-runnables/` and `resource/`: the rest of the repository is for development. Its folders come from `PLUGIN_FOLDERS` in `build_plugin_zip.py`, which the CI also uses to check the notes of a pull request. The command is the same in bash and PowerShell, and uv installs Python 3.9 and the tools the first time.
 
 `uv build` does not build the plugin: it only makes Python wheels, so it stops with a message.
 
@@ -149,14 +150,15 @@ The fake objects copy the shape of the DSS answers. If a real DSS answers in ano
 
 | Job | Steps |
 |---|---|
-| Lint, types and plugin zip | The setup step. Then `release.py next-release-notes` writes the notes of the next release on the summary page of the run, and `release.py check-branch` fails on a release branch that has notes of the next release: see [releasing](releasing.md). Then `check.py --no-tests`. The zip it builds is kept as the `plugin-zip` artifact. |
+| Lint, types and plugin zip | The setup step. Then `release.py next-release-notes` writes the notes of the next release on the summary page of the run, and `release.py check-branch` fails on a release branch that has notes of the next release. On a pull request, `release.py check-pull-request` fails when it changes the plugin and not the notes of the next release, unless it comes from a release branch or has the label `no-changelog`: see [releasing](releasing.md#while-you-develop). Then `check.py --no-tests`. The zip it builds is kept as the `plugin-zip` artifact. |
 | Tests on Python `<version>` | One job for each Python that `check.py` tests: the setup step, then `check.py --tests-on <version>`. |
 
 The matrix of the CI repeats the Python versions of `check.py`, since each tests job is a required check of `main`. A version that `check.py` does not test fails its job, and the log lists the versions it tests.
 
-The setup step is the composite action `.github/actions/setup`. It checks out the repository, installs uv and runs `uv sync --locked`, on the Python of `.python-version`. A workflow calls it with `uses: $/.github/actions/setup`, which GitHub takes from the commit of the run: no checkout comes before it. Its input, optional:
+The setup step is the composite action `.github/actions/setup`. It checks out the repository, installs uv and runs `uv sync --locked`, on the Python of `.python-version`. A workflow calls it with `uses: $/.github/actions/setup`, which GitHub takes from the commit of the run: no checkout comes before it. Its inputs, optional:
 
 - `ref`: the branch, tag or commit to check out. By default, the commit of the run.
+- `fetch-depth`: how many commits of the history to fetch. By default 1, the commit alone. The checks job gives 2, for the parents of the commit: on a pull request, the check of its notes compares the merge with its base.
 
 Dependabot keeps the actions of the workflows and of the setup step current: once a month, it opens one pull request with every update. Its settings are in `.github/dependabot.yml`.
 

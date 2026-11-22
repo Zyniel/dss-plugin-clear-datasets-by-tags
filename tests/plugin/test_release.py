@@ -1,8 +1,9 @@
-"""Tests of release.py at its command line: prepare a version, print notes, and check a release branch.
+"""Tests of release.py at its command line: prepare a version, print notes, check a release branch and a pull request.
 
-The notes are those of a version, or the notes of the next release, which a release branch must not have. The tests
-run a copy of release.py in a copy of the files a release changes, as the workflows run it: a git repository whose
-remote origin holds the tags and branches of the versions. See docs/releasing.md.
+The notes are those of a version, or the notes of the next release, which a release branch must not have, and which a
+pull request that changes the plugin adds to. The tests run a copy of release.py in a copy of the files a release
+changes, as the workflows run it: a git repository whose remote origin holds the tags and branches of the versions.
+See docs/releasing.md.
 """
 
 import os
@@ -44,6 +45,26 @@ WITHOUT_NEXT_RELEASE_NOTES = [
     pytest.param(PREPARED_CHANGELOG, id="dated by Prepare release"),
 ]
 EMPTY_NEXT_RELEASE_NOTES = 'The notes of the next release are empty: CHANGELOG.md has nothing under "## Unreleased".\n'
+# The CHANGELOG once a pull request added to the notes of the next release.
+CHANGELOG_WITH_A_NEW_NOTE = CHANGELOG.replace("- A fix.", "- A new option.\n- A fix.")
+# The branch of the pull request of the tests, which left main at its first commit.
+PULL_REQUEST_BRANCH = "pull-request"
+# The files of that first commit, besides those of the copy of the repository: one in each folder of the plugin zip,
+# its README and its license, and a doc that the plugin zip does not hold.
+BASE_FILES = {
+    "python-lib/core/runner.py": "RUNNER = 1\n",
+    "python-runnables/clear-datasets-by-tags/runnable.py": "RUNNABLE = 1\n",
+    "resource/tag_choices.py": "CHOICES = 1\n",
+    "README.md": "# Clear Datasets by Tags\n",
+    "LICENSE": "MIT License\n",
+    "docs/development.md": "# Development\n",
+}
+NOTHING_TO_CHECK = (
+    "The pull request changes nothing in plugin.json, python-lib/, python-runnables/ or resource/: "
+    "its notes of the next release are not checked.\n"
+)
+# The CI has no git identity: the commits of the tests get one of their own.
+GIT_IDENTITY = ["-c", "user.name=Tests", "-c", "user.email=tests@example.com"]
 
 
 @pytest.fixture
@@ -51,18 +72,28 @@ def repo(tmp_path: Path) -> Path:
     """Return a copy of release.py and of the files it changes, with a CHANGELOG that has unreleased changes.
 
     The copies are at version 1.0.0, whatever the version of the repository: the tests must pass in every release.
-    They are in a git repository, whose remote origin has no tag and no branch yet.
+    They are in a git repository, on main with no commit yet, whose remote origin has no tag and no branch yet.
     """
     copy = tmp_path / "repo"
     copy.mkdir()
-    for name in ["release.py", *release.VERSION_LINES]:
+    for name in ["release.py", "build_plugin_zip.py", *release.VERSION_LINES]:
         shutil.copy(ROOT / name, copy)
     set_version(copy, "1.0.0")
     write_changelog(copy, CHANGELOG)
     run_git(tmp_path, "init", "--bare", "origin.git")
-    run_git(copy, "init")
+    run_git(copy, "init", "--initial-branch=main")
     run_git(copy, "remote", "add", "origin", str(tmp_path / "origin.git"))
     return copy
+
+
+@pytest.fixture
+def pull_request(repo: Path) -> Path:
+    """Return the copy of the repository on the branch of a pull request, which left main at its first commit."""
+    for name, text in BASE_FILES.items():
+        write_copied_file(repo, name, text)
+    commit_all(repo, "The base of the pull request")
+    run_git(repo, "switch", "--create", PULL_REQUEST_BRANCH)
+    return repo
 
 
 def run_git(folder: Path, *arguments: str) -> None:
@@ -70,11 +101,15 @@ def run_git(folder: Path, *arguments: str) -> None:
     subprocess.run(["git", *arguments], cwd=folder, capture_output=True, check=True)
 
 
+def commit_all(repo: Path, message: str) -> None:
+    """Commit every change of the copy of the repository, on its current branch."""
+    run_git(repo, "add", "--all")
+    run_git(repo, *GIT_IDENTITY, "commit", "--message", message)
+
+
 def push_to_origin(repo: Path, ref: str) -> None:
     """Push a new commit of the copy of the repository to a ref of origin, such as refs/tags/1.1.0."""
-    # The CI has no git identity: the commit gets one of its own.
-    identity = ["-c", "user.name=Tests", "-c", "user.email=tests@example.com"]
-    run_git(repo, *identity, "commit", "--allow-empty", "--message", f"Commit of {ref}")
+    run_git(repo, *GIT_IDENTITY, "commit", "--allow-empty", "--message", f"Commit of {ref}")
     run_git(repo, "push", "origin", f"HEAD:{ref}")
 
 
@@ -113,14 +148,26 @@ def run_check_branch(repo: Path, branch: str) -> subprocess.CompletedProcess[str
     return run_release(repo, "check-branch", branch)
 
 
+def run_check_pull_request(repo: Path, base: str, head: str) -> subprocess.CompletedProcess[str]:
+    """Run `release.py check-pull-request` on the copy of the repository, with the base and the head to compare."""
+    return run_release(repo, "check-pull-request", base, head)
+
+
 def read_copied_file(repo: Path, name: str) -> str:
     """Return the text of a file of the copy of the repository."""
     return (repo / name).read_text(encoding="utf-8")
 
 
+def write_copied_file(repo: Path, name: str, text: str) -> None:
+    """Write a file of the copy of the repository, and its folders."""
+    path = repo / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
 def write_changelog(repo: Path, changelog: str) -> None:
     """Replace the CHANGELOG of the copy of the repository."""
-    (repo / "CHANGELOG.md").write_text(changelog, encoding="utf-8")
+    write_copied_file(repo, "CHANGELOG.md", changelog)
 
 
 def read_copied_files(repo: Path) -> dict[str, str]:
@@ -356,6 +403,115 @@ def test_a_branch_that_is_not_a_release_branch_passes_with_notes_of_the_next_rel
         0,
         f"{branch} is not a release branch: its notes of the next release are not checked.\n",
     )
+
+
+def test_a_pull_request_that_changes_the_plugin_and_the_notes_of_the_next_release_passes(pull_request: Path) -> None:
+    write_copied_file(pull_request, "python-lib/core/runner.py", "RUNNER = 2\n")
+    write_changelog(pull_request, CHANGELOG_WITH_A_NEW_NOTE)
+    commit_all(pull_request, "A new option")
+
+    result = run_check_pull_request(pull_request, "main", PULL_REQUEST_BRANCH)
+
+    assert (result.returncode, result.stdout) == (
+        0,
+        "The pull request changes the plugin, and the notes of the next release.\n",
+    )
+
+
+@pytest.mark.parametrize(
+    "changelog",
+    [
+        pytest.param(CHANGELOG, id="the changelog unchanged"),
+        pytest.param(CHANGELOG.replace("First version", "The first version"), id="an older section changed"),
+    ],
+)
+def test_a_pull_request_that_changes_the_plugin_and_not_the_notes_fails_and_names_its_files_and_the_label(
+    pull_request: Path, changelog: str
+) -> None:
+    set_version(pull_request, "1.0.1")  # plugin.json, and pyproject.toml, which the plugin zip does not hold
+    write_copied_file(pull_request, "python-lib/core/runner.py", "RUNNER = 2\n")
+    write_copied_file(pull_request, "python-runnables/clear-datasets-by-tags/runnable.json", "{}\n")
+    (pull_request / "resource" / "tag_choices.py").unlink()
+    write_copied_file(pull_request, "README.md", "# Clear Datasets by Tags, a plugin\n")
+    write_changelog(pull_request, changelog)
+    commit_all(pull_request, "A change of the plugin")
+
+    result = run_check_pull_request(pull_request, "main", PULL_REQUEST_BRANCH)
+
+    assert (result.returncode, result.stdout) == (1, "")
+    assert result.stderr == (
+        "error: The pull request changes the plugin, and not the notes of the next release. It changes:\n"
+        "- plugin.json\n"
+        "- python-lib/core/runner.py\n"
+        "- python-runnables/clear-datasets-by-tags/runnable.json\n"
+        "- resource/tag_choices.py\n"
+        'Describe the change for users under "## Unreleased" in CHANGELOG.md. If users cannot notice it, add the '
+        "label no-changelog to the pull request instead.\n"
+    )
+
+
+@pytest.mark.parametrize(
+    ("name", "text"),
+    [
+        pytest.param("README.md", "# Clear Datasets by Tags, a plugin\n", id="the README"),
+        pytest.param("LICENSE", "MIT License, 2026\n", id="the license"),
+        pytest.param("docs/development.md", "# Develop\n", id="a doc"),
+        pytest.param("resources/notes.md", "Notes\n", id="a folder whose name starts like one of the plugin"),
+        pytest.param("CHANGELOG.md", CHANGELOG_WITH_A_NEW_NOTE, id="the notes of the next release only"),
+    ],
+)
+def test_a_pull_request_that_does_not_change_the_plugin_passes_without_a_check_of_its_notes(
+    pull_request: Path, name: str, text: str
+) -> None:
+    write_copied_file(pull_request, name, text)
+    commit_all(pull_request, f"A change of {name}")
+
+    result = run_check_pull_request(pull_request, "main", PULL_REQUEST_BRANCH)
+
+    assert (result.returncode, result.stdout) == (0, NOTHING_TO_CHECK)
+
+
+def test_the_changes_that_main_got_after_the_pull_request_left_it_do_not_count(pull_request: Path) -> None:
+    write_copied_file(pull_request, "python-lib/core/runner.py", "RUNNER = 2\n")
+    commit_all(pull_request, "A change of the plugin, without notes")
+    run_git(pull_request, "switch", "main")
+    # Another pull request, merged into main since: a change of the plugin, with its notes.
+    write_copied_file(pull_request, "resource/tag_choices.py", "CHOICES = 2\n")
+    write_changelog(pull_request, CHANGELOG_WITH_A_NEW_NOTE)
+    commit_all(pull_request, "Another change of the plugin, with its notes")
+
+    result = run_check_pull_request(pull_request, "main", PULL_REQUEST_BRANCH)
+
+    assert result.returncode == 1
+    assert "It changes:\n- python-lib/core/runner.py\nDescribe" in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("changelog", "returncode"),
+    [pytest.param(CHANGELOG, 1, id="without notes"), pytest.param(CHANGELOG_WITH_A_NEW_NOTE, 0, id="with notes")],
+)
+def test_the_ci_checks_the_merge_of_the_pull_request_into_its_base_against_its_first_parent(
+    pull_request: Path, changelog: str, returncode: int
+) -> None:
+    write_copied_file(pull_request, "python-lib/core/runner.py", "RUNNER = 2\n")
+    write_changelog(pull_request, changelog)
+    commit_all(pull_request, "A change of the plugin")
+    run_git(pull_request, "switch", "main")
+    write_copied_file(pull_request, "docs/development.md", "# Develop\n")
+    commit_all(pull_request, "A change of main since")
+    # On a pull request, the CI checks out such a merge: its first parent is main, its second the pull request.
+    run_git(pull_request, *GIT_IDENTITY, "merge", "--no-ff", "--no-edit", PULL_REQUEST_BRANCH)
+
+    result = run_check_pull_request(pull_request, "HEAD^1", "HEAD")
+
+    assert result.returncode == returncode
+
+
+def test_the_check_of_a_pull_request_fails_when_git_cannot_compare_its_commits(pull_request: Path) -> None:
+    result = run_check_pull_request(pull_request, "main", "no-such-branch")
+
+    assert result.returncode == 1
+    assert result.stderr.startswith("error: Cannot compare no-such-branch with main: fatal: ")
 
 
 def test_the_command_line_reports_an_error_without_a_traceback(repo: Path) -> None:

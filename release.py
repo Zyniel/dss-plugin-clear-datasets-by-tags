@@ -1,4 +1,4 @@
-"""Release tools: prepare a version, print notes, and check a release branch. See docs/releasing.md.
+"""Release tools: prepare a version, print notes, check a release branch and a pull request. See docs/releasing.md.
 
 - `uv run python release.py prepare 1.1.0` sets the version in plugin.json and pyproject.toml, and turns the
   "## Unreleased" section of the CHANGELOG into "## 1.1.0 - <today>". Run `uv lock` after it. The README holds no
@@ -11,6 +11,9 @@
   of each run.
 - `uv run python release.py check-branch release/1.1.0` fails when a release branch has notes of the next release:
   changes that reached it after Prepare release dated the notes. Any other branch passes.
+- `uv run python release.py check-pull-request main HEAD` fails when the changes of HEAD since it left main change
+  the plugin, and not the notes of the next release. The CI runs it on each pull request, but those of a release
+  branch and those with the label no-changelog.
 
 The workflows of .github/workflows run them. Nothing here changes a file until every check has passed.
 """
@@ -24,12 +27,19 @@ import sys
 from pathlib import Path
 from typing import NamedTuple, Optional
 
+from build_plugin_zip import PLUGIN_FOLDERS
+
 ROOT = Path(__file__).resolve().parent
 CHANGELOG_FILE = "CHANGELOG.md"
 # The heading of the notes of the next release.
 UNRELEASED = "## Unreleased"
 # The branch of a release pull request is this prefix and the version, such as release/1.1.0.
 RELEASE_BRANCH_PREFIX = "release/"
+# The files and folders of the plugin: what the plugin zip holds, but its README and its license. A pull request that
+# changes them adds to the notes of the next release. A folder ends with "/", for git and for the reader.
+PLUGIN_PATHS = ["plugin.json", *(f"{folder}/" for folder in PLUGIN_FOLDERS)]
+# The label of a pull request whose change users cannot notice: the CI does not check its notes, see ci.yml.
+NO_CHANGELOG_LABEL = "no-changelog"
 # A version is X.Y.Z, or X.Y.Z-beta for a pre-release, and nothing else. As in semantic versioning, which Dataiku
 # recommends for a plugin, a number has no leading zero.
 VERSION = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-beta)?")
@@ -79,18 +89,28 @@ def parse_version(version: str) -> tuple[int, int, int, int]:
     return int(match[1]), int(match[2]), int(match[3]), 0 if match[4] else 1
 
 
+def run_git(root: Path, arguments: list[str], failure: str) -> str:
+    """Run a git command in the repository, and return what it prints.
+
+    :param root: the folder of the repository
+    :param failure: the start of the message of the error, such as "Cannot read the tags and branches of origin"
+    :raises ReleaseError: if git fails, with `failure` and what git said
+    """
+    result = subprocess.run(["git", *arguments], cwd=root, capture_output=True, encoding="utf-8", check=False)
+    if result.returncode != 0:
+        raise ReleaseError(f"{failure}: {result.stderr.strip()}")
+    return result.stdout
+
+
 def read_remote_refs(root: Path, refs: list[str]) -> set[str]:
     """Return those of `refs`, such as refs/tags/1.1.0, that the remote origin of the repository has.
 
     :param root: the folder of the repository
     :raises ReleaseError: if git cannot read the refs of origin
     """
-    command = ["git", "ls-remote", "origin", *refs]
-    result = subprocess.run(command, cwd=root, capture_output=True, encoding="utf-8", check=False)
-    if result.returncode != 0:
-        raise ReleaseError(f"Cannot read the tags and branches of origin: {result.stderr.strip()}")
+    output = run_git(root, ["ls-remote", "origin", *refs], "Cannot read the tags and branches of origin")
     # Each line is "<commit>\t<ref>". git matches the end of a ref, so keep only the refs asked for.
-    return {line.partition("\t")[2] for line in result.stdout.splitlines()} & set(refs)
+    return {line.partition("\t")[2] for line in output.splitlines()} & set(refs)
 
 
 def changelog_section(changelog: str, heading: str) -> Optional[str]:
@@ -242,14 +262,47 @@ def check_branch(changelog: str, branch: str) -> str:
     return f"{branch} has no notes of the next release."
 
 
+def check_pull_request(root: Path, base: str, head: str) -> str:
+    """Check that a pull request that changes the plugin adds to the notes of the next release, and say what it found.
+
+    The changes of the pull request are those of `head` since it left `base`, as GitHub shows them: from the last
+    commit they have in common. The plugin is what PLUGIN_PATHS names.
+
+    :param root: the folder of the git repository
+    :param base: the branch that the pull request merges into, such as main, or a commit
+    :param head: the branch of the pull request, or a commit
+    :raises ReleaseError: if the pull request changes the plugin and not the notes of the next release, or if git
+        cannot compare `head` with `base`
+    """
+    failure = f"Cannot compare {head} with {base}"
+    fork = run_git(root, ["merge-base", base, head], failure).strip()
+    # -z: the names as they are, one after the other, even with unusual characters. --no-renames: a file moved out of
+    # the plugin is a change of the plugin too.
+    changed = run_git(root, ["diff", "--name-only", "--no-renames", "-z", fork, head, "--", *PLUGIN_PATHS], failure)
+    plugin_files = [name for name in changed.split("\0") if name]
+    if not plugin_files:
+        paths = f"{', '.join(PLUGIN_PATHS[:-1])} or {PLUGIN_PATHS[-1]}"
+        return f"The pull request changes nothing in {paths}: its notes of the next release are not checked."
+    before = read_notes(run_git(root, ["show", f"{fork}:{CHANGELOG_FILE}"], failure), UNRELEASED)
+    after = read_notes(run_git(root, ["show", f"{head}:{CHANGELOG_FILE}"], failure), UNRELEASED)
+    if before != after:
+        return "The pull request changes the plugin, and the notes of the next release."
+    files = "".join(f"- {name}\n" for name in plugin_files)
+    raise ReleaseError(
+        f"The pull request changes the plugin, and not the notes of the next release. It changes:\n{files}"
+        f'Describe the change for users under "{UNRELEASED}" in {CHANGELOG_FILE}. If users cannot notice it, add the '
+        f"label {NO_CHANGELOG_LABEL} to the pull request instead."
+    )
+
+
 def main(argv: Optional[list[str]] = None) -> None:
-    """Run the command of the command line: prepare, notes, next-release-notes or check-branch.
+    """Run the command of the command line: prepare, notes, next-release-notes, check-branch or check-pull-request.
 
     :param argv: the arguments, without the name of the script. Default: those of `sys.argv`.
     :raises SystemExit: with the reason, if the release cannot go on
     """
     parser = argparse.ArgumentParser(
-        description="Prepare a release, print notes, or check a release branch. See docs/releasing.md."
+        description="Prepare a release, print notes, check a release branch or a pull request. See docs/releasing.md."
     )
     commands = parser.add_subparsers(dest="command", required=True)
     prepare_command = commands.add_parser(
@@ -269,12 +322,20 @@ def main(argv: Optional[list[str]] = None) -> None:
         "check-branch", help="Fail if a release branch has notes of the next release. Any other branch passes."
     )
     check_branch_command.add_argument("branch", help="Such as release/1.1.0, or main.")
+    check_pull_request_command = commands.add_parser(
+        "check-pull-request", help="Fail if a pull request changes the plugin, and not the notes of the next release."
+    )
+    check_pull_request_command.add_argument("base", help="The branch it merges into, such as main, or a commit.")
+    check_pull_request_command.add_argument("head", help="Its branch, or a commit, such as HEAD.")
     args = parser.parse_args(argv)
 
     try:
         if args.command == "prepare":
             prepare(ROOT, args.version, args.date or datetime.datetime.now(datetime.timezone.utc).date())
             print(f"Prepared {args.version}. Run `uv lock`, then commit.")
+            return
+        if args.command == "check-pull-request":
+            print(check_pull_request(ROOT, args.base, args.head))
             return
         changelog = (ROOT / CHANGELOG_FILE).read_text(encoding="utf-8")
         if args.command == "check-branch":

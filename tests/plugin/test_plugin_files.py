@@ -14,6 +14,7 @@ from typing import Any
 
 import pytest
 
+from build_plugin_zip import PLUGIN_FOLDERS
 from core.macro import MaintenanceMacro
 from core.options import (
     RECAP_ERROR_CHOICES,
@@ -274,12 +275,16 @@ def test_uv_build_stops_and_gives_the_command_that_builds_the_zip() -> None:
             hook(str(ROOT / "dist"))
 
 
-def test_plugin_zip_holds_the_plugin_and_nothing_else() -> None:
+def build_plugin_zip_names() -> list[str]:
+    """Build the plugin zip of the repository, and return the names of its files."""
     subprocess.run([sys.executable, str(ROOT / "build_plugin_zip.py")], cwd=ROOT, check=True, capture_output=True)
     version = read_json(ROOT / "plugin.json")["version"]
-
     with zipfile.ZipFile(ROOT / "dist" / f"dss-plugin-{PLUGIN_ID}-{version}.zip") as plugin_zip:
-        names = plugin_zip.namelist()
+        return plugin_zip.namelist()
+
+
+def test_plugin_zip_holds_the_plugin_and_nothing_else() -> None:
+    names = build_plugin_zip_names()
 
     assert "plugin.json" in names
     assert "LICENSE" in names
@@ -298,3 +303,11 @@ def test_plugin_zip_holds_the_plugin_and_nothing_else() -> None:
         "resource",
     }
     assert not [name for name in names if "__pycache__" in name]
+
+
+def test_the_folders_of_the_plugin_zip_are_those_of_its_list() -> None:
+    # release.py checks that a pull request that changes them adds to the notes of the next release: a folder that
+    # the plugin zip holds and the list misses would escape the check.
+    folders = {name.split("/")[0] for name in build_plugin_zip_names() if "/" in name}
+
+    assert sorted(folders) == sorted(PLUGIN_FOLDERS)
