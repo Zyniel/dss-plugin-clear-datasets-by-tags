@@ -1,9 +1,9 @@
 name: Prepare release
 
-# Run it from the Actions tab, with the version to release. It sets the version in every file, turns the
-# "## Unreleased" section of the CHANGELOG into the section of the version, runs the checks, then opens the pull
-# request release/<version> and starts the CI on it. Merging that pull request releases the version: see
-# tag-release.yml and docs/releasing.md.
+# Run it from the Actions tab, with the version to release. release.py checks that it can prepare the version, sets
+# it in every file and turns the "## Unreleased" section of the CHANGELOG into the section of the version. Then the
+# workflow runs the checks, opens the pull request release/<version> and starts the CI on it. Merging that pull
+# request releases the version: see tag-release.yml and docs/releasing.md.
 on:
   workflow_dispatch:
     inputs:
@@ -26,20 +26,12 @@ jobs:
       BRANCH: release/${{ inputs.version }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v7
+      # Checks out main, installs uv and syncs the environment.
+      - uses: $/.github/actions/setup
         with:
           ref: main
-      - uses: astral-sh/setup-uv@v7
-      - name: Check that the version and its branch are new
-        run: |
-          if git ls-remote --exit-code --tags origin "refs/tags/$VERSION" > /dev/null; then
-            echo "::error::$VERSION is released already: choose a new version."
-            exit 1
-          fi
-          if git ls-remote --exit-code --heads origin "refs/heads/$BRANCH" > /dev/null; then
-            echo "::error::The branch $BRANCH exists already: close its pull request and delete it, or merge it."
-            exit 1
-          fi
+      # release.py refuses a version it cannot prepare, and says why, before it changes any file: see
+      # docs/releasing.md. It reads the tags and the branches of origin.
       - name: Set the version and date the CHANGELOG
         run: |
           uv run python release.py prepare "$VERSION"
