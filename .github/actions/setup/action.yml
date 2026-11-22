@@ -9,10 +9,6 @@ inputs:
     description: "The branch, tag or commit to check out, such as main. By default, the commit of the run."
     required: false
     default: ""
-  python:
-    description: "The Python of the environment, such as 3.13. By default, the one of .python-version."
-    required: false
-    default: ""
 
 runs:
   using: composite
@@ -20,9 +16,7 @@ runs:
     - uses: actions/checkout@v5
       with:
         ref: ${{ inputs.ref }}
-    # With a Python, it sets UV_PYTHON for the rest of the job: the next uv commands use that Python.
+    # The environment is on the Python of .python-version. check.py runs the tests on a newer Python itself.
     - uses: astral-sh/setup-uv@v7
-      with:
-        python-version: ${{ inputs.python }}
     - run: uv sync --locked
       shell: bash

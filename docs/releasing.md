@@ -33,7 +33,7 @@ Merge the pull request ─────────────▶ Tag release: t
 
 | Workflow | Starts | Does |
 |---|---|---|
-| `ci.yml` | On each push and pull request, and when Prepare release starts it | ruff, mypy, the tests on Python 3.9 and 3.13, and the zip, kept as the artifact `plugin-zip`. |
+| `ci.yml` | On each push and pull request, and when Prepare release starts it | The checks of `check.py`, the tests included, and the zip, kept as the artifact `plugin-zip`. |
 | `prepare-release.yml` | By hand, in the Actions tab | Checks that the version is new, runs `release.py prepare` and `uv lock`, runs the checks, pushes `release/<version>`, opens its pull request and starts the CI on it. |
 | `tag-release.yml` | When a pull request from a `release/` branch is merged | Checks that the branch is named after the version of `plugin.json`, tags the merge commit, and starts Release on the tag. |
 | `release.yml` | On a version tag, and by hand for a dry run | Checks that the tag is the version of `plugin.json`, runs the checks, builds the zip, writes the notes, and publishes the release. A dry run publishes nothing. |

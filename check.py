@@ -1,20 +1,25 @@
 """Run the checks of the CI, one after the other, and print the output of those that fail.
 
-Run it with `uv run python check.py`. The CI and the release workflows call it too, so that the checks
-are the same everywhere. `--no-tests` skips pytest: the tests job of the CI runs it on each Python version.
+Run it with `uv run python check.py`. The CI and the release workflows call it too, so that the checks and the
+Python versions of the tests are the same everywhere. `--no-tests` skips the tests. `--tests-on 3.13` runs only the
+tests, on Python 3.13: each tests job of the CI runs it with its Python. `--help` lists the Python versions.
 """
 
 import argparse
 import subprocess
 import sys
 from pathlib import Path
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 
 # The paths are relative to this file, so that the script works from any folder.
 ROOT = Path(__file__).resolve().parent
 
-# .python-version gives the Python of DSS 13. The newer one shows the code keeps working after a DSS upgrade.
+# The Python of DSS 13, given by .python-version: the environment of the project, which runs this script, is on it.
+DSS_PYTHON = (ROOT / ".python-version").read_text(encoding="utf-8").strip()
+# The newer one shows the code keeps working after a DSS upgrade.
 NEWER_PYTHON = "3.13"
+# The tests run on each of them, in this order.
+TESTED_PYTHONS = [DSS_PYTHON, NEWER_PYTHON]
 
 
 class Check(NamedTuple):
@@ -38,11 +43,18 @@ def list_checks(with_tests: bool) -> list[Check]:
         checks.append(Check(f"mypy {path}", [python, "-m", "mypy", path]))
     checks.append(Check("plugin zip", [python, "build_plugin_zip.py"]))
     if with_tests:
-        checks.append(Check("pytest", [python, "-m", "pytest"]))
-        # --isolated leaves the environment of the project on the Python of DSS 13.
-        newer = ["uv", "run", "--isolated", "--locked", "--python", NEWER_PYTHON, "pytest"]
-        checks.append(Check(f"pytest on Python {NEWER_PYTHON}", newer))
+        checks.extend(build_tests_check(version) for version in TESTED_PYTHONS)
     return checks
+
+
+def build_tests_check(version: str) -> Check:
+    """Return the check that runs the tests on a Python of TESTED_PYTHONS."""
+    if version == DSS_PYTHON:
+        command = [sys.executable, "-m", "pytest"]
+    else:
+        # --isolated leaves the environment of the project on the Python of DSS 13.
+        command = ["uv", "run", "--isolated", "--locked", "--python", version, "pytest"]
+    return Check(f"pytest on Python {version}", command)
 
 
 def run_check(check: Check) -> bool:
@@ -55,12 +67,23 @@ def run_check(check: Check) -> bool:
     return passed
 
 
-def main() -> int:
-    """Run every check, even after one fails, and return 1 if one failed."""
+def main(argv: Optional[list[str]] = None) -> int:
+    """Run every check, even after one fails, and return 1 if one failed.
+
+    :param argv: the arguments of the command line, without the name of the script. By default, those of `sys.argv`.
+    """
     parser = argparse.ArgumentParser(description="Run the checks of the CI.")
-    parser.add_argument("--no-tests", action="store_true", help="skip pytest")
-    args = parser.parse_args()
-    results = [run_check(check) for check in list_checks(with_tests=not args.no_tests)]
+    tests = parser.add_mutually_exclusive_group()
+    tests.add_argument("--no-tests", action="store_true", help="skip the tests")
+    tests.add_argument(
+        "--tests-on",
+        choices=TESTED_PYTHONS,
+        metavar="PYTHON",
+        help=f"run only the tests, on this Python: {' or '.join(TESTED_PYTHONS)}",
+    )
+    args = parser.parse_args(argv)
+    checks = [build_tests_check(args.tests_on)] if args.tests_on else list_checks(with_tests=not args.no_tests)
+    results = [run_check(check) for check in checks]
     return 0 if all(results) else 1
 
 

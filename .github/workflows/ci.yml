@@ -14,7 +14,7 @@ jobs:
       # Checks out, installs uv and syncs the environment. Python 3.9 comes from .python-version: the version DSS 13
       # runs the plugin with.
       - uses: $/.github/actions/setup
-      # Ruff, ruff format, mypy, mypy for each runnable and the plugin zip. The tests job runs pytest.
+      # Every check but the tests, which the tests jobs run. The plugin zip it builds is kept as an artifact.
       - run: uv run --locked python check.py --no-tests
       - uses: actions/upload-artifact@v6
         with:
@@ -27,11 +27,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 3.9 is what DSS 13 runs. The newer one shows the code keeps working after a DSS upgrade.
+        # One job for each Python that check.py tests, which `check.py --help` lists: it fails on any other. The name
+        # of each job is a required check of `main`.
         python: ["3.9", "3.13"]
     steps:
-      # The environment on the Python of the matrix, which the setup step gives to every uv command after it.
+      # The environment of the project, on the Python of .python-version, as on your machine.
       - uses: $/.github/actions/setup
-        with:
-          python: ${{ matrix.python }}
-      - run: uv run --locked pytest
+      # Only the tests, on the Python of the job. On another Python than the one of the project, check.py runs
+      # them in an environment of their own.
+      - run: uv run --locked python check.py --tests-on ${{ matrix.python }}
