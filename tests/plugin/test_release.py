@@ -235,7 +235,7 @@ def test_prepare_changes_only_the_version_lines(repo: Path) -> None:
         "too short",
         "with a v",
         "beta without a dash",
-        "another pre-release",
+        "a suffix other than -beta",
         "a leading zero",
         "a section already",
         "no unreleased section",

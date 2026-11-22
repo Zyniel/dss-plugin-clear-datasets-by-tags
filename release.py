@@ -28,7 +28,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import NamedTuple, Optional
+from typing import Callable, NamedTuple, Optional
 
 from build_plugin_zip import PLUGIN_FOLDERS
 
@@ -77,21 +77,31 @@ class LinkTarget(NamedTuple):
         return f"https://github.com/{self.repository}/blob/{self.ref}/{path}"
 
 
+class VersionOrder(NamedTuple):
+    """Where a version comes in the order of versions: by its three numbers, then a pre-release first.
+
+    So 1.0.2-beta comes before 1.0.2, which comes before 1.0.3-beta.
+    """
+
+    major: int
+    minor: int
+    patch: int
+    without_beta: bool
+
+
 class ReleaseError(Exception):
     """The release cannot go on. The message says why, and what to do."""
 
 
-def parse_version(version: str) -> tuple[int, int, int, int]:
-    """Return the key that orders versions: the three numbers, then 0 for a pre-release and 1 for a release.
-
-    So 1.0.2-beta comes before 1.0.2, which comes before 1.0.3-beta.
+def parse_version(version: str) -> VersionOrder:
+    """Return where a version comes in the order of versions.
 
     :raises ReleaseError: if it is not a version
     """
     match = VERSION.fullmatch(version)
     if not match:
         raise ReleaseError(f"{version!r} is not a version such as 1.1.0, or 1.1.0-beta for a pre-release.")
-    return int(match[1]), int(match[2]), int(match[3]), 0 if match[4] else 1
+    return VersionOrder(int(match[1]), int(match[2]), int(match[3]), without_beta=not match[4])
 
 
 def read_plugin_version(root: Path) -> str:
@@ -113,8 +123,7 @@ def is_pre_release(version: str) -> bool:
 
     :raises ReleaseError: if it is not a version
     """
-    parse_version(version)
-    return version.endswith("-beta")
+    return not parse_version(version).without_beta
 
 
 def read_git(root: Path, arguments: list[str], failure: str) -> str:
@@ -222,7 +231,7 @@ def prepare(root: Path, version: str, today: datetime.date) -> None:
             f"then prepare {version} again."
         )
 
-    changelog = (root / CHANGELOG_FILE).read_text(encoding="utf-8")
+    changelog = read_changelog(root)
     if changelog_section(changelog, f"## {version}") is not None:
         raise ReleaseError(f"{CHANGELOG_FILE} already has a section for {version}: choose a new version.")
     if read_notes(changelog, UNRELEASED) is None:
@@ -290,6 +299,14 @@ def check_branch(changelog: str, branch: str) -> str:
     return f"{branch} has no notes of the next release."
 
 
+def read_changelog(root: Path) -> str:
+    """Return the text of the CHANGELOG of the working tree.
+
+    :param root: the folder of the repository
+    """
+    return (root / CHANGELOG_FILE).read_text(encoding="utf-8")
+
+
 def read_changelog_at(root: Path, ref: str) -> str:
     """Return the text of the CHANGELOG at a commit or a branch of the repository.
 
@@ -348,7 +365,7 @@ def main(argv: Optional[list[str]] = None) -> None:
     )
     prepare_command.add_argument("version", help="Such as 1.1.0, or 1.1.0-beta for a pre-release.")
     prepare_command.add_argument("--date", type=datetime.date.fromisoformat, help="Default: today, in UTC.")
-    commands.add_parser("version", help="Print the version of the plugin, from plugin.json.")
+    version_command = commands.add_parser("version", help="Print the version of the plugin, from plugin.json.")
     is_pre_release_command = commands.add_parser(
         "is-pre-release", help="Print true if the version is a pre-release, such as 1.1.0-beta, else false."
     )
@@ -370,32 +387,33 @@ def main(argv: Optional[list[str]] = None) -> None:
     )
     check_pull_request_command.add_argument("base", help="The branch it merges into, such as main, or a commit.")
     check_pull_request_command.add_argument("head", help="Its branch, or a commit, such as HEAD.")
+
+    def run_prepare_command(args: argparse.Namespace) -> str:
+        prepare(ROOT, args.version, args.date or datetime.datetime.now(datetime.timezone.utc).date())
+        return f"Prepared {args.version}. Run `uv lock`, then commit.\n"
+
+    # The function that runs each command, and returns what it prints. A command missing here fails with an
+    # AttributeError, instead of running another one.
+    runs: dict[argparse.ArgumentParser, Callable[[argparse.Namespace], str]] = {
+        prepare_command: run_prepare_command,
+        version_command: lambda _: f"{read_plugin_version(ROOT)}\n",
+        # As the Release workflow passes it on: gh release create --prerelease=true.
+        is_pre_release_command: lambda args: "true\n" if is_pre_release(args.version) else "false\n",
+        notes_command: lambda args: release_notes(
+            read_changelog(ROOT), args.version, LinkTarget(args.repository, args.ref)
+        ),
+        next_release_notes_command: lambda args: next_release_notes(
+            read_changelog(ROOT), LinkTarget(args.repository, args.ref)
+        ),
+        check_branch_command: lambda args: f"{check_branch(read_changelog(ROOT), args.branch)}\n",
+        check_pull_request_command: lambda args: f"{check_pull_request(ROOT, args.base, args.head)}\n",
+    }
+    for command, run in runs.items():
+        command.set_defaults(run=run)
     args = parser.parse_args(argv)
 
     try:
-        if args.command == "prepare":
-            prepare(ROOT, args.version, args.date or datetime.datetime.now(datetime.timezone.utc).date())
-            print(f"Prepared {args.version}. Run `uv lock`, then commit.")
-            return
-        if args.command == "version":
-            print(read_plugin_version(ROOT))
-            return
-        if args.command == "is-pre-release":
-            # As the Release workflow passes it on: gh release create --prerelease=true.
-            print("true" if is_pre_release(args.version) else "false")
-            return
-        if args.command == "check-pull-request":
-            print(check_pull_request(ROOT, args.base, args.head))
-            return
-        changelog = (ROOT / CHANGELOG_FILE).read_text(encoding="utf-8")
-        if args.command == "check-branch":
-            print(check_branch(changelog, args.branch))
-            return
-        links = LinkTarget(args.repository, args.ref)
-        if args.command == "notes":
-            sys.stdout.write(release_notes(changelog, args.version, links))
-        else:  # next-release-notes
-            sys.stdout.write(next_release_notes(changelog, links))
+        sys.stdout.write(args.run(args))
     except ReleaseError as error:
         raise SystemExit(f"error: {error}") from None
 
