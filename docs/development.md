@@ -44,7 +44,7 @@ Git uses it for your commits in this repository, and for the commits Claude Code
 │   ├── core/
 │   ├── recap/
 │   ├── macros/
-│   ├── plugin/                   The plugin files of every macro, the zip, release.py
+│   ├── plugin/                   The plugin files of every macro, the zip, release.py, check.py
 │   ├── integration/              The macros on a real DSS, skipped without a config file
 │   ├── screenshots/              The README screenshots on a real DSS, skipped without --screenshots
 │   └── support/                  Fake DSS objects and test helpers
@@ -88,7 +88,12 @@ Git uses it for your commits in this repository, and for the commits Claude Code
 uv run python check.py
 ```
 
-It runs the checks of the CI, one after the other: ruff, ruff format, mypy, mypy for each runnable, the build of the zip, then pytest on Python 3.9 and 3.13. It prints `ok` or `FAIL` for each, the output of those that fail only, and ends in error if one fails. The command is the same in bash and PowerShell. `--no-tests` skips pytest.
+It runs the checks of the CI, one after the other, the tests on each Python version included. It prints `ok` or `FAIL` for each, the output of those that fail only, and ends in error if one fails. The command is the same in bash and PowerShell. `check.py` gives the checks and the Python versions of the tests: the CI runs it, and so do Prepare release and Release. A new check goes in `check.py` only.
+
+Two options run a part of the checks, as the jobs of the CI do. `--help` lists them, with the Python versions:
+
+- `--no-tests` runs every check but the tests.
+- `--tests-on <version>` runs only the tests, on that Python. Given a version it does not test, it fails, and lists the versions it tests.
 
 Good to know:
 
@@ -97,7 +102,7 @@ Good to know:
 - **The conventions.** Ruff checks those it can, with the rules of `pyproject.toml`. [CODING_STANDARDS.md](../CODING_STANDARDS.md) gives the others.
 - **mypy, one runnable at a time.** All runnables are named `runnable.py`, and mypy refuses two files with the same name in one run. This is why `check.py` runs mypy on each.
 - **mypy 1.x.** mypy 2 cannot check code for Python 3.9 any more.
-- **Another Python version.** `check.py` runs the tests on Python 3.13 with `uv run --isolated --locked --python 3.13 pytest`. `--isolated` leaves the environment of the project on Python 3.9.
+- **Another Python version.** `check.py` runs the tests on a newer Python with `uv run --isolated`, in an environment of their own: the environment of the project stays on the Python of `.python-version`.
 - **Node.js.** If it is installed, a test also checks the syntax of the script of the interactive table.
 
 ## Build the zip
@@ -144,13 +149,14 @@ The fake objects copy the shape of the DSS answers. If a real DSS answers in ano
 
 | Job | Steps |
 |---|---|
-| Lint, types and plugin zip | The setup step, then `check.py --no-tests`: ruff, ruff format, mypy, mypy for each runnable, and the build of the zip, kept as the `plugin-zip` artifact. |
-| Tests on Python 3.9 and 3.13 | The setup step on that Python, then `uv run --locked pytest`. |
+| Lint, types and plugin zip | The setup step, then `check.py --no-tests`. The zip it builds is kept as the `plugin-zip` artifact. |
+| Tests on Python `<version>` | One job for each Python that `check.py` tests: the setup step, then `check.py --tests-on <version>`. |
 
-The setup step is the composite action `.github/actions/setup`. It checks out the repository, installs uv and runs `uv sync --locked`. A workflow calls it with `uses: $/.github/actions/setup`, which GitHub takes from the commit of the run: no checkout comes before it. Its inputs, both optional:
+The matrix of the CI repeats the Python versions of `check.py`, since each tests job is a required check of `main`. A version that `check.py` does not test fails its job, and the log lists the versions it tests.
+
+The setup step is the composite action `.github/actions/setup`. It checks out the repository, installs uv and runs `uv sync --locked`, on the Python of `.python-version`. A workflow calls it with `uses: $/.github/actions/setup`, which GitHub takes from the commit of the run: no checkout comes before it. Its input, optional:
 
 - `ref`: the branch, tag or commit to check out. By default, the commit of the run.
-- `python`: the Python of the environment, such as `3.13`. By default, the one of `.python-version`. The uv commands after the step use it too.
 
 Dependabot keeps the actions of the workflows and of the setup step current: once a month, it opens one pull request with every update. Its settings are in `.github/dependabot.yml`.
 
