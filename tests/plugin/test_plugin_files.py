@@ -275,7 +275,7 @@ def test_uv_build_stops_and_gives_the_command_that_builds_the_zip() -> None:
             hook(str(ROOT / "dist"))
 
 
-def build_plugin_zip_names() -> list[str]:
+def list_built_plugin_zip() -> list[str]:
     """Build the plugin zip of the repository, and return the names of its files."""
     subprocess.run([sys.executable, str(ROOT / "build_plugin_zip.py")], cwd=ROOT, check=True, capture_output=True)
     version = read_json(ROOT / "plugin.json")["version"]
@@ -284,7 +284,7 @@ def build_plugin_zip_names() -> list[str]:
 
 
 def test_plugin_zip_holds_the_plugin_and_nothing_else() -> None:
-    names = build_plugin_zip_names()
+    names = list_built_plugin_zip()
 
     assert "plugin.json" in names
     assert "LICENSE" in names
@@ -305,9 +305,9 @@ def test_plugin_zip_holds_the_plugin_and_nothing_else() -> None:
     assert not [name for name in names if "__pycache__" in name]
 
 
-def test_the_folders_of_the_plugin_zip_are_those_of_its_list() -> None:
+def test_the_plugin_folders_are_the_folders_of_the_plugin_zip() -> None:
     # release.py checks that a pull request that changes them adds to the notes of the next release: a folder that
     # the plugin zip holds and the list misses would escape the check.
-    folders = {name.split("/")[0] for name in build_plugin_zip_names() if "/" in name}
+    folders = {name.split("/")[0] for name in list_built_plugin_zip() if "/" in name}
 
     assert sorted(folders) == sorted(PLUGIN_FOLDERS)

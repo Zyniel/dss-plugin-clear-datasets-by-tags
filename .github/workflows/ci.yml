@@ -4,8 +4,9 @@ on:
   push:
   pull_request:
     # The types of a pull_request run by default, and a label added or removed: the label no-changelog decides whether
-    # the notes of the next release are checked. Every job runs again, so that each required check comes from the
-    # last run.
+    # the notes of the next release are checked. Every job runs again. A required check counts the last pull_request
+    # run of the pull request: when it fails, the merge is blocked, even if the push run of the same check passes, and
+    # the run that a label starts replaces it. Seen on pull request #54, 2026-11-22.
     types: [opened, synchronize, reopened, labeled, unlabeled]
   # Prepare release starts it on the branch of a release pull request, which starts no workflow by itself.
   workflow_dispatch:
@@ -39,12 +40,13 @@ jobs:
         run: uv run --locked python release.py check-branch "$BRANCH"
       # A pull request that changes the plugin adds to the notes of the next release: this step fails when it does not,
       # names the files and says what to do. Only on a pull request, as a push has no base to compare with. Not on a
-      # release pull request, whose notes Prepare release dated, nor with the label no-changelog, for a change users
-      # cannot notice.
+      # release pull request, from a release/ branch of this repository: Prepare release dated its notes of the next
+      # release, which the step above checks. Not with the label no-changelog, which release.py names in its message,
+      # for a change that users cannot notice.
       - name: Check that a pull request that changes the plugin adds to the notes of the next release
         if: >-
           github.event_name == 'pull_request'
-          && !startsWith(github.head_ref, 'release/')
+          && !(startsWith(github.head_ref, 'release/') && github.event.pull_request.head.repo.full_name == github.repository)
           && !contains(github.event.pull_request.labels.*.name, 'no-changelog')
         # A pull_request run checks out the merge of the pull request into its base, whose first parent is the base:
         # what the merge changes is what the pull request changes.

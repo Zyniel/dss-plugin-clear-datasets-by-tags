@@ -1,9 +1,9 @@
 """Tests of release.py at its command line: prepare a version, print notes, check a release branch and a pull request.
 
 The notes are those of a version, or the notes of the next release, which a release branch must not have, and which a
-pull request that changes the plugin adds to. The tests run a copy of release.py in a copy of the files a release
-changes, as the workflows run it: a git repository whose remote origin holds the tags and branches of the versions.
-See docs/releasing.md.
+pull request that changes the plugin adds to. The tests run a copy of release.py, and of the script it imports, in a
+copy of the files a release changes, as the workflows run it: a git repository whose remote origin holds the tags and
+branches of the versions. See docs/releasing.md.
 """
 
 import os
@@ -69,7 +69,7 @@ GIT_IDENTITY = ["-c", "user.name=Tests", "-c", "user.email=tests@example.com"]
 
 @pytest.fixture
 def repo(tmp_path: Path) -> Path:
-    """Return a copy of release.py and of the files it changes, with a CHANGELOG that has unreleased changes.
+    """Return a copy of release.py, of the script it imports and of the files it changes, with unreleased changes.
 
     The copies are at version 1.0.0, whatever the version of the repository: the tests must pass in every release.
     They are in a git repository, on main with no commit yet, whose remote origin has no tag and no branch yet.
@@ -105,6 +105,11 @@ def commit_all(repo: Path, message: str) -> None:
     """Commit every change of the copy of the repository, on its current branch."""
     run_git(repo, "add", "--all")
     run_git(repo, *GIT_IDENTITY, "commit", "--message", message)
+
+
+def change_the_plugin(repo: Path) -> None:
+    """Change a file of the plugin in the copy of the repository: python-lib/core/runner.py."""
+    write_copied_file(repo, "python-lib/core/runner.py", "RUNNER = 2\n")
 
 
 def push_to_origin(repo: Path, ref: str) -> None:
@@ -406,7 +411,7 @@ def test_a_branch_that_is_not_a_release_branch_passes_with_notes_of_the_next_rel
 
 
 def test_a_pull_request_that_changes_the_plugin_and_the_notes_of_the_next_release_passes(pull_request: Path) -> None:
-    write_copied_file(pull_request, "python-lib/core/runner.py", "RUNNER = 2\n")
+    change_the_plugin(pull_request)
     write_changelog(pull_request, CHANGELOG_WITH_A_NEW_NOTE)
     commit_all(pull_request, "A new option")
 
@@ -429,7 +434,7 @@ def test_a_pull_request_that_changes_the_plugin_and_not_the_notes_fails_and_name
     pull_request: Path, changelog: str
 ) -> None:
     set_version(pull_request, "1.0.1")  # plugin.json, and pyproject.toml, which the plugin zip does not hold
-    write_copied_file(pull_request, "python-lib/core/runner.py", "RUNNER = 2\n")
+    change_the_plugin(pull_request)
     write_copied_file(pull_request, "python-runnables/clear-datasets-by-tags/runnable.json", "{}\n")
     (pull_request / "resource" / "tag_choices.py").unlink()
     write_copied_file(pull_request, "README.md", "# Clear Datasets by Tags, a plugin\n")
@@ -472,7 +477,7 @@ def test_a_pull_request_that_does_not_change_the_plugin_passes_without_a_check_o
 
 
 def test_the_changes_that_main_got_after_the_pull_request_left_it_do_not_count(pull_request: Path) -> None:
-    write_copied_file(pull_request, "python-lib/core/runner.py", "RUNNER = 2\n")
+    change_the_plugin(pull_request)
     commit_all(pull_request, "A change of the plugin, without notes")
     run_git(pull_request, "switch", "main")
     # Another pull request, merged into main since: a change of the plugin, with its notes.
@@ -490,10 +495,10 @@ def test_the_changes_that_main_got_after_the_pull_request_left_it_do_not_count(p
     ("changelog", "returncode"),
     [pytest.param(CHANGELOG, 1, id="without notes"), pytest.param(CHANGELOG_WITH_A_NEW_NOTE, 0, id="with notes")],
 )
-def test_the_ci_checks_the_merge_of_the_pull_request_into_its_base_against_its_first_parent(
+def test_the_merge_of_a_pull_request_into_its_base_is_checked_against_its_first_parent(
     pull_request: Path, changelog: str, returncode: int
 ) -> None:
-    write_copied_file(pull_request, "python-lib/core/runner.py", "RUNNER = 2\n")
+    change_the_plugin(pull_request)
     write_changelog(pull_request, changelog)
     commit_all(pull_request, "A change of the plugin")
     run_git(pull_request, "switch", "main")

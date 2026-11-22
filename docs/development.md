@@ -158,7 +158,7 @@ The matrix of the CI repeats the Python versions of `check.py`, since each tests
 The setup step is the composite action `.github/actions/setup`. It checks out the repository, installs uv and runs `uv sync --locked`, on the Python of `.python-version`. A workflow calls it with `uses: $/.github/actions/setup`, which GitHub takes from the commit of the run: no checkout comes before it. Its inputs, optional:
 
 - `ref`: the branch, tag or commit to check out. By default, the commit of the run.
-- `fetch-depth`: how many commits of the history to fetch. By default 1, the commit alone. The checks job gives 2, for the parents of the commit: on a pull request, the check of its notes compares the merge with its base.
+- `fetch-depth`: how many commits of the history to fetch. By default 1, the commit alone. The job "Lint, types and plugin zip" gives 2, for the parents of the commit: on a pull request, the check of its notes compares the merge with its base.
 
 Dependabot keeps the actions of the workflows and of the setup step current: once a month, it opens one pull request with every update. Its settings are in `.github/dependabot.yml`.
 
