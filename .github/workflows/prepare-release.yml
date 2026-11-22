@@ -5,7 +5,7 @@ name: Prepare release
 # workflow runs the checks, and opens the release pull request release/<version>, with its checklist and its notes.
 # GitHub holds the CI run of that pull request until the maintainer approves it: a pull request that the token of a
 # workflow opens starts no run by itself. Merging it releases the version: see release.yml and docs/releasing.md.
-# https://github.blog/changelog/2026-06-11-bot-created-pull-requests-can-run-workflows-if-approved/
+# https://docs.github.com/en/actions/concepts/security/github_token
 on:
   workflow_dispatch:
     inputs:
@@ -54,21 +54,24 @@ jobs:
             > "$RUNNER_TEMP/release-notes.md"
           docs="https://github.com/$GITHUB_REPOSITORY/blob/$BRANCH/docs"
           {
-            echo "Prepared by the Prepare release workflow. Merging it tags \`$VERSION\` and publishes its release, as"
-            echo "the [runbook]($docs/releasing.md#release-a-version) says. While it is open, merge nothing else into \`main\`."
+            echo "Prepared by the Prepare release workflow. Merging it tags \`$VERSION\` and publishes its release,"
+            echo "as the [runbook]($docs/releasing.md#release-a-version) says. While it is open, merge nothing else"
+            echo "into \`main\`."
             echo
             echo "## Before merging"
             echo
-            echo "- [ ] **The CI:** approve its run, and it passes. GitHub holds the CI of a pull request that a workflow"
-            echo "  opened until you approve it: click **Awaiting approval**, then **Approve workflows to run**."
+            echo "- [ ] **The CI:** approve its run, and it passes. GitHub holds the CI of a pull request that a"
+            echo "  workflow opened until you approve it: click **Awaiting approval**, then **Approve workflows to"
+            echo "  run**."
             echo "- [ ] **The release review** of everything since the tag of the last release has nothing open."
             echo "- [ ] **The integration tests** pass on this branch, on the test DSS, with \`install_plugin: true\`:"
             echo "  see [integration tests]($docs/integration-tests.md)."
-            echo "- [ ] **The notes** below read well. To change them, edit the section of \`$VERSION\` in \`CHANGELOG.md\`"
-            echo "  on this branch."
+            echo "- [ ] **The notes** below read well. To change them, edit the section of \`$VERSION\` in"
+            echo "  \`CHANGELOG.md\` on this branch."
             echo
             echo "## Notes of $VERSION"
             echo
             cat "$RUNNER_TEMP/release-notes.md"
           } > "$RUNNER_TEMP/pull-request.md"
-          gh pr create --base main --head "$BRANCH" --title "Release $VERSION" --body-file "$RUNNER_TEMP/pull-request.md"
+          gh pr create --base main --head "$BRANCH" --title "Release $VERSION" \
+            --body-file "$RUNNER_TEMP/pull-request.md"

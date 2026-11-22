@@ -36,8 +36,8 @@ ROOT = Path(__file__).resolve().parent
 CHANGELOG_FILE = "CHANGELOG.md"
 # The heading of the notes of the next release.
 UNRELEASED = "## Unreleased"
-# The branch of a release pull request is this prefix and the version, such as release/1.1.0. ci.yml checks the same
-# prefix.
+# The branch of a release pull request is this prefix and the version, such as release/1.1.0. ci.yml and release.yml
+# check the same prefix.
 RELEASE_BRANCH_PREFIX = "release/"
 # The files and folders of the plugin: what the plugin zip holds, but its README and its license. A pull request that
 # changes them adds to the notes of the next release. A folder ends with "/", for git and for the reader.
@@ -113,7 +113,8 @@ def is_pre_release(version: str) -> bool:
 
     :raises ReleaseError: if it is not a version
     """
-    return parse_version(version)[3] == 0
+    parse_version(version)
+    return version.endswith("-beta")
 
 
 def read_git(root: Path, arguments: list[str], failure: str) -> str:

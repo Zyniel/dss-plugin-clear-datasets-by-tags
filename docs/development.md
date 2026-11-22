@@ -182,4 +182,4 @@ The options of the "Summary" section are the same for all macros, and the "Run" 
 
 ## Release a version
 
-See [releasing](releasing.md). In short: write the changes under `## Unreleased` in the [CHANGELOG](../CHANGELOG.md), have an agent run the release review, run the Prepare release workflow, approve the CI of the release pull request, run the integration tests on its branch, and merge it. The merge tags the version and publishes the release with the zip.
+See [releasing](releasing.md). In short: write the changes under `## Unreleased` in the [CHANGELOG](../CHANGELOG.md), have an agent run the release review, run the Prepare release workflow, approve the CI of the release pull request, run the integration tests on its branch, and merge it. The merge tags the version and publishes the release with the plugin zip.

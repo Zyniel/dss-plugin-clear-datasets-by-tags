@@ -35,14 +35,16 @@ jobs:
       # Checks out the merge commit, installs uv and syncs the environment.
       - uses: $/.github/actions/setup
         with:
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          ref: ${{ env.MERGE_COMMIT }}
       # Prepare release named the branch after the version it set. A release pull request edited by hand could set
       # another one: it is refused, and nothing is tagged.
       - name: Check that the branch is named after the version of the plugin
         run: |
           version=$(uv run --locked python release.py version)
           if [ "$BRANCH" != "release/$version" ]; then
-            echo "::error::The branch is $BRANCH, but the version of plugin.json is $version: nothing is tagged. Fix plugin.json on main, and release the next patch version: see \"If something fails\" in docs/releasing.md."
+            echo "::error::The branch is $BRANCH, but the version of plugin.json is $version: nothing is tagged." \
+              "Fix plugin.json on main, and release the next patch version: see \"If something fails\" in" \
+              "docs/releasing.md."
             exit 1
           fi
           echo "VERSION=$version" >> "$GITHUB_ENV"
@@ -71,7 +73,9 @@ jobs:
           elif [ "$tag_commit" = "$MERGE_COMMIT" ]; then
             echo "The tag $VERSION is on the merge commit $MERGE_COMMIT already: nothing to tag."
           else
-            echo "::error::The tag $VERSION is on the commit $tag_commit, not on the merge commit $MERGE_COMMIT, and a tag never moves: nothing is published. Release the next patch version: see \"If something fails\" in docs/releasing.md."
+            echo "::error::The tag $VERSION is on the commit $tag_commit, not on the merge commit $MERGE_COMMIT, and" \
+              "a tag never moves: nothing is published. Release the next patch version: see \"If something fails\"" \
+              "in docs/releasing.md."
             exit 1
           fi
       # The release of the version, with the plugin zip and the notes, as a pre-release when the version is one. A
