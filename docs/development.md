@@ -93,7 +93,7 @@ It runs the checks of the CI, one after the other, the tests on each Python vers
 Two options run a part of the checks, as the jobs of the CI do. `--help` lists them, with the Python versions:
 
 - `--no-tests` runs every check but the tests.
-- `--tests-on <version>` runs only the tests, on that Python. Given a version it does not test, it fails with those it tests.
+- `--tests-on <version>` runs only the tests, on that Python. Given a version it does not test, it fails, and lists the versions it tests.
 
 Good to know:
 
@@ -152,7 +152,7 @@ The fake objects copy the shape of the DSS answers. If a real DSS answers in ano
 | Lint, types and plugin zip | The setup step, then `check.py --no-tests`. The zip it builds is kept as the `plugin-zip` artifact. |
 | Tests on Python `<version>` | One job for each Python that `check.py` tests: the setup step, then `check.py --tests-on <version>`. |
 
-The matrix of the CI repeats the Python versions of `check.py`, since each tests job is a required check of `main`. A version that `check.py` does not test fails its job, with the versions it tests.
+The matrix of the CI repeats the Python versions of `check.py`, since each tests job is a required check of `main`. A version that `check.py` does not test fails its job, and the log lists the versions it tests.
 
 The setup step is the composite action `.github/actions/setup`. It checks out the repository, installs uv and runs `uv sync --locked`, on the Python of `.python-version`. A workflow calls it with `uses: $/.github/actions/setup`, which GitHub takes from the commit of the run: no checkout comes before it. Its input, optional:
 

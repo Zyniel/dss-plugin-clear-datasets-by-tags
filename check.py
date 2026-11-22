@@ -68,14 +68,14 @@ def run_check(check: Check) -> bool:
 
 
 def main(argv: Optional[list[str]] = None) -> int:
-    """Run every check, even after one fails, and return 1 if one failed.
+    """Run the checks that the arguments ask for, even after one fails, and return 1 if one failed.
 
     :param argv: the arguments of the command line, without the name of the script. By default, those of `sys.argv`.
     """
     parser = argparse.ArgumentParser(description="Run the checks of the CI.")
-    tests = parser.add_mutually_exclusive_group()
-    tests.add_argument("--no-tests", action="store_true", help="skip the tests")
-    tests.add_argument(
+    tests_options = parser.add_mutually_exclusive_group()
+    tests_options.add_argument("--no-tests", action="store_true", help="skip the tests")
+    tests_options.add_argument(
         "--tests-on",
         choices=TESTED_PYTHONS,
         metavar="PYTHON",

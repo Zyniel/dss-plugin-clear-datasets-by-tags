@@ -26,7 +26,7 @@ def record_commands(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
 
 
 @pytest.mark.parametrize(
-    ("python", "command"),
+    ("version", "command"),
     [
         # The environment of the project, which runs check.py: the Python of .python-version, that of DSS 13.
         ("3.9", [sys.executable, "-m", "pytest"]),
@@ -35,15 +35,15 @@ def record_commands(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
     ],
 )
 def test_tests_on_a_python_runs_pytest_on_that_python_and_nothing_else(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], python: str, command: list[str]
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], version: str, command: list[str]
 ) -> None:
     commands = record_commands(monkeypatch)
 
-    exit_code = check.main(["--tests-on", python])
+    exit_code = check.main(["--tests-on", version])
 
     assert exit_code == 0
     assert commands == [command]
-    assert capsys.readouterr().out == f"ok   pytest on Python {python}\n"
+    assert capsys.readouterr().out == f"ok   pytest on Python {version}\n"
 
 
 def test_tests_on_a_python_that_the_checks_do_not_test_fails_with_the_versions_they_test() -> None:
