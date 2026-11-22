@@ -38,8 +38,8 @@ RELEASE_BRANCH_PREFIX = "release/"
 # The files and folders of the plugin: what the plugin zip holds, but its README and its license. A pull request that
 # changes them adds to the notes of the next release. A folder ends with "/", for git and for the reader.
 PLUGIN_PATHS = ["plugin.json", *(f"{folder}/" for folder in PLUGIN_FOLDERS)]
-# The label of a pull request whose change users cannot notice: the CI does not check its notes, see ci.yml. A name
-# of GitHub labels, kept: "changelog" is the file, CHANGELOG.md, which gets no entry.
+# The label of a pull request whose change users cannot notice: the CI does not check its notes. ci.yml tests the same
+# name. It is the name of the label on GitHub, so it stays: "changelog" means the file CHANGELOG.md, not the notes.
 NO_CHANGELOG_LABEL = "no-changelog"
 # A version is X.Y.Z, or X.Y.Z-beta for a pre-release, and nothing else. As in semantic versioning, which Dataiku
 # recommends for a plugin, a number has no leading zero.
@@ -91,7 +91,7 @@ def parse_version(version: str) -> tuple[int, int, int, int]:
 
 
 def read_git(root: Path, arguments: list[str], failure: str) -> str:
-    """Run a git command that reads the repository, and return what it prints.
+    """Run a git command that reads the repository or its remote, and return what it prints.
 
     :param root: the folder of the repository
     :param failure: the start of the message of the error, such as "Cannot read the tags and branches of origin"
@@ -263,13 +263,13 @@ def check_branch(changelog: str, branch: str) -> str:
     return f"{branch} has no notes of the next release."
 
 
-def read_changelog_at(root: Path, commit: str) -> str:
-    """Return the text of the CHANGELOG at a commit of the repository, or of a branch.
+def read_changelog_at(root: Path, ref: str) -> str:
+    """Return the text of the CHANGELOG at a commit or a branch of the repository.
 
     :param root: the folder of the git repository
     :raises ReleaseError: if git cannot read it
     """
-    return read_git(root, ["show", f"{commit}:{CHANGELOG_FILE}"], f"Cannot read {CHANGELOG_FILE} at {commit}")
+    return read_git(root, ["show", f"{ref}:{CHANGELOG_FILE}"], f"Cannot read {CHANGELOG_FILE} at {ref}")
 
 
 def check_pull_request(root: Path, base: str, head: str) -> str:
@@ -282,7 +282,7 @@ def check_pull_request(root: Path, base: str, head: str) -> str:
     :param base: the branch that the pull request merges into, such as main, or a commit
     :param head: the branch of the pull request, or a commit
     :raises ReleaseError: if the pull request changes the plugin and not the notes of the next release; or if git
-        cannot compare `head` with `base`, or read the CHANGELOG of either
+        cannot compare `head` with `base`, or read the CHANGELOG at their merge base or at `head`
     """
     failure = f"Cannot compare {head} with {base}"
     merge_base = read_git(root, ["merge-base", base, head], failure).strip()

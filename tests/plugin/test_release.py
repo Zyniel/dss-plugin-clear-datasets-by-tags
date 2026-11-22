@@ -63,13 +63,15 @@ NOTHING_TO_CHECK = (
     "The pull request changes nothing in plugin.json, python-lib/, python-runnables/ or resource/: "
     "its notes of the next release are not checked.\n"
 )
+# The file of the plugin that change_plugin() changes.
+CHANGED_PLUGIN_FILE = "python-lib/core/runner.py"
 # The CI has no git identity: the commits of the tests get one of their own.
 GIT_IDENTITY = ["-c", "user.name=Tests", "-c", "user.email=tests@example.com"]
 
 
 @pytest.fixture
 def repo(tmp_path: Path) -> Path:
-    """Return a copy of release.py, of the script it imports and of the files it changes, with unreleased changes.
+    """Return a copy of release.py, the script it imports and the files it changes, with notes of the next release.
 
     The copies are at version 1.0.0, whatever the version of the repository: the tests must pass in every release.
     They are in a git repository, on main with no commit yet, whose remote origin has no tag and no branch yet.
@@ -107,9 +109,9 @@ def commit_all(repo: Path, message: str) -> None:
     run_git(repo, *GIT_IDENTITY, "commit", "--message", message)
 
 
-def change_the_plugin(repo: Path) -> None:
-    """Change a file of the plugin in the copy of the repository: python-lib/core/runner.py."""
-    write_copied_file(repo, "python-lib/core/runner.py", "RUNNER = 2\n")
+def change_plugin(repo: Path) -> None:
+    """Change a file of the plugin in the copy of the repository: CHANGED_PLUGIN_FILE."""
+    write_copied_file(repo, CHANGED_PLUGIN_FILE, "RUNNER = 2\n")
 
 
 def push_to_origin(repo: Path, ref: str) -> None:
@@ -411,7 +413,7 @@ def test_a_branch_that_is_not_a_release_branch_passes_with_notes_of_the_next_rel
 
 
 def test_a_pull_request_that_changes_the_plugin_and_the_notes_of_the_next_release_passes(pull_request: Path) -> None:
-    change_the_plugin(pull_request)
+    change_plugin(pull_request)
     write_changelog(pull_request, CHANGELOG_WITH_A_NEW_NOTE)
     commit_all(pull_request, "A new option")
 
@@ -434,7 +436,7 @@ def test_a_pull_request_that_changes_the_plugin_and_not_the_notes_fails_and_name
     pull_request: Path, changelog: str
 ) -> None:
     set_version(pull_request, "1.0.1")  # plugin.json, and pyproject.toml, which the plugin zip does not hold
-    change_the_plugin(pull_request)
+    change_plugin(pull_request)
     write_copied_file(pull_request, "python-runnables/clear-datasets-by-tags/runnable.json", "{}\n")
     (pull_request / "resource" / "tag_choices.py").unlink()
     write_copied_file(pull_request, "README.md", "# Clear Datasets by Tags, a plugin\n")
@@ -447,7 +449,7 @@ def test_a_pull_request_that_changes_the_plugin_and_not_the_notes_fails_and_name
     assert result.stderr == (
         "error: The pull request changes the plugin, and not the notes of the next release. It changes:\n"
         "- plugin.json\n"
-        "- python-lib/core/runner.py\n"
+        f"- {CHANGED_PLUGIN_FILE}\n"
         "- python-runnables/clear-datasets-by-tags/runnable.json\n"
         "- resource/tag_choices.py\n"
         'Describe the change for users under "## Unreleased" in CHANGELOG.md. If users cannot notice it, add the '
@@ -477,7 +479,7 @@ def test_a_pull_request_that_does_not_change_the_plugin_passes_without_a_check_o
 
 
 def test_the_changes_that_main_got_after_the_pull_request_left_it_do_not_count(pull_request: Path) -> None:
-    change_the_plugin(pull_request)
+    change_plugin(pull_request)
     commit_all(pull_request, "A change of the plugin, without notes")
     run_git(pull_request, "switch", "main")
     # Another pull request, merged into main since: a change of the plugin, with its notes.
@@ -488,7 +490,7 @@ def test_the_changes_that_main_got_after_the_pull_request_left_it_do_not_count(p
     result = run_check_pull_request(pull_request, "main", PULL_REQUEST_BRANCH)
 
     assert result.returncode == 1
-    assert "It changes:\n- python-lib/core/runner.py\nDescribe" in result.stderr
+    assert f"It changes:\n- {CHANGED_PLUGIN_FILE}\nDescribe" in result.stderr
 
 
 @pytest.mark.parametrize(
@@ -498,7 +500,7 @@ def test_the_changes_that_main_got_after_the_pull_request_left_it_do_not_count(p
 def test_the_merge_of_a_pull_request_into_its_base_is_checked_against_its_first_parent(
     pull_request: Path, changelog: str, returncode: int
 ) -> None:
-    change_the_plugin(pull_request)
+    change_plugin(pull_request)
     write_changelog(pull_request, changelog)
     commit_all(pull_request, "A change of the plugin")
     run_git(pull_request, "switch", "main")
