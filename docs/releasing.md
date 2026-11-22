@@ -33,7 +33,7 @@ Merge the pull request ─────────────▶ Tag release: t
 
 | Workflow | Starts | Does |
 |---|---|---|
-| `ci.yml` | On each push and pull request, and when Prepare release starts it | Writes the notes of the next release on the summary page of the run. On a release branch, fails when they are not empty. Runs the checks of `check.py`, and keeps the zip as the artifact `plugin-zip`. |
+| `ci.yml` | On each push and pull request, when a label of a pull request is added or removed, and when Prepare release starts it | Writes the notes of the next release on the summary page of the run. On a release branch, fails when they are not empty. On a pull request that changes the plugin, fails when they do not change, unless it comes from a release branch or has the label `no-changelog`. Runs the checks of `check.py`, and keeps the zip as the artifact `plugin-zip`. |
 | `prepare-release.yml` | By hand, in the Actions tab | Runs `release.py prepare`, which checks that it can prepare the version, and `uv lock`, runs the checks, pushes `release/<version>`, opens its pull request and starts the CI on it. |
 | `tag-release.yml` | When a pull request from a `release/` branch is merged | Checks that the branch is named after the version of `plugin.json`, tags the merge commit, and starts Release on the tag. |
 | `release.yml` | On a version tag, and when Tag release starts it on the tag | Checks that the tag is the version of `plugin.json`, runs the checks, builds the zip, writes the notes, and publishes the release. |
@@ -54,6 +54,10 @@ These settings are in GitHub, not in the repository. Only an administrator of th
 
 Each change that users can notice goes into the CHANGELOG, under `## Unreleased` at the top: the notes of the next release. Create this section with the first change after a release. Write for users: what changes for them, and what they must do. Prepare release refuses to run when the section is missing or empty.
 
+A pull request that changes the plugin, `plugin.json`, `python-lib/`, `python-runnables/` or `resource/`, adds to these notes: its required check "Lint, types and plugin zip" fails when it does not, at the step "Check that a pull request that changes the plugin adds to the notes of the next release", and names the files it changes. The README and the license are not checked. When users cannot notice the change, such as a refactoring, add the label `no-changelog` to the pull request instead: the CI runs again, without this step. Removing the label runs it again too. On your machine, `uv run python release.py check-pull-request origin/main HEAD` gives the same verdict for your commits.
+
+The [pull request template](../.github/pull_request_template.md) lists what each pull request needs: these notes, the screenshots when the recap or a form changes, the integration tests when the code DSS runs changes, and the checks. The screenshots are refreshed in the pull request that changes what they show, not at release time.
+
 Every run of the CI shows the notes of the next release, with links that work: open the run in **Actions > CI**, and read "Notes of the next release" on its **Summary** page. When they are empty, it says so.
 
 ## Release a version
@@ -71,7 +75,6 @@ Every run of the CI shows the notes of the next release, with links that work: o
 4. **Check the pull request:**
    - The CI passes.
    - The zip works: download the artifact `plugin-zip` of its CI run (**Actions > CI**, the run on `release/<version>`), install it on a test DSS, and do the checks of [verification](verification.md) that the release touches.
-   - The screenshots of the README show this version: on the branch `release/<version>`, run the refresh of the [screenshots](screenshots.md) on the test DSS, with `"install_plugin": true`. When a result differs from the README, fix the code or the README first. Then look at the four images, and commit them on the branch.
    - The notes read well. To change them, edit `CHANGELOG.md` on the branch: the CI runs again.
 5. **Merge the pull request.** Tag release tags the version, and Release publishes it. The release is under **Releases** a few minutes later, and the release badge of the README follows.
 

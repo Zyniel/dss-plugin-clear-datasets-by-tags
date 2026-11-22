@@ -12,6 +12,10 @@ from typing import Any, NoReturn, Optional
 # The paths are relative to this file, so that the script works from any folder.
 ROOT = Path(__file__).resolve().parent
 
+# The folders of the plugin, which the zip holds with all their files. release.py checks that a pull request that
+# changes them adds to the notes of the next release.
+PLUGIN_FOLDERS = ["python-lib", "python-runnables", "resource"]
+
 NOT_A_PACKAGE = (
     "This project is a plugin for Dataiku (DSS), not a Python package: uv build cannot make it.\n"
     "Build the plugin zip with: uv run python build_plugin_zip.py"
@@ -28,7 +32,7 @@ def build_plugin_zip() -> Path:
         plugin_zip.write(ROOT / "plugin.json", "plugin.json")
         plugin_zip.write(ROOT / "README.md", "README.md")
         plugin_zip.write(ROOT / "LICENSE", "LICENSE")
-        for folder in ["python-lib", "python-runnables", "resource"]:
+        for folder in PLUGIN_FOLDERS:
             for path in sorted((ROOT / folder).rglob("*")):
                 if path.is_file() and "__pycache__" not in path.parts:
                     plugin_zip.write(path, path.relative_to(ROOT).as_posix())

@@ -14,4 +14,4 @@ Never report a vulnerability in an issue: follow the [security policy](SECURITY.
 2. Read the [architecture](../docs/architecture.md) and the [coding standards](../CODING_STANDARDS.md). To add a macro, follow [add a macro](../docs/adding-a-macro.md).
 3. With each change: tests, the CHANGELOG under `## Unreleased`, and the docs it touches. The checks of the CI must pass: `uv run python check.py` runs them, as the CI does.
 4. Commit with your GitHub noreply address, as [development](../docs/development.md#set-up) explains.
-5. Open a pull request on `main`. Say what you checked on a real DSS, if anything.
+5. Open a pull request on `main`, and go through the checklist of its [template](pull_request_template.md): the notes of the next release, the screenshots, the integration tests and the checks. Say what you checked on a real DSS, if anything. When users cannot notice your change, say so: the maintainer adds the label `no-changelog`, and the CI no longer asks for notes of the next release.

@@ -2,6 +2,10 @@
 
 The README shows each macro with two screenshots taken in DSS: its form, and the recap of a run. The tests of `tests/screenshots` take all four again on the test DSS of the [integration tests](integration-tests.md), on demo projects they create from code, so that they show the plugin of your folder. A run of these tests is a refresh.
 
+## When to refresh
+
+In the pull request that changes what they show: the recap or the form of a macro of the README. A release does not refresh them: the [pull request template](../.github/pull_request_template.md) asks for them instead.
+
 ## What you need
 
 - **The test DSS and the config file of the [integration tests](integration-tests.md)**, with the API key of a DSS administrator.
