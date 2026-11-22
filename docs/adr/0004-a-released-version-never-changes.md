@@ -4,5 +4,5 @@ Once the tag of a version exists, nobody moves or deletes it, the administrator 
 
 ## Consequences
 
-- A run of Release that fails can cost a version number. Its tag stays with no release: it is an abandoned version. Its section of the CHANGELOG goes back under `## Unreleased` with the fix, and the next version publishes its changes.
+- A run of Release that fails can cost a version number. The tag of the version stays with no release: it is an abandoned version. Its section of the CHANGELOG goes back under `## Unreleased` with the fix, and the next version publishes its changes.
 - Each step of the Release workflow can run twice: it skips a tag or a release that exists, and never replaces them.

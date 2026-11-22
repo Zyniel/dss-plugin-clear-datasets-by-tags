@@ -3,7 +3,7 @@ name: Release
 # Publishes the release of a version when its release pull request is merged into main: tags the merge commit with
 # the version, and publishes the GitHub release with the plugin zip and the notes of the version, in this one run
 # (ADR-0003). GitHub adds the source code of the tag. No step replaces what an earlier run did (ADR-0004), so "Re-run
-# failed jobs" finishes a release that failed for a cause outside the repository: a re-run uses the commit and the
+# failed jobs" finishes a run that failed for a cause outside the repository: a re-run uses the commit and the
 # ref of the first run. It has no manual start and no trigger on tags. See docs/releasing.md.
 # https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs
 on:

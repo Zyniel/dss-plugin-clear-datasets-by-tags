@@ -231,7 +231,7 @@ def prepare(root: Path, version: str, today: datetime.date) -> None:
             f"then prepare {version} again."
         )
 
-    changelog = (root / CHANGELOG_FILE).read_text(encoding="utf-8")
+    changelog = read_changelog(root)
     if changelog_section(changelog, f"## {version}") is not None:
         raise ReleaseError(f"{CHANGELOG_FILE} already has a section for {version}: choose a new version.")
     if read_notes(changelog, UNRELEASED) is None:
@@ -297,6 +297,14 @@ def check_branch(changelog: str, branch: str) -> str:
             f"missing from its notes. Close its release pull request, delete the branch, and prepare {version} again."
         )
     return f"{branch} has no notes of the next release."
+
+
+def read_changelog(root: Path) -> str:
+    """Return the CHANGELOG of the working tree.
+
+    :param root: the folder of the repository
+    """
+    return (root / CHANGELOG_FILE).read_text(encoding="utf-8")
 
 
 def read_changelog_at(root: Path, ref: str) -> str:
@@ -380,26 +388,24 @@ def main(argv: Optional[list[str]] = None) -> None:
     check_pull_request_command.add_argument("base", help="The branch it merges into, such as main, or a commit.")
     check_pull_request_command.add_argument("head", help="Its branch, or a commit, such as HEAD.")
 
-    def run_prepare(args: argparse.Namespace) -> str:
+    def run_prepare_command(args: argparse.Namespace) -> str:
         prepare(ROOT, args.version, args.date or datetime.datetime.now(datetime.timezone.utc).date())
         return f"Prepared {args.version}. Run `uv lock`, then commit.\n"
 
-    def read_changelog() -> str:
-        return (ROOT / CHANGELOG_FILE).read_text(encoding="utf-8")
-
-    # What each command prints. A command missing here fails, instead of running another one.
+    # The function that runs each command, and returns what it prints. A command missing here fails with an
+    # AttributeError, instead of running another one.
     runs: dict[argparse.ArgumentParser, Callable[[argparse.Namespace], str]] = {
-        prepare_command: run_prepare,
+        prepare_command: run_prepare_command,
         version_command: lambda _: f"{read_plugin_version(ROOT)}\n",
         # As the Release workflow passes it on: gh release create --prerelease=true.
         is_pre_release_command: lambda args: "true\n" if is_pre_release(args.version) else "false\n",
         notes_command: lambda args: release_notes(
-            read_changelog(), args.version, LinkTarget(args.repository, args.ref)
+            read_changelog(ROOT), args.version, LinkTarget(args.repository, args.ref)
         ),
         next_release_notes_command: lambda args: next_release_notes(
-            read_changelog(), LinkTarget(args.repository, args.ref)
+            read_changelog(ROOT), LinkTarget(args.repository, args.ref)
         ),
-        check_branch_command: lambda args: f"{check_branch(read_changelog(), args.branch)}\n",
+        check_branch_command: lambda args: f"{check_branch(read_changelog(ROOT), args.branch)}\n",
         check_pull_request_command: lambda args: f"{check_pull_request(ROOT, args.base, args.head)}\n",
     }
     for command, run in runs.items():
