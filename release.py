@@ -300,7 +300,7 @@ def check_branch(changelog: str, branch: str) -> str:
 
 
 def read_changelog(root: Path) -> str:
-    """Return the CHANGELOG of the working tree.
+    """Return the text of the CHANGELOG of the working tree.
 
     :param root: the folder of the repository
     """
