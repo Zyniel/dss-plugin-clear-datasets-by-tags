@@ -11,10 +11,9 @@ jobs:
     name: Lint, types and plugin zip
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v7
-      # Python 3.9 comes from .python-version: the version DSS 13 runs the plugin with.
-      - run: uv sync --locked
+      # Checks out, installs uv and syncs the environment. Python 3.9 comes from .python-version: the version DSS 13
+      # runs the plugin with.
+      - uses: $/.github/actions/setup
       # Ruff, ruff format, mypy, mypy for each runnable and the plugin zip. The tests job runs pytest.
       - run: uv run --locked python check.py --no-tests
       - uses: actions/upload-artifact@v6
@@ -31,6 +30,8 @@ jobs:
         # 3.9 is what DSS 13 runs. The newer one shows the code keeps working after a DSS upgrade.
         python: ["3.9", "3.13"]
     steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v7
-      - run: uv run --locked --python ${{ matrix.python }} pytest
+      # The environment on the Python of the matrix, which the setup step gives to every uv command after it.
+      - uses: $/.github/actions/setup
+        with:
+          python: ${{ matrix.python }}
+      - run: uv run --locked pytest

@@ -64,11 +64,13 @@ Git uses it for your commits in this repository, and for the commits Claude Code
 ├── uv.lock                       Exact versions of the tools
 ├── .python-version               Python 3.9, the version DSS 13 runs
 └── .github/
+    ├── actions/setup/            The setup step of the workflows: checkout, uv, environment
     ├── workflows/                See releasing.md for the last three
     │   ├── ci.yml                Checks and tests on each push and pull request
     │   ├── prepare-release.yml   Opens the pull request of a release
     │   ├── tag-release.yml       Tags a merged release pull request
     │   └── release.yml           Publishes the release of a version tag
+    ├── dependabot.yml            Updates the GitHub Actions, once a month
     ├── ISSUE_TEMPLATE/           The bug report form
     ├── CONTRIBUTING.md           How to contribute
     └── SECURITY.md               How to report a vulnerability
@@ -136,8 +138,15 @@ The fake objects copy the shape of the DSS answers. If a real DSS answers in ano
 
 | Job | Steps |
 |---|---|
-| Lint, types and plugin zip | `uv sync --locked`, then `check.py --no-tests`: ruff, ruff format, mypy, mypy for each runnable, and the build of the zip, kept as the `plugin-zip` artifact. |
-| Tests on Python 3.9 and 3.13 | `uv run --locked --python <version> pytest`. |
+| Lint, types and plugin zip | The setup step, then `check.py --no-tests`: ruff, ruff format, mypy, mypy for each runnable, and the build of the zip, kept as the `plugin-zip` artifact. |
+| Tests on Python 3.9 and 3.13 | The setup step on that Python, then `uv run --locked pytest`. |
+
+The setup step is the composite action `.github/actions/setup`. It checks out the repository, installs uv and runs `uv sync --locked`. A workflow calls it with `uses: $/.github/actions/setup`, which GitHub takes from the commit of the run: no checkout comes before it. Its inputs, both optional:
+
+- `ref`: the branch, tag or commit to check out. By default, the commit of the run.
+- `python`: the Python of the environment, such as `3.13`. By default, the one of `.python-version`. The uv commands after the step use it too.
+
+Dependabot keeps the actions of the workflows and of the setup step current: once a month, it opens one pull request with every update. Its settings are in `.github/dependabot.yml`.
 
 Three more workflows release a version: `prepare-release.yml`, `tag-release.yml` and `release.yml`. See [releasing](releasing.md).
 

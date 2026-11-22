@@ -1,0 +1,14 @@
+# Dependabot keeps the GitHub Actions current: one pull request a month, with every update.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    # "/" covers the workflows of .github/workflows. The shared setup step is in .github/actions/setup.
+    directories:
+      - "/"
+      - "/.github/actions/*"
+    schedule:
+      interval: monthly
+    # One group for every action, in every directory above: one pull request.
+    groups:
+      github-actions:
+        patterns: ["*"]

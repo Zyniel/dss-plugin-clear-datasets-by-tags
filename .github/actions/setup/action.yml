@@ -1,0 +1,28 @@
+name: Set up
+description: Check out the repository, install uv and sync the locked environment.
+
+# Every workflow sets itself up with this step, so that the actions below are in one file. A workflow uses it with
+# `uses: $/.github/actions/setup`: GitHub takes it from this repository at the commit of the run, before any checkout.
+# Dependabot keeps its actions current: see .github/dependabot.yml.
+inputs:
+  ref:
+    description: "The branch, tag or commit to check out, such as main. By default, the commit of the run."
+    required: false
+    default: ""
+  python:
+    description: "The Python of the environment, such as 3.13. By default, the one of .python-version."
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v5
+      with:
+        ref: ${{ inputs.ref }}
+    # With a Python, it sets UV_PYTHON for the rest of the job: the next uv commands use that Python.
+    - uses: astral-sh/setup-uv@v7
+      with:
+        python-version: ${{ inputs.python }}
+    - run: uv sync --locked
+      shell: bash
