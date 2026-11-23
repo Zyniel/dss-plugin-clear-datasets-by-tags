@@ -72,7 +72,7 @@ Git uses it for your commits in this repository, and for the commits Claude Code
 └── .github/
     ├── actions/setup/            The setup step of the workflows: checkout, uv, environment
     ├── workflows/                See releasing.md for the last two
-    │   ├── ci.yml                Checks and tests on each push and pull request
+    │   ├── ci.yml                Checks and tests on each pull request, and on main
     │   ├── prepare-release.yml   Opens the release pull request of a version
     │   └── release.yml           Tags and publishes a version when its release pull request is merged
     ├── rulesets/                 The rulesets of main and of the tags, as releasing.md applies them
@@ -146,7 +146,7 @@ The fake objects copy the shape of the DSS answers. If a real DSS answers in ano
 
 ## The CI
 
-`.github/workflows/ci.yml` runs on each push and pull request. On a release pull request, which a workflow opens, it waits until the maintainer approves its run: see [releasing](releasing.md#release-a-version).
+`.github/workflows/ci.yml` runs on each pull request, and on each push to `main`. A push to another branch starts no run, since the run of its pull request does the same: to get the CI on a branch with no pull request, open a draft pull request. On a release pull request, which a workflow opens, it waits until the maintainer approves its run: see [releasing](releasing.md#release-a-version).
 
 | Job | Steps |
 |---|---|
