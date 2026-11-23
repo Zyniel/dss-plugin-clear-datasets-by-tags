@@ -1,14 +1,18 @@
 name: CI
 
 on:
+  # Only on main: the run of each merge gives the CI badge of the README and the notes of the next release. On another
+  # branch, the pull_request run of its pull request runs the same jobs, and a push run would run them a second time.
+  # A branch with no pull request gets no run: open a draft pull request.
   push:
+    branches: [main]
   pull_request:
     # The types of a pull_request run by default, and a label added or removed: the label no-changelog decides whether
     # the notes of the next release are checked. Every job runs again. A required check counts the last pull_request
-    # run of the pull request: when it fails, the merge is blocked, even if the push run of the same check passes, and
-    # the run that a label starts replaces it. Seen on pull request #54, 2026-11-22. On a release pull request, which
-    # Prepare release opens, the run waits until the maintainer approves it, and gives the required checks: no
-    # workflow starts the CI. https://docs.github.com/en/actions/concepts/security/github_token
+    # run of the pull request: when it fails, the merge is blocked, and the run that a label starts replaces it. Seen
+    # on pull request #54, 2026-11-22. On a release pull request, which Prepare release opens, the run waits until the
+    # maintainer approves it, and gives the required checks: no workflow starts the CI.
+    # https://docs.github.com/en/actions/concepts/security/github_token
     types: [opened, synchronize, reopened, labeled, unlabeled]
 
 jobs:
