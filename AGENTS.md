@@ -30,7 +30,7 @@ What the Dataiku docs say about macros, scenarios and the API, with links, and w
 
 A release follows the runbook, `docs/releasing.md`. An agent may run the release review, start Prepare release, read the CI, run the integration tests on the release branch, and comment on the release pull request. The maintainer alone approves a run or a pull request, merges, and re-runs Release; the Release workflow alone tags and publishes. An agent never does any of these.
 
-- **The release review** covers everything since the tag of the last release, `gh release list --exclude-drafts --limit 1 --json tagName --jq '.[0].tagName'`. Its spec is the notes of the next release, `## Unreleased` in `CHANGELOG.md`: each change that users can notice has an entry, and each entry matches the code.
+- **The release review** runs the skill `mattpocock-skills:code-review`, with the tag of the last release as its fixed point: `gh release list --exclude-drafts --limit 1 --json tagName --jq '.[0].tagName'`. Its spec is the notes of the next release, `## Unreleased` in `CHANGELOG.md`: each change that users can notice has an entry, and each entry matches the code.
 - **Prepare release** runs with the version the maintainer gives: `gh workflow run prepare-release.yml --ref main -f version=<version>`.
 - **The integration tests** run on the release branch with `install_plugin: true`, as `docs/integration-tests.md` says. Their result goes in a comment on the release pull request.
 

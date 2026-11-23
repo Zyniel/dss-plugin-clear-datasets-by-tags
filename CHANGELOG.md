@@ -2,6 +2,12 @@
 
 The changes of each version of the plugin, the most recent first. The changes not released yet are under **Unreleased**.
 
+## Unreleased
+
+### For developers
+
+- The runbook and the release pull request say where to approve the CI of the release pull request, in its merge box, and how to check that the run started. The runbook names the skill that runs the release review, `mattpocock-skills:code-review`, as `AGENTS.md` does.
+
 ## 1.0.3-beta - 2026-11-22
 
 ### Plugin
