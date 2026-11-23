@@ -36,4 +36,4 @@ A release follows the runbook, `docs/releasing.md`. An agent may run the release
 
 ### Spec of a review
 
-What a run shows (the recap, the log, the JSON recap, the summary dataset) is specified by the user guides and automation guides in `docs/macros/`, as well as by the issue: a Spec review checks the diff against both. The commits that fix review findings get a review of their own.
+What a run shows (the recap, the log, the JSON recap, the summary dataset) is specified by the user guides and automation guides in `docs/macros/`, as well as by the issue: a Spec review checks the diff against both. It also checks that the notes of the next release stay true of the whole release, as `docs/releasing.md` says under "While you develop". The commits that fix review findings get a review of their own, by the reviewer that found the findings: send it the fix commit, which it checks alone. The review ends when it finds nothing to fix.

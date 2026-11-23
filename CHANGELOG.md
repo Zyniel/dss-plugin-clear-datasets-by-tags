@@ -7,6 +7,7 @@ The changes of each version of the plugin, the most recent first. The changes no
 ### For developers
 
 - The runbook and the release pull request say where to approve the CI of the release pull request, in its merge box, and how to check that the run started. The runbook and `AGENTS.md` name the skill that runs the release review, `mattpocock-skills:code-review`.
+- Each entry of the notes of the next release says what the release changes compared with the last release, and a change that makes an earlier entry false rewrites it, as [releasing](docs/releasing.md#while-you-develop) says. The Spec review checks it. A commit that fixes review findings goes back to the reviewer that found them, which reviews that commit alone.
 
 ## 1.0.3-beta - 2026-11-22
 
