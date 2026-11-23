@@ -32,7 +32,7 @@ There are three cases, and nothing else to do:
 
 ## While you develop
 
-Each change that users can notice goes into the CHANGELOG, under `## Unreleased` at the top: the notes of the next release. Create this section with the first change after a release. Write for users: what changes for them, and what they must do. Prepare release refuses to run when the section is missing or empty.
+Each change that users can notice goes into the CHANGELOG, under `## Unreleased` at the top: the notes of the next release. Create this section with the first change after a release. Write for users: what changes for them, and what they must do. Each entry says what the next release changes compared with the last release, not what its commit changes. A change that makes an earlier entry false rewrites that entry. Prepare release refuses to run when the section is missing or empty.
 
 A pull request that changes the plugin, `plugin.json`, `python-lib/`, `python-runnables/` or `resource/`, adds to these notes: its required check "Lint, types and plugin zip" fails when it does not, at the step "Check that a pull request that changes the plugin adds to the notes of the next release", and names the files it changes. The README and the license are not checked. When users cannot notice the change, such as a refactoring, add the label `no-changelog` to the pull request instead: the CI runs again, without this step. Removing the label runs it again too. On your machine, `uv run python release.py check-pull-request origin/main HEAD` gives the same verdict for your commits.
 
